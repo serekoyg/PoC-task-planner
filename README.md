@@ -84,3 +84,5 @@ experiment/quick-add-task
 - 주요 화면의 스크린샷 또는 짧은 영상을 첨부했는가?
 
 코딩 에이전트를 사용할 때의 상세 작업 규칙은 [AGENTS.md](./AGENTS.md)를 따릅니다.
+
+실제 작업 사례를 따라 해보고 싶다면 [코딩 에이전트와 화면 아이디어 검증하기](./doc/contribution.md)를 참고합니다.
