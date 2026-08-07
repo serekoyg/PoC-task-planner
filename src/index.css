@@ -98,6 +98,50 @@ a:focus-visible {
   box-shadow: 0 7px 16px rgba(240, 111, 85, 0.24);
 }
 
+.primary-nav {
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid rgba(23, 36, 52, 0.09);
+  border-radius: 14px;
+  background: rgba(255, 254, 250, 0.72);
+}
+
+.primary-nav a {
+  min-width: 98px;
+  height: 38px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 10px;
+  color: #6c757f;
+  font-size: 0.79rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: 150ms ease;
+}
+
+.primary-nav a:hover {
+  color: var(--ink);
+  background: #f6f3ed;
+}
+
+.primary-nav a.active {
+  color: white;
+  background: var(--ink);
+  box-shadow: 0 5px 12px rgba(23, 36, 52, 0.16);
+}
+
+.header-meta {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .today-label {
   margin: 0;
   color: #626c77;
@@ -106,7 +150,6 @@ a:focus-visible {
 }
 
 .avatar {
-  justify-self: end;
   width: 38px;
   height: 38px;
   border: 0;
@@ -123,6 +166,10 @@ a:focus-visible {
   grid-template-columns: minmax(0, 1.7fr) minmax(330px, 0.72fr);
   gap: 22px;
   align-items: stretch;
+}
+
+.calendar-page {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .calendar-card,
@@ -144,6 +191,29 @@ a:focus-visible {
   flex-direction: column;
 }
 
+.schedule-panel {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.6fr);
+  column-gap: 28px;
+}
+
+.schedule-panel .day-heading,
+.schedule-panel .event-form {
+  grid-column: 1 / -1;
+}
+
+.schedule-panel .schedule-list {
+  grid-column: 1;
+  margin-bottom: 0;
+}
+
+.schedule-panel .schedule-tip {
+  grid-column: 2;
+  margin-top: 21px;
+  align-self: start;
+}
+
 .section-heading {
   display: flex;
   align-items: flex-start;
@@ -152,8 +222,7 @@ a:focus-visible {
 }
 
 .section-heading h1,
-.section-heading h2,
-.todo-heading h2 {
+.section-heading h2 {
   margin: 4px 0 0;
   letter-spacing: -0.045em;
 }
@@ -163,8 +232,7 @@ a:focus-visible {
   font-size: clamp(1.7rem, 2.5vw, 2.2rem);
 }
 
-.section-heading h2,
-.todo-heading h2 {
+.section-heading h2 {
   font-size: 1.32rem;
 }
 
@@ -437,19 +505,58 @@ a:focus-visible {
   font-weight: 600;
 }
 
-.empty-schedule {
-  margin: 0;
-  padding: 20px 0;
-  color: #9a9fa4;
-  font-size: 0.8rem;
+.empty-schedule-card {
+  padding: 32px 18px;
+  border: 1px dashed #dcd8d0;
+  border-radius: 16px;
+  color: #8f969d;
+  background: #fbfaf7;
+  text-align: center;
 }
 
-.todo-heading {
-  padding-top: 25px;
+.empty-schedule-card > span {
+  width: 34px;
+  height: 34px;
+  margin: 0 auto 10px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--coral);
+  background: var(--coral-soft);
+}
+
+.empty-schedule-card p {
+  margin: 0 0 4px;
+  color: #636c75;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.empty-schedule-card small {
+  font-size: 0.7rem;
+}
+
+.schedule-tip {
+  margin-top: auto;
+  padding: 17px;
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  border-top: 1px solid var(--line);
+  align-items: flex-start;
+  gap: 9px;
+  border-radius: 14px;
+  color: #74808b;
+  background: #f5f3ed;
+  font-size: 0.72rem;
+  line-height: 1.65;
+}
+
+.schedule-tip > span {
+  color: var(--coral);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.schedule-tip p {
+  margin: 0;
 }
 
 .task-count {
@@ -629,6 +736,137 @@ a:focus-visible {
   font-size: 0.7rem;
 }
 
+.todos-page {
+  width: min(900px, 92vw);
+  margin: 56px auto 0;
+}
+
+.todo-page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.todo-page-heading h1 {
+  margin: 5px 0 0;
+  font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
+  font-size: clamp(2rem, 4vw, 3.1rem);
+  letter-spacing: -0.055em;
+}
+
+.page-description {
+  margin: 12px 0 0;
+  color: #78818b;
+  font-size: 0.86rem;
+}
+
+.date-navigation {
+  flex: 0 0 auto;
+  padding: 4px;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--paper);
+}
+
+.date-navigation button {
+  min-width: 40px;
+  height: 38px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--ink);
+  background: transparent;
+  font-size: 1.35rem;
+  cursor: pointer;
+}
+
+.date-navigation button:hover {
+  background: #f5f2ec;
+}
+
+.date-navigation .date-today-button {
+  min-width: 58px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.todo-workspace {
+  margin-top: 28px;
+  padding: 30px 34px 34px;
+  border: 1px solid rgba(23, 36, 52, 0.08);
+  border-radius: 28px;
+  background: var(--paper);
+  box-shadow: 0 18px 60px rgba(38, 41, 45, 0.06);
+}
+
+.todo-summary {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+}
+
+.progress-ring {
+  --progress: 0deg;
+  position: relative;
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(var(--coral) var(--progress), #ece9e2 0);
+}
+
+.progress-ring::after {
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: var(--paper);
+  content: '';
+}
+
+.progress-ring span {
+  position: relative;
+  z-index: 1;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.todo-summary p {
+  margin: 0 0 4px;
+  color: #8a9198;
+  font-size: 0.72rem;
+}
+
+.todo-summary strong {
+  font-size: 0.95rem;
+}
+
+.todo-page-form {
+  margin-top: 27px;
+  grid-template-columns: 1fr 50px;
+}
+
+.todo-page-form input,
+.todo-page-form button {
+  height: 50px;
+}
+
+.todo-page-form input {
+  font-size: 0.86rem;
+}
+
+.todo-page-list li {
+  min-height: 62px;
+}
+
+.todo-page-list .todo-text {
+  font-size: 0.87rem;
+}
+
 footer {
   width: min(1440px, 92vw);
   margin: 22px auto 34px;
@@ -644,16 +882,13 @@ footer p {
   margin: 0;
 }
 
-footer button {
+footer a {
   padding: 0;
-  border: 0;
   color: #68727d;
-  background: transparent;
   font-size: 0.72rem;
   font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 3px;
-  cursor: pointer;
 }
 
 @media (max-width: 1050px) {
@@ -665,41 +900,32 @@ footer button {
     min-height: 105px;
   }
 
-  .day-panel {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    column-gap: 32px;
-  }
-
-  .day-heading,
-  .event-form,
-  .schedule-list {
-    grid-column: 1;
-  }
-
-  .todo-heading,
-  .progress-track,
-  .todo-form,
-  .todo-list,
-  .empty-todos {
-    grid-column: 2;
-  }
-
-  .todo-heading {
-    grid-row: 1;
-    padding-top: 0;
-    border-top: 0;
-  }
 }
 
 @media (max-width: 700px) {
   .topbar {
     min-height: 66px;
-    grid-template-columns: 1fr auto;
+    padding: 0 14px;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
   }
 
   .today-label {
     display: none;
+  }
+
+  .header-meta {
+    gap: 0;
+  }
+
+  .primary-nav {
+    justify-self: center;
+  }
+
+  .primary-nav a {
+    min-width: auto;
+    height: 36px;
+    padding: 0 11px;
   }
 
   .planner {
@@ -770,11 +996,6 @@ footer button {
     display: flex;
   }
 
-  .todo-heading {
-    padding-top: 25px;
-    border-top: 1px solid var(--line);
-  }
-
   .event-form {
     grid-template-columns: 88px 1fr;
   }
@@ -788,8 +1009,63 @@ footer button {
     opacity: 1;
   }
 
+  .todos-page {
+    width: min(100% - 24px, 620px);
+    margin-top: 30px;
+  }
+
+  .todo-page-heading {
+    align-items: flex-start;
+  }
+
+  .todo-page-heading h1 {
+    font-size: 1.8rem;
+  }
+
+  .page-description {
+    display: none;
+  }
+
+  .todo-workspace {
+    padding: 24px 20px 28px;
+    border-radius: 21px;
+  }
+
+  .todo-summary {
+    grid-template-columns: auto 1fr;
+  }
+
+  .todo-summary .task-count {
+    display: none;
+  }
+
   footer {
     width: calc(100% - 28px);
+  }
+}
+
+@media (max-width: 460px) {
+  .brand > span:last-child {
+    display: none;
+  }
+
+  .primary-nav a {
+    padding-inline: 9px;
+    font-size: 0.73rem;
+  }
+
+  .avatar {
+    width: 34px;
+    height: 34px;
+  }
+
+  .todo-page-heading {
+    display: block;
+  }
+
+  .date-navigation {
+    width: fit-content;
+    margin-top: 18px;
   }
 }
 
