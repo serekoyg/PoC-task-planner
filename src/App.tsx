@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, NavLink, Route, Routes } from 'react-router-dom'
+import {
+  Link,
+  Navigate,
+  NavLink,
+  Route,
+  Routes,
+  useParams,
+} from 'react-router-dom'
 import {
   type CalendarEvent,
   createInitialEvents,
@@ -7,12 +14,20 @@ import {
   type Todo,
   toDateKey,
 } from './data/initialData'
+import {
+  createInitialStudyRooms,
+  type StudyRoom,
+  type StudyRoomCreateInput,
+} from './data/studyRooms'
 import { formatHeaderDate } from './lib/date'
 import CalendarPage from './pages/CalendarPage'
+import StudyRoomDetailPage from './pages/StudyRoomDetailPage'
+import StudyRoomsPage from './pages/StudyRoomsPage'
 import TodosPage from './pages/TodosPage'
 
 const TODO_STORAGE_KEY = 'haru.todos'
 const EVENT_STORAGE_KEY = 'haru.events'
+const STUDY_STORAGE_KEY = 'haru.study-rooms'
 
 const readStorage = <T,>(key: string, fallback: () => T): T => {
   try {
@@ -21,6 +36,32 @@ const readStorage = <T,>(key: string, fallback: () => T): T => {
   } catch {
     return fallback()
   }
+}
+
+const readStudyRooms = () =>
+  readStorage(STUDY_STORAGE_KEY, createInitialStudyRooms).map((room) =>
+    room.description ===
+    '출근 전 조용히 모여 각자 준비하는 아침 집중 스터디예요.'
+      ? {
+          ...room,
+          description: '출근 전 조용히 모여 각자 준비하는 아침 집중 모임이에요.',
+        }
+      : room,
+  )
+
+type StudyRoomRouteProps = {
+  rooms: StudyRoom[]
+  onJoinRoom: (roomId: string) => void
+}
+
+function StudyRoomRoute({ rooms, onJoinRoom }: StudyRoomRouteProps) {
+  const { roomId } = useParams()
+  return (
+    <StudyRoomDetailPage
+      room={rooms.find((room) => room.id === roomId)}
+      onJoinRoom={onJoinRoom}
+    />
+  )
 }
 
 export default function App() {
@@ -35,6 +76,9 @@ export default function App() {
   const [events, setEvents] = useState<CalendarEvent[]>(() =>
     readStorage(EVENT_STORAGE_KEY, createInitialEvents),
   )
+  const [studyRooms, setStudyRooms] = useState<StudyRoom[]>(() =>
+    readStudyRooms(),
+  )
   const selectedKey = toDateKey(selectedDate)
 
   useEffect(() => {
@@ -44,6 +88,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(EVENT_STORAGE_KEY, JSON.stringify(events))
   }, [events])
+
+  useEffect(() => {
+    localStorage.setItem(STUDY_STORAGE_KEY, JSON.stringify(studyRooms))
+  }, [studyRooms])
 
   const selectToday = () => {
     const now = new Date()
@@ -106,6 +154,64 @@ export default function App() {
     }))
   }
 
+  const joinStudyRoom = (roomId: string) => {
+    setStudyRooms((current) =>
+      current.map((room) => {
+        if (room.id !== roomId || room.joined) return room
+
+        return {
+          ...room,
+          joined: true,
+          memberCount: room.memberCount + 1,
+          members: [
+            ...room.members,
+            {
+              id: 'me',
+              name: '민서',
+              avatar: '민',
+              minutes: 0,
+              status: 'resting',
+              focusLabel: '오늘의 공부를 준비 중이에요',
+              isMe: true,
+            },
+          ],
+        }
+      }),
+    )
+  }
+
+  const createStudyRoom = (input: StudyRoomCreateInput) => {
+    const roomId = `study-${crypto.randomUUID()}`
+    const accents: StudyRoom['accent'][] = ['coral', 'blue', 'green', 'violet']
+
+    setStudyRooms((current) => [
+      {
+        ...input,
+        id: roomId,
+        accent: accents[current.length % accents.length],
+        memberCount: 1,
+        joined: true,
+        todayMinutes: 0,
+        weeklyProgress: 0,
+        streak: 1,
+        members: [
+          {
+            id: 'me',
+            name: '민서',
+            avatar: '민',
+            minutes: 0,
+            status: 'resting',
+            focusLabel: '첫 집중을 준비 중이에요',
+            isMe: true,
+          },
+        ],
+      },
+      ...current,
+    ])
+
+    return roomId
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -124,6 +230,10 @@ export default function App() {
           <NavLink to="/todos">
             <span aria-hidden="true">✓</span>
             할 일
+          </NavLink>
+          <NavLink to="/studies">
+            <span aria-hidden="true">◉</span>
+            모임
           </NavLink>
         </nav>
 
@@ -173,6 +283,22 @@ export default function App() {
               onToggleTodo={toggleTodo}
               onRemoveTodo={removeTodo}
             />
+          }
+        />
+        <Route
+          path="/studies"
+          element={
+            <StudyRoomsPage
+              rooms={studyRooms}
+              onJoinRoom={joinStudyRoom}
+              onCreateRoom={createStudyRoom}
+            />
+          }
+        />
+        <Route
+          path="/studies/:roomId"
+          element={
+            <StudyRoomRoute rooms={studyRooms} onJoinRoom={joinStudyRoom} />
           }
         />
         <Route path="*" element={<Navigate to="/calendar" replace />} />
