@@ -113,24 +113,36 @@ export default function App() {
           <span className="brand-mark" aria-hidden="true">
             H
           </span>
-          <span>하루</span>
+          <span className="brand-copy">
+            <strong>하루</strong>
+            <small>나를 위한 데일리 플래너</small>
+          </span>
         </Link>
 
         <nav className="primary-nav" aria-label="주요 메뉴">
           <NavLink to="/calendar">
-            <span aria-hidden="true">▦</span>
-            캘린더
+            <span className="nav-glyph" aria-hidden="true">▦</span>
+            <span className="nav-copy">
+              <strong>캘린더</strong>
+              <small>일정 관리</small>
+            </span>
           </NavLink>
           <NavLink to="/todos">
-            <span aria-hidden="true">✓</span>
-            할 일
+            <span className="nav-glyph" aria-hidden="true">✓</span>
+            <span className="nav-copy">
+              <strong>할 일</strong>
+              <small>오늘 집중</small>
+            </span>
           </NavLink>
         </nav>
 
         <div className="header-meta">
-          <p className="today-label">{formatHeaderDate(today)}</p>
+          <div className="today-label">
+            <span>오늘</span>
+            <strong>{formatHeaderDate(today)}</strong>
+          </div>
           <button className="avatar" type="button" aria-label="내 프로필">
-            플
+            민
           </button>
         </div>
       </header>
@@ -179,9 +191,9 @@ export default function App() {
       </Routes>
 
       <footer>
-        <p>오늘 해야 할 일과 중요한 일정을 한곳에서.</p>
+        <p>하루 · 오늘을 가볍게 정리하는 플래너</p>
         <Link to="/calendar" onClick={selectToday}>
-          오늘 일정 보기
+          오늘로 돌아가기
         </Link>
       </footer>
     </div>

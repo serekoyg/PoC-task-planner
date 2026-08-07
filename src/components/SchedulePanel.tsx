@@ -35,13 +35,14 @@ export default function SchedulePanel({
 
   return (
     <aside
-      className="day-panel schedule-panel"
+      className="schedule-panel"
       aria-labelledby="selected-date-title"
     >
-      <div className="section-heading day-heading">
+      <div className="schedule-header">
         <div>
-          <p className="eyebrow">선택한 날짜</p>
+          <p className="section-label">선택한 날짜</p>
           <h2 id="selected-date-title">{formatSelectedDate(selectedDate)}</h2>
+          <span className="event-count">일정 {selectedEvents.length}개</span>
         </div>
         <button
           className="add-event-button"
@@ -49,7 +50,7 @@ export default function SchedulePanel({
           onClick={() => setIsEventFormOpen((current) => !current)}
           aria-expanded={isEventFormOpen}
         >
-          <span aria-hidden="true">＋</span> 일정
+          <span aria-hidden="true">＋</span> 일정 추가
         </button>
       </div>
 
@@ -69,7 +70,7 @@ export default function SchedulePanel({
               type="text"
               value={eventTitle}
               onChange={(event) => setEventTitle(event.target.value)}
-              placeholder="새 일정 이름"
+              placeholder="일정 이름을 입력하세요"
               autoFocus
             />
           </label>
@@ -81,14 +82,12 @@ export default function SchedulePanel({
         {selectedEvents.length ? (
           selectedEvents.map((item) => (
             <article className="schedule-item" key={item.id}>
-              <span
-                className={`schedule-dot ${item.color}`}
-                aria-hidden="true"
-              />
-              <div>
-                <time>{item.time}</time>
+              <time className={`schedule-time ${item.color}`}>{item.time}</time>
+              <div className="schedule-content">
                 <p>{item.title}</p>
+                <small>개인 일정</small>
               </div>
+              <span className={`schedule-dot ${item.color}`} aria-hidden="true" />
             </article>
           ))
         ) : (
@@ -100,9 +99,13 @@ export default function SchedulePanel({
         )}
       </div>
 
-      <div className="schedule-tip">
-        <span aria-hidden="true">•</span>
-        <p>달력에서 날짜를 선택하면 해당 날짜의 일정을 확인할 수 있어요.</p>
+      <div className="schedule-footer">
+        <span aria-hidden="true">✦</span>
+        <p>
+          {selectedEvents.length
+            ? '일정 사이에 여유 시간을 남겨두면 하루가 한결 가벼워져요.'
+            : '비어 있는 날이에요. 중요한 약속이 있다면 지금 추가해 보세요.'}
+        </p>
       </div>
     </aside>
   )
