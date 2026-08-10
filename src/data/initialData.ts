@@ -2,6 +2,10 @@ export type Todo = {
   id: string
   text: string
   done: boolean
+  project?: string
+  estimatedMinutes?: number
+  priority?: '높음' | '보통' | '낮음'
+  memo?: string
 }
 
 export type CalendarEvent = {
@@ -30,12 +34,44 @@ export const createInitialTodos = (): Record<string, Todo[]> => {
 
   return {
     [toDateKey(today)]: [
-      { id: 'todo-1', text: '이번 주 우선순위 정리하기', done: true },
-      { id: 'todo-2', text: '캘린더 화면 피드백 남기기', done: false },
-      { id: 'todo-3', text: '오후 회의 자료 훑어보기', done: false },
+      {
+        id: 'todo-1',
+        text: '이번 주 우선순위 정리하기',
+        done: true,
+        project: '주간 계획',
+        estimatedMinutes: 20,
+        priority: '보통',
+        memo: '이번 주에 꼭 끝내야 하는 일 세 가지를 먼저 정리해요.',
+      },
+      {
+        id: 'todo-2',
+        text: '캘린더 화면 피드백 남기기',
+        done: false,
+        project: '하루 리뉴얼',
+        estimatedMinutes: 45,
+        priority: '높음',
+        memo: '날짜 선택 흐름과 일정 카드의 정보 순서를 중심으로 살펴봐요.',
+      },
+      {
+        id: 'todo-3',
+        text: '오후 회의 자료 훑어보기',
+        done: false,
+        project: '팀 운영',
+        estimatedMinutes: 30,
+        priority: '보통',
+        memo: '결정이 필요한 항목에는 미리 표시를 남겨요.',
+      },
     ],
     [toDateKey(addDays(today, 1))]: [
-      { id: 'todo-4', text: '프로토타입 검토 결과 공유하기', done: false },
+      {
+        id: 'todo-4',
+        text: '프로토타입 검토 결과 공유하기',
+        done: false,
+        project: '하루 리뉴얼',
+        estimatedMinutes: 35,
+        priority: '낮음',
+        memo: '검토한 흐름과 다음 실험 아이디어를 짧게 공유해요.',
+      },
     ],
   }
 }
