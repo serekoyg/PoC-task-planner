@@ -14,6 +14,7 @@ export type CalendarEvent = {
   title: string
   time: string
   color: 'coral' | 'blue' | 'green'
+  project?: string
 }
 
 export const toDateKey = (date: Date) => {
@@ -86,6 +87,7 @@ export const createInitialEvents = (): CalendarEvent[] => {
       title: '주간 계획 회의',
       time: '10:30',
       color: 'coral',
+      project: '주간 계획',
     },
     {
       id: 'event-2',
@@ -93,6 +95,7 @@ export const createInitialEvents = (): CalendarEvent[] => {
       title: '화면 프로토타입 리뷰',
       time: '14:00',
       color: 'blue',
+      project: '하루 리뉴얼',
     },
     {
       id: 'event-3',
@@ -100,6 +103,7 @@ export const createInitialEvents = (): CalendarEvent[] => {
       title: '다음 스프린트 정리',
       time: '16:30',
       color: 'green',
+      project: '팀 운영',
     },
     {
       id: 'event-4',
@@ -107,6 +111,7 @@ export const createInitialEvents = (): CalendarEvent[] => {
       title: '아이디어 공유',
       time: '11:00',
       color: 'blue',
+      project: '하루 리뉴얼',
     },
   ]
 }
