@@ -3,7 +3,7 @@ import type { Todo } from '../data/initialData'
 import type { StudyRoom } from '../data/studyRooms'
 
 type ProfilePageProps = {
-  todos: Record<string, Todo[]>
+  todos: Todo[]
   rooms: StudyRoom[]
 }
 
@@ -24,7 +24,7 @@ const formatMinutes = (minutes: number) => {
 }
 
 export default function ProfilePage({ todos, rooms }: ProfilePageProps) {
-  const allTodos = Object.values(todos).flat()
+  const allTodos = todos
   const completedTodos = allTodos.filter((todo) => todo.done).length
   const joinedRooms = rooms.filter((room) => room.joined)
   const todayFocusMinutes = joinedRooms.reduce((total, room) => {
