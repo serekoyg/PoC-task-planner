@@ -10,9 +10,11 @@ import {
 } from 'react-router-dom'
 import {
   type CalendarEvent,
+  type CalendarEventInput,
   createInitialEvents,
   createInitialTodos,
   type Todo,
+  type TodoInput,
   toDateKey,
 } from './data/initialData'
 import {
@@ -42,6 +44,76 @@ const readStorage = <T,>(key: string, fallback: () => T): T => {
   } catch {
     return fallback()
   }
+}
+
+const getDefaultEndTime = (startTime: string) => {
+  const [hours, minutes] = startTime.split(':').map(Number)
+  const endMinutes = Math.min(hours * 60 + minutes + 60, 23 * 60 + 59)
+  return `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(
+    endMinutes % 60,
+  ).padStart(2, '0')}`
+}
+
+const readEvents = () =>
+  readStorage<CalendarEvent[]>(EVENT_STORAGE_KEY, createInitialEvents).map(
+    (event) => {
+      const startTime = event.startTime ?? event.time ?? '09:00'
+      return {
+        ...event,
+        startTime,
+        endTime: event.endTime ?? getDefaultEndTime(startTime),
+        allDay: event.allDay ?? false,
+        category: event.category ?? '개인',
+        location: event.location ?? '',
+        note: event.note ?? '',
+        repeat: event.repeat ?? 'none',
+        reminder: event.reminder ?? 'none',
+      }
+    },
+  )
+
+type LegacyTodo = Omit<Partial<Todo>, 'priority'> &
+  Pick<Todo, 'id' | 'text' | 'done'> & {
+    priority?: Todo['priority'] | '높음' | '보통' | '낮음'
+  }
+
+const normalizePriority = (priority: LegacyTodo['priority']): Todo['priority'] => {
+  if (priority === '높음') return 'high'
+  if (priority === '낮음') return 'low'
+  if (priority === '보통') return 'medium'
+  return priority ?? 'medium'
+}
+
+const normalizeTodo = (todo: LegacyTodo, date: string): Todo => ({
+  id: todo.id,
+  date: todo.date ?? date,
+  text: todo.text,
+  done: todo.done,
+  priority: normalizePriority(todo.priority),
+  category: todo.category ?? '개인',
+  dueTime: todo.dueTime ?? '',
+  reminder: todo.reminder ?? 'none',
+  color: todo.color ?? 'blue',
+  note: todo.note ?? todo.memo ?? '',
+  project: todo.project,
+  estimatedMinutes: todo.estimatedMinutes ?? 30,
+  memo: todo.memo,
+})
+
+const readTodos = () => {
+  const stored = readStorage<Todo[] | Record<string, LegacyTodo[]>>(
+    TODO_STORAGE_KEY,
+    createInitialTodos,
+  )
+
+  if (Array.isArray(stored)) {
+    const fallbackDate = toDateKey(new Date())
+    return stored.map((todo) => normalizeTodo(todo, fallbackDate))
+  }
+
+  return Object.entries(stored).flatMap(([date, items]) =>
+    items.map((todo) => normalizeTodo(todo, date)),
+  )
 }
 
 const readStudyRooms = () =>
@@ -76,19 +148,16 @@ type TaskEntry = {
 }
 
 const findTask = (
-  todos: Record<string, Todo[]>,
+  todos: Todo[],
   todoId?: string,
 ): TaskEntry | undefined => {
   if (!todoId) return undefined
-
-  for (const [dateKey, dateTodos] of Object.entries(todos)) {
-    const todo = dateTodos.find((item) => item.id === todoId)
-    if (todo) return { todo, dateKey }
-  }
+  const todo = todos.find((item) => item.id === todoId)
+  return todo ? { todo, dateKey: todo.date } : undefined
 }
 
 type TaskRouteProps = {
-  todos: Record<string, Todo[]>
+  todos: Todo[]
   focusResults: Record<string, number>
 }
 
@@ -106,7 +175,7 @@ function TaskDetailRoute({ todos, focusResults }: TaskRouteProps) {
 }
 
 type FocusSessionRouteProps = {
-  todos: Record<string, Todo[]>
+  todos: Todo[]
   onFinish: (todoId: string, elapsedSeconds: number) => void
 }
 
@@ -155,11 +224,9 @@ export default function App() {
   const [visibleMonth, setVisibleMonth] = useState(
     new Date(today.getFullYear(), today.getMonth(), 1),
   )
-  const [todos, setTodos] = useState<Record<string, Todo[]>>(() =>
-    readStorage(TODO_STORAGE_KEY, createInitialTodos),
-  )
+  const [todos, setTodos] = useState<Todo[]>(readTodos)
   const [events, setEvents] = useState<CalendarEvent[]>(() =>
-    readStorage(EVENT_STORAGE_KEY, createInitialEvents),
+    readEvents(),
   )
   const [studyRooms, setStudyRooms] = useState<StudyRoom[]>(() =>
     readStudyRooms(),
@@ -226,51 +293,54 @@ export default function App() {
     )
   }
 
-  const addEvent = (title: string, time: string) => {
+  const addEvent = (event: CalendarEventInput) => {
     setEvents((current) => [
       ...current,
       {
         id: crypto.randomUUID(),
-        date: selectedKey,
-        title,
-        time,
-        color: 'coral',
+        ...event,
       },
     ])
   }
 
-  const addTodo = (text: string) => {
+  const updateEvent = (eventId: string, event: CalendarEventInput) => {
+    setEvents((current) =>
+      current.map((item) => (item.id === eventId ? { id: eventId, ...event } : item)),
+    )
+  }
+
+  const removeEvent = (eventId: string) => {
+    setEvents((current) => current.filter((event) => event.id !== eventId))
+  }
+
+  const addTodo = (input: TodoInput) => {
     const newTodo: Todo = {
       id: crypto.randomUUID(),
-      text,
       done: false,
-      project: '받은 편지함',
-      estimatedMinutes: 30,
-      priority: '보통',
+      ...input,
     }
 
-    setTodos((current) => ({
-      ...current,
-      [selectedKey]: [...(current[selectedKey] ?? []), newTodo],
-    }))
+    setTodos((current) => [...current, newTodo])
+  }
+
+  const updateTodo = (todoId: string, input: TodoInput) => {
+    setTodos((current) =>
+      current.map((todo) =>
+        todo.id === todoId ? { ...todo, ...input } : todo,
+      ),
+    )
   }
 
   const toggleTodo = (todoId: string) => {
-    setTodos((current) => ({
-      ...current,
-      [selectedKey]: (current[selectedKey] ?? []).map((todo) =>
+    setTodos((current) =>
+      current.map((todo) =>
         todo.id === todoId ? { ...todo, done: !todo.done } : todo,
       ),
-    }))
+    )
   }
 
   const removeTodo = (todoId: string) => {
-    setTodos((current) => ({
-      ...current,
-      [selectedKey]: (current[selectedKey] ?? []).filter(
-        (todo) => todo.id !== todoId,
-      ),
-    }))
+    setTodos((current) => current.filter((todo) => todo.id !== todoId))
   }
 
   const finishFocus = (todoId: string, elapsedSeconds: number) => {
@@ -281,12 +351,11 @@ export default function App() {
   }
 
   const completeTodo = (todoId: string, dateKey: string) => {
-    setTodos((current) => ({
-      ...current,
-      [dateKey]: (current[dateKey] ?? []).map((todo) =>
+    setTodos((current) =>
+      current.map((todo) =>
         todo.id === todoId ? { ...todo, done: true } : todo,
       ),
-    }))
+    )
     selectDate(new Date(`${dateKey}T00:00:00`))
   }
 
@@ -300,18 +369,13 @@ export default function App() {
       return
     }
 
-    setTodos((current) => {
-      const todo = (current[fromDateKey] ?? []).find((item) => item.id === todoId)
-      if (!todo) return current
-
-      return {
-        ...current,
-        [fromDateKey]: (current[fromDateKey] ?? []).filter(
-          (item) => item.id !== todoId,
-        ),
-        [toDateKey]: [...(current[toDateKey] ?? []), { ...todo, done: false }],
-      }
-    })
+    setTodos((current) =>
+      current.map((todo) =>
+        todo.id === todoId
+          ? { ...todo, date: toDateKey, done: false }
+          : todo,
+      ),
+    )
     selectDate(new Date(`${toDateKey}T00:00:00`))
   }
 
@@ -474,6 +538,8 @@ export default function App() {
               }
               onSelectToday={selectToday}
               onAddEvent={addEvent}
+              onUpdateEvent={updateEvent}
+              onRemoveEvent={removeEvent}
             />
           }
         />
@@ -483,9 +549,10 @@ export default function App() {
             <TodosPage
               today={today}
               selectedDate={selectedDate}
-              todos={todos[selectedKey] ?? []}
+              todos={todos.filter((todo) => todo.date === selectedKey)}
               onSelectDate={selectDate}
               onAddTodo={addTodo}
+              onUpdateTodo={updateTodo}
               onToggleTodo={toggleTodo}
               onRemoveTodo={removeTodo}
             />
