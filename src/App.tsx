@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Link,
   Navigate,
   NavLink,
   Route,
   Routes,
+  useLocation,
   useParams,
 } from 'react-router-dom'
 import {
@@ -23,6 +24,7 @@ import { formatHeaderDate } from './lib/date'
 import CalendarPage from './pages/CalendarPage'
 import FocusResultPage from './pages/FocusResultPage'
 import FocusSessionPage from './pages/FocusSessionPage'
+import ProfilePage from './pages/ProfilePage'
 import StudyRoomDetailPage from './pages/StudyRoomDetailPage'
 import StudyRoomsPage from './pages/StudyRoomsPage'
 import TaskDetailPage from './pages/TaskDetailPage'
@@ -145,7 +147,10 @@ function FocusResultRoute({
 }
 
 export default function App() {
+  const location = useLocation()
   const today = useMemo(() => new Date(), [])
+  const profileMenuRef = useRef<HTMLDivElement>(null)
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const [selectedDate, setSelectedDate] = useState(today)
   const [visibleMonth, setVisibleMonth] = useState(
     new Date(today.getFullYear(), today.getMonth(), 1),
@@ -179,6 +184,30 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(FOCUS_STORAGE_KEY, JSON.stringify(focusResults))
   }, [focusResults])
+
+  useEffect(() => {
+    setIsProfileMenuOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (!isProfileMenuOpen) return
+
+    const closeProfileMenu = (event: MouseEvent) => {
+      if (!profileMenuRef.current?.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false)
+      }
+    }
+    const closeProfileMenuOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsProfileMenuOpen(false)
+    }
+
+    document.addEventListener('mousedown', closeProfileMenu)
+    window.addEventListener('keydown', closeProfileMenuOnEscape)
+    return () => {
+      document.removeEventListener('mousedown', closeProfileMenu)
+      window.removeEventListener('keydown', closeProfileMenuOnEscape)
+    }
+  }, [isProfileMenuOpen])
 
   const selectToday = () => {
     const now = new Date()
@@ -371,9 +400,54 @@ export default function App() {
 
         <div className="header-meta">
           <p className="today-label">{formatHeaderDate(today)}</p>
-          <button className="avatar" type="button" aria-label="내 프로필">
-            플
-          </button>
+          <div className="profile-menu" ref={profileMenuRef}>
+            <button
+              className={`avatar${isProfileMenuOpen ? ' active' : ''}`}
+              type="button"
+              aria-label="사용자 메뉴"
+              aria-controls="profile-menu-popover"
+              aria-expanded={isProfileMenuOpen}
+              onClick={() => setIsProfileMenuOpen((current) => !current)}
+            >
+              민
+            </button>
+
+            {isProfileMenuOpen && (
+              <div
+                className="profile-menu-popover"
+                id="profile-menu-popover"
+                role="menu"
+              >
+                <div className="profile-menu-user">
+                  <span aria-hidden="true">민</span>
+                  <div>
+                    <strong>민서</strong>
+                    <small>오늘도 한 걸음씩</small>
+                  </div>
+                </div>
+                <div className="profile-menu-links">
+                  <Link role="menuitem" to="/profile">
+                    <span aria-hidden="true">◯</span>
+                    내 프로필
+                    <i aria-hidden="true">›</i>
+                  </Link>
+                  <Link role="menuitem" to="/todos">
+                    <span aria-hidden="true">✓</span>
+                    오늘 할 일
+                    <i aria-hidden="true">›</i>
+                  </Link>
+                  <Link role="menuitem" to="/studies">
+                    <span aria-hidden="true">◉</span>
+                    참여 중인 모임
+                    <i aria-hidden="true">›</i>
+                  </Link>
+                </div>
+                <p className="profile-menu-message">
+                  이번 주 목표까지 <strong>2일</strong> 남았어요.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -453,6 +527,10 @@ export default function App() {
           element={
             <StudyRoomRoute rooms={studyRooms} onJoinRoom={joinStudyRoom} />
           }
+        />
+        <Route
+          path="/profile"
+          element={<ProfilePage todos={todos} rooms={studyRooms} />}
         />
         <Route path="*" element={<Navigate to="/calendar" replace />} />
       </Routes>
