@@ -4,11 +4,33 @@ import ProjectSidebar, {
   type ProjectFilter,
 } from '../components/ProjectSidebar'
 import TodoEditorModal from '../components/TodoEditorModal'
+import TodoKanbanView from '../components/TodoKanbanView'
+import TodoProjectListView from '../components/TodoProjectListView'
 import type { Todo, TodoInput } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
 import type { PlannerProject, ProjectInput } from '../data/projects'
 import { formatSelectedDate, moveDate } from '../lib/date'
 import { getTaskEstimate, getTaskProject } from '../lib/task'
+
+type TodoView = 'today' | 'kanban' | 'projects'
+
+const viewLabels: Record<TodoView, string> = {
+  today: '오늘',
+  kanban: '칸반',
+  projects: '프로젝트 목록',
+}
+
+const viewTitles: Record<TodoView, string> = {
+  today: '오늘 보기',
+  kanban: '프로젝트 칸반',
+  projects: '프로젝트 목록',
+}
+
+const viewDescriptions: Record<TodoView, string> = {
+  today: '선택한 날짜에 실행할 일을 우선순위와 마감 시간으로 관리하세요.',
+  kanban: '모든 날짜의 할 일을 프로젝트 열로 나누어 한눈에 확인하세요.',
+  projects: '프로젝트별 할 일을 날짜와 함께 세로로 계속 탐색하세요.',
+}
 
 type TodosPageProps = {
   today: Date
@@ -61,6 +83,7 @@ export default function TodosPage({
 }: TodosPageProps) {
   const [selectedProjectId, setSelectedProjectId] =
     useState<ProjectFilter>('all')
+  const [todoView, setTodoView] = useState<TodoView>('today')
   const [isCreating, setIsCreating] = useState(false)
   const [editingTodo, setEditingTodo] = useState<Todo>()
   const selectedDateKey = toDateKey(selectedDate)
@@ -130,39 +153,58 @@ export default function TodosPage({
           onDeleteProject={onDeleteProject}
         />
 
-        <div className="project-filter-content">
-          <section className="todo-page-heading" aria-labelledby="todo-page-title">
+        <div className="project-filter-content todo-view-content">
+          <header className="todo-view-toolbar">
             <div>
-              <p className="eyebrow">{formatSelectedDate(selectedDate)}</p>
-              <h1 id="todo-page-title">{selectedProjectName}</h1>
-              <p className="page-description">
-                선택한 프로젝트의 할 일을 우선순위와 마감 시간으로 관리하세요.
+              <p className="eyebrow">
+                {todoView === 'today'
+                  ? `${formatSelectedDate(selectedDate)} · ${selectedProjectName}`
+                  : selectedProjectName}
               </p>
+              <h1>{viewTitles[todoView]}</h1>
+              <p>{viewDescriptions[todoView]}</p>
             </div>
-            <div className="todo-heading-actions">
-              <div className="date-navigation" aria-label="할 일 날짜 이동">
-                <button
-                  type="button"
-                  onClick={() => onSelectDate(moveDate(selectedDate, -1))}
-                  aria-label="이전 날짜"
-                >
-                  ‹
-                </button>
-                <button
-                  className="date-today-button"
-                  type="button"
-                  onClick={() => onSelectDate(today)}
-                >
-                  오늘
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSelectDate(moveDate(selectedDate, 1))}
-                  aria-label="다음 날짜"
-                >
-                  ›
-                </button>
+            <div className="todo-view-actions">
+              <div className="todo-view-tabs" aria-label="할 일 보기 선택">
+                {(Object.keys(viewLabels) as TodoView[]).map((view) => (
+                  <button
+                    className={todoView === view ? 'active' : ''}
+                    type="button"
+                    key={view}
+                    onClick={() => setTodoView(view)}
+                    aria-pressed={todoView === view}
+                  >
+                    {viewLabels[view]}
+                  </button>
+                ))}
               </div>
+
+              {todoView === 'today' && (
+                <div className="date-navigation" aria-label="할 일 날짜 이동">
+                  <button
+                    type="button"
+                    onClick={() => onSelectDate(moveDate(selectedDate, -1))}
+                    aria-label="이전 날짜"
+                  >
+                    ‹
+                  </button>
+                  <button
+                    className="date-today-button"
+                    type="button"
+                    onClick={() => onSelectDate(today)}
+                  >
+                    오늘
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSelectDate(moveDate(selectedDate, 1))}
+                    aria-label="다음 날짜"
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
+
               <button
                 className="add-todo-button"
                 type="button"
@@ -172,110 +214,132 @@ export default function TodosPage({
                 새 할 일
               </button>
             </div>
-          </section>
+          </header>
 
-          <section className="todo-workspace" aria-label="할 일 관리">
-            <div className="todo-summary">
-              <div
-                className="progress-ring"
-                style={{ '--progress': `${completionRate * 3.6}deg` } as CSSProperties}
-                aria-label={`할 일 ${completionRate}% 완료`}
-              >
-                <span>{completionRate}%</span>
-              </div>
-              <div>
-                <p>{selectedProjectName} 진행률</p>
-                <strong>
-                  {completedCount}개 완료 · {filteredTodos.length - completedCount}개 남음
-                </strong>
-              </div>
-              <span className="task-count">
-                {completedCount}/{filteredTodos.length}
-              </span>
-            </div>
-
-            <div className="progress-track" aria-hidden="true">
-              <span style={{ width: `${completionRate}%` }} />
-            </div>
-
-            <div className="todo-list-heading">
-              <div>
-                <strong>{formatSelectedDate(selectedDate)} 할 일</strong>
-                <span>미완료 항목은 우선순위와 마감 시간 순으로 보여요.</span>
-              </div>
-              <span>{filteredTodos.length}개</span>
-            </div>
-
-            <ul className="todo-list todo-page-list">
-              {sortedTodos.map((todo) => (
-                <li
-                  className={`${todo.done ? 'completed' : ''} color-${todo.color}`}
-                  key={todo.id}
+          {todoView === 'today' && (
+            <section className="todo-workspace" aria-label="오늘 할 일 관리">
+              <div className="todo-summary">
+                <div
+                  className="progress-ring"
+                  style={{ '--progress': `${completionRate * 3.6}deg` } as CSSProperties}
+                  aria-label={`할 일 ${completionRate}% 완료`}
                 >
-                  <label className="todo-check-control">
-                    <input
-                      type="checkbox"
-                      checked={todo.done}
-                      onChange={() => onToggleTodo(todo.id)}
-                    />
-                    <span className="custom-checkbox" aria-hidden="true">✓</span>
-                    <span className="sr-only">
-                      {todo.done ? `${todo.text} 완료 취소` : `${todo.text} 완료`}
-                    </span>
-                  </label>
-
-                  <div className="todo-item-content">
-                    <div className="todo-item-title-row">
-                      <span className="todo-kind-badge">{getTaskProject(todo)}</span>
-                      <Link className="todo-title-link" to={`/todos/${todo.id}`}>
-                        <span className="todo-text">{todo.text}</span>
-                      </Link>
-                    </div>
-                    <div className="todo-item-meta">
-                      <span className={`priority-badge ${todo.priority}`}>
-                        우선순위 {priorityLabels[todo.priority]}
-                      </span>
-                      <span>예상 {getTaskEstimate(todo)}분</span>
-                      {todo.dueTime && <span>마감 {todo.dueTime}</span>}
-                      {reminderLabels[todo.reminder] && (
-                        <span>◷ {reminderLabels[todo.reminder]}</span>
-                      )}
-                    </div>
-                    {todo.note && <p className="todo-note">{todo.note}</p>}
-                  </div>
-
-                  <div className="todo-item-actions">
-                    <Link
-                      className="todo-detail-link"
-                      to={`/todos/${todo.id}`}
-                      aria-label={`${todo.text} 상세 보기`}
-                    >
-                      상세 <span aria-hidden="true">›</span>
-                    </Link>
-                    <button
-                      className="edit-todo-button"
-                      type="button"
-                      onClick={() => setEditingTodo(todo)}
-                      aria-label={`${todo.text} 편집`}
-                    >
-                      편집
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-
-            {!filteredTodos.length && (
-              <div className="empty-todos">
-                <span aria-hidden="true">✓</span>
-                <p>{selectedProjectName}에 이날 등록된 할 일이 없어요.</p>
-                <small>새 할 일을 만들면 선택한 프로젝트가 자동으로 연결돼요.</small>
-                <button type="button" onClick={() => setIsCreating(true)}>
-                  첫 할 일 추가
-                </button>
+                  <span>{completionRate}%</span>
+                </div>
+                <div>
+                  <p>{selectedProjectName} 진행률</p>
+                  <strong>
+                    {completedCount}개 완료 · {filteredTodos.length - completedCount}개 남음
+                  </strong>
+                </div>
+                <span className="task-count">
+                  {completedCount}/{filteredTodos.length}
+                </span>
               </div>
-            )}
-          </section>
+
+              <div className="progress-track" aria-hidden="true">
+                <span style={{ width: `${completionRate}%` }} />
+              </div>
+
+              <div className="todo-list-heading">
+                <div>
+                  <strong>{formatSelectedDate(selectedDate)} 할 일</strong>
+                  <span>미완료 항목은 우선순위와 마감 시간 순으로 보여요.</span>
+                </div>
+                <span>{filteredTodos.length}개</span>
+              </div>
+
+              <ul className="todo-list todo-page-list">
+                {sortedTodos.map((todo) => (
+                  <li
+                    className={`${todo.done ? 'completed' : ''} color-${todo.color}`}
+                    key={todo.id}
+                  >
+                    <label className="todo-check-control">
+                      <input
+                        type="checkbox"
+                        checked={todo.done}
+                        onChange={() => onToggleTodo(todo.id)}
+                      />
+                      <span className="custom-checkbox" aria-hidden="true">✓</span>
+                      <span className="sr-only">
+                        {todo.done ? `${todo.text} 완료 취소` : `${todo.text} 완료`}
+                      </span>
+                    </label>
+
+                    <div className="todo-item-content">
+                      <div className="todo-item-title-row">
+                        <span className="todo-kind-badge">{getTaskProject(todo)}</span>
+                        <Link className="todo-title-link" to={`/todos/${todo.id}`}>
+                          <span className="todo-text">{todo.text}</span>
+                        </Link>
+                      </div>
+                      <div className="todo-item-meta">
+                        <span className={`priority-badge ${todo.priority}`}>
+                          우선순위 {priorityLabels[todo.priority]}
+                        </span>
+                        <span>예상 {getTaskEstimate(todo)}분</span>
+                        {todo.dueTime && <span>마감 {todo.dueTime}</span>}
+                        {reminderLabels[todo.reminder] && (
+                          <span>◷ {reminderLabels[todo.reminder]}</span>
+                        )}
+                      </div>
+                      {todo.note && <p className="todo-note">{todo.note}</p>}
+                    </div>
+
+                    <div className="todo-item-actions">
+                      <Link
+                        className="todo-detail-link"
+                        to={`/todos/${todo.id}`}
+                        aria-label={`${todo.text} 상세 보기`}
+                      >
+                        상세 <span aria-hidden="true">›</span>
+                      </Link>
+                      <button
+                        className="edit-todo-button"
+                        type="button"
+                        onClick={() => setEditingTodo(todo)}
+                        aria-label={`${todo.text} 편집`}
+                      >
+                        편집
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              {!filteredTodos.length && (
+                <div className="empty-todos">
+                  <span aria-hidden="true">✓</span>
+                  <p>{selectedProjectName}에 이날 등록된 할 일이 없어요.</p>
+                  <small>새 할 일을 만들면 선택한 프로젝트가 자동으로 연결돼요.</small>
+                  <button type="button" onClick={() => setIsCreating(true)}>
+                    첫 할 일 추가
+                  </button>
+                </div>
+              )}
+            </section>
+          )}
+
+          {todoView === 'kanban' && (
+            <TodoKanbanView
+              todos={todos}
+              projects={projects}
+              selectedProjectId={selectedProjectId}
+              onToggleTodo={onToggleTodo}
+              onEditTodo={setEditingTodo}
+            />
+          )}
+
+          {todoView === 'projects' && (
+            <TodoProjectListView
+              todos={todos}
+              projects={projects}
+              selectedProjectId={selectedProjectId}
+              onToggleTodo={onToggleTodo}
+              onEditTodo={setEditingTodo}
+            />
+          )}
         </div>
       </div>
 
