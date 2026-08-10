@@ -15,12 +15,12 @@ type ProjectTaskEntry = {
 
 type ProjectsPageProps = {
   categories: ProjectCategory[]
-  todos: Record<string, Todo[]>
+  todos: Todo[]
   events: CalendarEvent[]
   todayKey: string
   onCreateProject: (input: ProjectCreateInput) => string
   onAddTodo: (projectName: string, text: string) => void
-  onToggleTodo: (dateKey: string, todoId: string) => void
+  onToggleTodo: (todoId: string) => void
   onAddEvent: (projectName: string, title: string, time: string) => void
 }
 
@@ -29,6 +29,12 @@ const accentLabels: Record<ProjectAccent, string> = {
   blue: '블루',
   green: '그린',
   violet: '바이올렛',
+}
+
+const priorityLabels: Record<Todo['priority'], string> = {
+  high: '높음',
+  medium: '보통',
+  low: '낮음',
 }
 
 const formatProjectDate = (dateKey: string, todayKey: string) => {
@@ -82,10 +88,7 @@ export default function ProjectsPage({
   })
 
   const allTasks = useMemo<ProjectTaskEntry[]>(
-    () =>
-      Object.entries(todos).flatMap(([dateKey, dateTodos]) =>
-        dateTodos.map((todo) => ({ todo, dateKey })),
-      ),
+    () => todos.map((todo) => ({ todo, dateKey: todo.date })),
     [todos],
   )
 
@@ -105,7 +108,9 @@ export default function ProjectsPage({
   )
   const projectEvents = events
     .filter((event) => event.project === project.name)
-    .sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`))
+    .sort((a, b) =>
+      `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`),
+    )
   const completedCount = projectTasks.filter(({ todo }) => todo.done).length
   const completionRate = projectTasks.length
     ? Math.round((completedCount / projectTasks.length) * 100)
@@ -282,7 +287,7 @@ export default function ProjectsPage({
                     <input
                       type="checkbox"
                       checked={todo.done}
-                      onChange={() => onToggleTodo(dateKey, todo.id)}
+                      onChange={() => onToggleTodo(todo.id)}
                     />
                     <span aria-hidden="true">✓</span>
                     <span className="sr-only">{todo.text} 완료 상태 변경</span>
@@ -293,8 +298,8 @@ export default function ProjectsPage({
                       {formatProjectDate(dateKey, todayKey)} · 예상 {todo.estimatedMinutes ?? 30}분
                     </small>
                   </Link>
-                  <span className={`project-priority priority-${todo.priority ?? '보통'}`}>
-                    {todo.priority ?? '보통'}
+                  <span className={`project-priority priority-${todo.priority}`}>
+                    {priorityLabels[todo.priority]}
                   </span>
                 </li>
               ))}
@@ -342,7 +347,7 @@ export default function ProjectsPage({
               {projectEvents.map((item) => (
                 <article key={item.id}>
                   <time>
-                    <strong>{item.time}</strong>
+                    <strong>{item.startTime}</strong>
                     <small>{formatProjectDate(item.date, todayKey)}</small>
                   </time>
                   <span className={project.accent} aria-hidden="true" />

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import SchedulePanel from '../components/SchedulePanel'
-import type { CalendarEvent } from '../data/initialData'
+import type { CalendarEvent, CalendarEventInput } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
 import { formatSelectedDate, getCalendarDays } from '../lib/date'
 
@@ -14,7 +14,9 @@ type CalendarPageProps = {
   onSelectDate: (date: Date) => void
   onMoveMonth: (amount: number) => void
   onSelectToday: () => void
-  onAddEvent: (title: string, time: string) => void
+  onAddEvent: (event: CalendarEventInput) => void
+  onUpdateEvent: (eventId: string, event: CalendarEventInput) => void
+  onRemoveEvent: (eventId: string) => void
 }
 
 export default function CalendarPage({
@@ -26,6 +28,8 @@ export default function CalendarPage({
   onMoveMonth,
   onSelectToday,
   onAddEvent,
+  onUpdateEvent,
+  onRemoveEvent,
 }: CalendarPageProps) {
   const selectedKey = toDateKey(selectedDate)
   const todayKey = toDateKey(today)
@@ -39,6 +43,8 @@ export default function CalendarPage({
         selectedDate={selectedDate}
         events={events}
         onAddEvent={onAddEvent}
+        onUpdateEvent={onUpdateEvent}
+        onRemoveEvent={onRemoveEvent}
       />
 
       <section className="calendar-card" aria-labelledby="calendar-title">
@@ -107,7 +113,7 @@ export default function CalendarPage({
                 <span className="day-events" aria-hidden="true">
                   {dateEvents.slice(0, 2).map((item) => (
                     <span className={`event-chip ${item.color}`} key={item.id}>
-                      {item.time} {item.title}
+                      {item.allDay ? '종일' : item.startTime} {item.title}
                     </span>
                   ))}
                   {dateEvents.length > 2 && (

@@ -1,10 +1,15 @@
 import type { Todo } from '../data/initialData'
 
-export const getTaskProject = (todo: Todo) => todo.project ?? '받은 편지함'
+export const getTaskProject = (todo: Todo) =>
+  todo.project ?? todo.category ?? '받은 편지함'
 
 export const getTaskEstimate = (todo: Todo) => todo.estimatedMinutes ?? 30
 
-export const getTaskPriority = (todo: Todo) => todo.priority ?? '보통'
+export const getTaskPriority = (todo: Todo) => {
+  if (todo.priority === 'high') return '높음'
+  if (todo.priority === 'low') return '낮음'
+  return '보통'
+}
 
 export const formatTaskDate = (dateKey: string) =>
   new Date(`${dateKey}T00:00:00`).toLocaleDateString('ko-KR', {

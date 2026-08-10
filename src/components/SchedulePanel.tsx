@@ -1,36 +1,93 @@
-import { FormEvent, useState } from 'react'
-import type { CalendarEvent } from '../data/initialData'
+import { useMemo, useState } from 'react'
+import type {
+  CalendarEvent,
+  CalendarEventInput,
+} from '../data/initialData'
 import { toDateKey } from '../data/initialData'
 import { formatSelectedDate } from '../lib/date'
+import EventEditorModal from './EventEditorModal'
 
 type SchedulePanelProps = {
   selectedDate: Date
   events: CalendarEvent[]
-  onAddEvent: (title: string, time: string) => void
+  onAddEvent: (event: CalendarEventInput) => void
+  onUpdateEvent: (eventId: string, event: CalendarEventInput) => void
+  onRemoveEvent: (eventId: string) => void
+}
+
+const repeatLabels: Record<CalendarEvent['repeat'], string> = {
+  none: '',
+  daily: '매일 반복',
+  weekdays: '평일 반복',
+  weekly: '매주 반복',
+  monthly: '매월 반복',
+}
+
+const reminderLabels: Record<CalendarEvent['reminder'], string> = {
+  none: '',
+  '10m': '10분 전 알림',
+  '30m': '30분 전 알림',
+  '1h': '1시간 전 알림',
+  '1d': '1일 전 알림',
+}
+
+const toMinutes = (time: string) => {
+  const [hours, minutes] = time.split(':').map(Number)
+  return hours * 60 + minutes
+}
+
+const formatDuration = (minutes: number) => {
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  if (!hours) return `${rest}분`
+  return rest ? `${hours}시간 ${rest}분` : `${hours}시간`
 }
 
 export default function SchedulePanel({
   selectedDate,
   events,
   onAddEvent,
+  onUpdateEvent,
+  onRemoveEvent,
 }: SchedulePanelProps) {
-  const [eventTitle, setEventTitle] = useState('')
-  const [eventTime, setEventTime] = useState('09:00')
-  const [isEventFormOpen, setIsEventFormOpen] = useState(false)
+  const [isEditorOpen, setIsEditorOpen] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent>()
   const selectedKey = toDateKey(selectedDate)
-  const selectedEvents = events
-    .filter((event) => event.date === selectedKey)
-    .sort((a, b) => a.time.localeCompare(b.time))
+  const selectedEvents = useMemo(
+    () =>
+      events
+        .filter((event) => event.date === selectedKey)
+        .sort((a, b) => {
+          if (a.allDay !== b.allDay) return a.allDay ? -1 : 1
+          return a.startTime.localeCompare(b.startTime)
+        }),
+    [events, selectedKey],
+  )
+  const scheduledMinutes = selectedEvents.reduce((total, event) => {
+    if (event.allDay) return total
+    return total + Math.max(toMinutes(event.endTime) - toMinutes(event.startTime), 0)
+  }, 0)
+  const nextReminder = selectedEvents.find((event) => event.reminder !== 'none')
 
-  const addEvent = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const title = eventTitle.trim()
-    if (!title) return
+  const openNewEvent = () => {
+    setEditingEvent(undefined)
+    setIsEditorOpen(true)
+  }
 
-    onAddEvent(title, eventTime)
-    setEventTitle('')
-    setEventTime('09:00')
-    setIsEventFormOpen(false)
+  const openEditEvent = (event: CalendarEvent) => {
+    setEditingEvent(event)
+    setIsEditorOpen(true)
+  }
+
+  const closeEditor = () => {
+    setIsEditorOpen(false)
+    setEditingEvent(undefined)
+  }
+
+  const saveEvent = (event: CalendarEventInput) => {
+    if (editingEvent) onUpdateEvent(editingEvent.id, event)
+    else onAddEvent(event)
+    closeEditor()
   }
 
   return (
@@ -38,72 +95,113 @@ export default function SchedulePanel({
       className="day-panel schedule-panel"
       aria-labelledby="selected-date-title"
     >
-      <div className="section-heading day-heading">
+      <div className="section-heading day-heading schedule-heading">
         <div>
           <p className="eyebrow">선택한 날짜</p>
           <h2 id="selected-date-title">{formatSelectedDate(selectedDate)}</h2>
+          <p className="schedule-heading-summary">
+            {selectedEvents.length
+              ? `${selectedEvents.length}개의 일정이 있어요.`
+              : '아직 등록된 일정이 없어요.'}
+          </p>
         </div>
-        <button
-          className="add-event-button"
-          type="button"
-          onClick={() => setIsEventFormOpen((current) => !current)}
-          aria-expanded={isEventFormOpen}
-        >
-          <span aria-hidden="true">＋</span> 일정
+        <button className="add-event-button" type="button" onClick={openNewEvent}>
+          <span aria-hidden="true">＋</span> 새 일정
         </button>
       </div>
-
-      {isEventFormOpen && (
-        <form className="event-form" onSubmit={addEvent}>
-          <label>
-            <span className="sr-only">일정 시간</span>
-            <input
-              type="time"
-              value={eventTime}
-              onChange={(event) => setEventTime(event.target.value)}
-            />
-          </label>
-          <label>
-            <span className="sr-only">일정 이름</span>
-            <input
-              type="text"
-              value={eventTitle}
-              onChange={(event) => setEventTitle(event.target.value)}
-              placeholder="새 일정 이름"
-              autoFocus
-            />
-          </label>
-          <button type="submit">추가</button>
-        </form>
-      )}
 
       <div className="schedule-list" aria-label="선택한 날짜의 일정">
         {selectedEvents.length ? (
           selectedEvents.map((item) => (
-            <article className="schedule-item" key={item.id}>
-              <span
-                className={`schedule-dot ${item.color}`}
-                aria-hidden="true"
-              />
-              <div>
-                <time>{item.time}</time>
-                <p>{item.title}</p>
+            <article className={`schedule-item ${item.color}`} key={item.id}>
+              <div className="schedule-time-block">
+                {item.allDay ? (
+                  <strong>하루 종일</strong>
+                ) : (
+                  <>
+                    <strong>{item.startTime}</strong>
+                    <span>{item.endTime}</span>
+                  </>
+                )}
               </div>
+              <span className={`schedule-dot ${item.color}`} aria-hidden="true" />
+              <div className="schedule-item-copy">
+                <div className="schedule-item-title">
+                  <h3>{item.title}</h3>
+                  <span>{item.category}</span>
+                  {item.repeat !== 'none' && <span>{repeatLabels[item.repeat]}</span>}
+                </div>
+                <div className="schedule-item-meta">
+                  {item.location && (
+                    <span><i aria-hidden="true">⌖</i>{item.location}</span>
+                  )}
+                  {item.reminder !== 'none' && (
+                    <span><i aria-hidden="true">◷</i>{reminderLabels[item.reminder]}</span>
+                  )}
+                </div>
+                {item.note && <p>{item.note}</p>}
+              </div>
+              <button
+                className="edit-event-button"
+                type="button"
+                onClick={() => openEditEvent(item)}
+                aria-label={`${item.title} 편집`}
+              >
+                편집
+              </button>
             </article>
           ))
         ) : (
-          <div className="empty-schedule-card">
+          <button className="empty-schedule-card" type="button" onClick={openNewEvent}>
             <span aria-hidden="true">＋</span>
-            <p>등록된 일정이 없습니다.</p>
-            <small>이날의 첫 일정을 추가해 보세요.</small>
-          </div>
+            <strong>이날의 첫 일정을 추가해 보세요.</strong>
+            <small>시간, 장소, 반복과 알림까지 함께 설정할 수 있어요.</small>
+          </button>
         )}
       </div>
 
-      <div className="schedule-tip">
-        <span aria-hidden="true">•</span>
-        <p>달력에서 날짜를 선택하면 해당 날짜의 일정을 확인할 수 있어요.</p>
+      <div className="schedule-side-column">
+        <section className="schedule-summary-card" aria-label="일정 요약">
+          <p className="eyebrow">하루 요약</p>
+          <div>
+            <span>등록된 일정</span>
+            <strong>{selectedEvents.length}개</strong>
+          </div>
+          <div>
+            <span>예정된 시간</span>
+            <strong>{scheduledMinutes ? formatDuration(scheduledMinutes) : '없음'}</strong>
+          </div>
+          <div>
+            <span>다음 알림</span>
+            <strong>{nextReminder ? nextReminder.startTime : '없음'}</strong>
+          </div>
+        </section>
+
+        <div className="schedule-tip">
+          <span aria-hidden="true">✦</span>
+          <div>
+            <strong>잊지 않도록 미리 준비하세요.</strong>
+            <p>일정마다 장소와 알림을 함께 적어두면 당일에 다시 찾지 않아도 돼요.</p>
+          </div>
+        </div>
       </div>
+
+      {isEditorOpen && (
+        <EventEditorModal
+          selectedDate={selectedDate}
+          event={editingEvent}
+          onClose={closeEditor}
+          onSave={saveEvent}
+          onDelete={
+            editingEvent
+              ? () => {
+                  onRemoveEvent(editingEvent.id)
+                  closeEditor()
+                }
+              : undefined
+          }
+        />
+      )}
     </aside>
   )
 }

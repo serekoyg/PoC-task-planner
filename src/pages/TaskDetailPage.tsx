@@ -49,7 +49,7 @@ export default function TaskDetailPage({
           <p className="eyebrow">집중할 작업</p>
           <h1 id="task-title">{todo.text}</h1>
           <p className="task-detail-memo">
-            {todo.memo ?? '완료 조건을 떠올리고 한 번에 하나씩 집중해 보세요.'}
+            {todo.note || todo.memo || '완료 조건을 떠올리고 한 번에 하나씩 집중해 보세요.'}
           </p>
 
           <dl className="task-facts">
