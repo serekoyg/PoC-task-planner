@@ -914,7 +914,6 @@ export default function App() {
               projects={projects}
               studyRooms={joinedStudyRooms}
               sharedItems={sharedItemEntries}
-              onSelectDate={selectDate}
               onAddTodo={addTodo}
               onAddEvent={addEvent}
               onUpdateTodo={updateTodo}

@@ -1350,6 +1350,183 @@ fieldset {
   font-size: 0.75rem;
 }
 
+.todo-date-list {
+  display: grid;
+  gap: 12px;
+}
+
+.todo-date-section {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.todo-date-section > header {
+  min-height: 56px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-subtle);
+}
+
+.todo-date-section > header > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.todo-date-section > header time {
+  font-size: 0.92rem;
+  font-weight: 750;
+}
+
+.todo-date-section > header span {
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 0.65rem;
+  font-weight: 750;
+}
+
+.todo-date-section > header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.todo-date-rows {
+  display: grid;
+}
+
+.todo-date-row {
+  position: relative;
+  min-height: 76px;
+  padding: 12px 16px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.todo-date-row::before {
+  position: absolute;
+  top: 13px;
+  bottom: 13px;
+  left: 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--line-strong);
+  content: '';
+}
+
+.todo-date-row.color-blue::before { background: var(--accent); }
+.todo-date-row.color-coral::before { background: #d65c4a; }
+.todo-date-row.color-green::before { background: var(--success); }
+
+.todo-date-row + .todo-date-row {
+  border-top: 1px solid var(--line);
+}
+
+.todo-date-row.completed {
+  opacity: 0.58;
+}
+
+.todo-date-row.completed .todo-date-copy a {
+  text-decoration: line-through;
+}
+
+.todo-date-copy {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.todo-date-copy > div {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.todo-date-copy a {
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todo-date-copy a:hover {
+  color: var(--accent);
+}
+
+.todo-date-copy > div > span {
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface-subtle);
+  font-size: 0.65rem;
+  font-weight: 650;
+}
+
+.todo-date-copy p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.69rem;
+}
+
+.todo-date-row > button,
+.todo-date-room-link {
+  min-height: 29px;
+  padding: 0 9px;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.todo-date-room-link {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.todo-date-list-empty {
+  min-height: 340px;
+  padding: 40px 20px;
+  place-items: center;
+  align-content: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--muted);
+  text-align: center;
+}
+
+.todo-date-list-empty > span {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+
+.todo-date-list-empty strong {
+  color: var(--text);
+}
+
+.todo-date-list-empty p {
+  margin: -4px 0 6px;
+  font-size: 0.74rem;
+}
+
 .todo-kanban {
   padding: 14px;
   overflow-x: auto;
@@ -4987,6 +5164,26 @@ footer a {
 
   .todo-project-row {
     grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .todo-date-section > header {
+    min-height: 62px;
+    padding: 10px 13px;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+  }
+
+  .todo-date-row {
+    padding: 13px;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .todo-date-row > button,
+  .todo-date-room-link {
+    grid-column: 2;
+    justify-self: start;
   }
 
   .todo-project-row > time {
