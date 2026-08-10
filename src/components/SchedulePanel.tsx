@@ -4,12 +4,15 @@ import type {
   CalendarEventInput,
 } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
+import type { PlannerProject } from '../data/projects'
 import { formatSelectedDate } from '../lib/date'
 import EventEditorModal from './EventEditorModal'
 
 type SchedulePanelProps = {
   selectedDate: Date
   events: CalendarEvent[]
+  projects: PlannerProject[]
+  defaultProjectName?: string
   onAddEvent: (event: CalendarEventInput) => void
   onUpdateEvent: (eventId: string, event: CalendarEventInput) => void
   onRemoveEvent: (eventId: string) => void
@@ -46,6 +49,8 @@ const formatDuration = (minutes: number) => {
 export default function SchedulePanel({
   selectedDate,
   events,
+  projects,
+  defaultProjectName,
   onAddEvent,
   onUpdateEvent,
   onRemoveEvent,
@@ -128,7 +133,7 @@ export default function SchedulePanel({
               <div className="schedule-item-copy">
                 <div className="schedule-item-title">
                   <h3>{item.title}</h3>
-                  <span>{item.category}</span>
+                  <span>{item.project ?? '받은 편지함'}</span>
                   {item.repeat !== 'none' && <span>{repeatLabels[item.repeat]}</span>}
                 </div>
                 <div className="schedule-item-meta">
@@ -189,6 +194,8 @@ export default function SchedulePanel({
       {isEditorOpen && (
         <EventEditorModal
           selectedDate={selectedDate}
+          projects={projects}
+          defaultProjectName={defaultProjectName}
           event={editingEvent}
           onClose={closeEditor}
           onSave={saveEvent}

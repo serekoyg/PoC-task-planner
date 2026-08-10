@@ -18,9 +18,10 @@ import {
   toDateKey,
 } from './data/initialData'
 import {
-  createInitialProjectCategories,
-  type ProjectCategory,
-  type ProjectCreateInput,
+  createInitialProjects,
+  normalizeProjects,
+  type PlannerProject,
+  type ProjectInput,
 } from './data/projects'
 import {
   createInitialStudyRooms,
@@ -32,7 +33,6 @@ import CalendarPage from './pages/CalendarPage'
 import FocusResultPage from './pages/FocusResultPage'
 import FocusSessionPage from './pages/FocusSessionPage'
 import ProfilePage from './pages/ProfilePage'
-import ProjectsPage from './pages/ProjectsPage'
 import StudyRoomDetailPage from './pages/StudyRoomDetailPage'
 import StudyRoomsPage from './pages/StudyRoomsPage'
 import TaskDetailPage from './pages/TaskDetailPage'
@@ -42,7 +42,8 @@ const TODO_STORAGE_KEY = 'haru.todos'
 const EVENT_STORAGE_KEY = 'haru.events'
 const STUDY_STORAGE_KEY = 'haru.study-rooms'
 const FOCUS_STORAGE_KEY = 'haru.focus-results'
-const PROJECT_STORAGE_KEY = 'haru.project-categories'
+const PROJECT_STORAGE_KEY = 'haru.projects'
+const LEGACY_PROJECT_STORAGE_KEY = 'haru.project-categories'
 
 const readStorage = <T,>(key: string, fallback: () => T): T => {
   try {
@@ -50,6 +51,17 @@ const readStorage = <T,>(key: string, fallback: () => T): T => {
     return saved ? (JSON.parse(saved) as T) : fallback()
   } catch {
     return fallback()
+  }
+}
+
+const readProjects = (): PlannerProject[] => {
+  try {
+    const saved =
+      localStorage.getItem(PROJECT_STORAGE_KEY) ??
+      localStorage.getItem(LEGACY_PROJECT_STORAGE_KEY)
+    return saved ? normalizeProjects(JSON.parse(saved)) : createInitialProjects()
+  } catch {
+    return createInitialProjects()
   }
 }
 
@@ -248,17 +260,13 @@ export default function App() {
   )
   const [todos, setTodos] = useState<Todo[]>(readTodos)
   const [events, setEvents] = useState<CalendarEvent[]>(readEvents)
-  const [projectCategories, setProjectCategories] = useState<ProjectCategory[]>(
-    () => readStorage(PROJECT_STORAGE_KEY, createInitialProjectCategories),
-  )
+  const [projects, setProjects] = useState<PlannerProject[]>(readProjects)
   const [studyRooms, setStudyRooms] = useState<StudyRoom[]>(() =>
     readStudyRooms(),
   )
   const [focusResults, setFocusResults] = useState<Record<string, number>>(() =>
     readStorage(FOCUS_STORAGE_KEY, () => ({})),
   )
-  const selectedKey = toDateKey(selectedDate)
-
   useEffect(() => {
     localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(todos))
   }, [todos])
@@ -276,8 +284,8 @@ export default function App() {
   }, [focusResults])
 
   useEffect(() => {
-    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(projectCategories))
-  }, [projectCategories])
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(projects))
+  }, [projects])
 
   useEffect(() => {
     setIsProfileMenuOpen(false)
@@ -361,82 +369,61 @@ export default function App() {
     )
   }
 
-  const addProjectTodo = (projectName: string, text: string) => {
-    const newTodo: Todo = {
-      id: crypto.randomUUID(),
-      date: selectedKey,
-      text,
-      done: false,
-      priority: 'medium',
-      category: '업무',
-      dueTime: '',
-      reminder: 'none',
-      color: 'blue',
-      note: '',
-      project: projectName,
-      estimatedMinutes: 30,
-    }
-
-    setTodos((current) => [...current, newTodo])
-  }
-
-  const toggleProjectTodo = (todoId: string) => {
-    setTodos((current) =>
-      current.map((todo) =>
-        todo.id === todoId ? { ...todo, done: !todo.done } : todo,
-      ),
-    )
-  }
-
-  const addProjectEvent = (
-    projectName: string,
-    title: string,
-    time: string,
-  ) => {
-    setEvents((current) => [
-      ...current,
-      {
-        id: crypto.randomUUID(),
-        date: selectedKey,
-        title,
-        startTime: time,
-        endTime: getDefaultEndTime(time),
-        allDay: false,
-        color: 'coral',
-        project: projectName,
-        category: '업무',
-        location: '',
-        note: '',
-        repeat: 'none',
-        reminder: 'none',
-      },
-    ])
-  }
-
-  const createProject = (input: ProjectCreateInput) => {
+  const createProject = (input: ProjectInput) => {
     const projectId = `project-${crypto.randomUUID()}`
 
-    setProjectCategories((current) =>
-      current.map((category) =>
-        category.id === input.categoryId
-          ? {
-              ...category,
-              projects: [
-                ...category.projects,
-                {
-                  id: projectId,
-                  name: input.name,
-                  description: input.description,
-                  accent: input.accent,
-                  goal: '첫 할 일과 일정을 연결해 보세요',
-                },
-              ],
-            }
-          : category,
+    setProjects((current) => [...current, { id: projectId, ...input }])
+
+    return projectId
+  }
+
+  const updateProject = (projectId: string, input: ProjectInput) => {
+    const previousProject = projects.find((project) => project.id === projectId)
+    if (!previousProject) return
+
+    setProjects((current) =>
+      current.map((project) =>
+        project.id === projectId ? { ...project, ...input } : project,
       ),
     )
 
-    return projectId
+    if (previousProject.name !== input.name) {
+      setTodos((current) =>
+        current.map((todo) =>
+          todo.project === previousProject.name
+            ? { ...todo, project: input.name }
+            : todo,
+        ),
+      )
+      setEvents((current) =>
+        current.map((event) =>
+          event.project === previousProject.name
+            ? { ...event, project: input.name }
+            : event,
+        ),
+      )
+    }
+  }
+
+  const deleteProject = (projectId: string) => {
+    const project = projects.find((item) => item.id === projectId)
+    if (!project) return
+
+    setProjects((current) => current.filter((item) => item.id !== projectId))
+    setTodos((current) =>
+      current.map((todo) =>
+        todo.project === project.name
+          ? { ...todo, project: '받은 편지함' }
+          : todo,
+      ),
+    )
+    setEvents((current) =>
+      current.map((event) =>
+        event.project === project.name
+          ? { ...event, project: '받은 편지함' }
+          : event,
+      ),
+    )
   }
 
   const toggleTodo = (todoId: string) => {
@@ -564,10 +551,6 @@ export default function App() {
             <span aria-hidden="true">✓</span>
             <span className="nav-label">할 일</span>
           </NavLink>
-          <NavLink to="/projects">
-            <span aria-hidden="true">◆</span>
-            <span className="nav-label">계획</span>
-          </NavLink>
           <NavLink to="/studies">
             <span aria-hidden="true">◉</span>
             <span className="nav-label">모임</span>
@@ -637,6 +620,7 @@ export default function App() {
               selectedDate={selectedDate}
               visibleMonth={visibleMonth}
               events={events}
+              projects={projects}
               onSelectDate={selectDate}
               onMoveMonth={(amount) =>
                 setVisibleMonth(
@@ -652,6 +636,9 @@ export default function App() {
               onAddEvent={addEvent}
               onUpdateEvent={updateEvent}
               onRemoveEvent={removeEvent}
+              onCreateProject={createProject}
+              onUpdateProject={updateProject}
+              onDeleteProject={deleteProject}
             />
           }
         />
@@ -661,29 +648,22 @@ export default function App() {
             <TodosPage
               today={today}
               selectedDate={selectedDate}
-              todos={todos.filter((todo) => todo.date === selectedKey)}
+              todos={todos}
+              projects={projects}
               onSelectDate={selectDate}
               onAddTodo={addTodo}
               onUpdateTodo={updateTodo}
               onToggleTodo={toggleTodo}
               onRemoveTodo={removeTodo}
+              onCreateProject={createProject}
+              onUpdateProject={updateProject}
+              onDeleteProject={deleteProject}
             />
           }
         />
         <Route
           path="/projects/:projectId?"
-          element={
-            <ProjectsPage
-              categories={projectCategories}
-              todos={todos}
-              events={events}
-              todayKey={selectedKey}
-              onCreateProject={createProject}
-              onAddTodo={addProjectTodo}
-              onToggleTodo={toggleProjectTodo}
-              onAddEvent={addProjectEvent}
-            />
-          }
+          element={<Navigate to="/todos" replace />}
         />
         <Route
           path="/todos/:todoId"

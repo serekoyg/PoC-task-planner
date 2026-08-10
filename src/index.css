@@ -342,7 +342,6 @@ ol {
 .todo-page-heading,
 .study-section-heading,
 .profile-section-heading,
-.project-panel-heading,
 .study-panel-heading {
   display: flex;
   align-items: flex-start;
@@ -353,7 +352,6 @@ ol {
 .section-heading h2,
 .study-section-heading h2,
 .profile-section-heading h2,
-.project-panel-heading h2,
 .study-panel-heading h2 {
   margin-bottom: 0;
 }
@@ -376,11 +374,13 @@ ol {
 .task-detail-card,
 .task-flow-hint,
 .focus-result-hero,
-.focus-next-step,
-.project-tree,
-.project-hero,
-.project-task-panel,
-.project-schedule-panel {
+.focus-next-step {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.shared-project-sidebar {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -422,8 +422,6 @@ button:hover,
 .room-join-button,
 .focus-console > button,
 .project-modal-actions button:last-child,
-.project-event-form > button,
-.project-quick-form > button,
 .finish-task-option button,
 .reschedule-task-option button {
   color: #fff;
@@ -469,6 +467,139 @@ fieldset {
 }
 
 /* Calendar and schedule */
+.project-filter-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.project-filter-content {
+  min-width: 0;
+  display: grid;
+  gap: 20px;
+}
+
+.shared-project-sidebar {
+  position: sticky;
+  top: 76px;
+  padding: 14px;
+}
+
+.shared-project-heading {
+  padding-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+}
+
+.shared-project-heading h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.shared-project-heading button {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+}
+
+.shared-project-description {
+  margin: 10px 2px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.shared-project-list {
+  display: grid;
+  gap: 3px;
+}
+
+.shared-project-list > button,
+.shared-project-row > button:first-child {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 8px;
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.76rem;
+  text-align: left;
+}
+
+.shared-project-list button.active {
+  color: var(--text);
+  background: var(--surface-subtle);
+}
+
+.shared-project-list small {
+  color: var(--muted);
+}
+
+.shared-project-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.shared-project-edit {
+  min-width: 28px;
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+}
+
+.project-filter-icon {
+  width: 8px;
+  height: 8px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 0.62rem;
+  background: var(--line-strong);
+}
+
+.project-filter-icon.all,
+.project-filter-icon.inbox {
+  width: 12px;
+  height: 12px;
+  background: transparent;
+}
+
+.project-filter-icon.coral {
+  background: #d65c4a;
+}
+
+.project-filter-icon.blue {
+  background: var(--accent);
+}
+
+.project-filter-icon.green {
+  background: var(--success);
+}
+
+.project-filter-icon.violet {
+  background: #7c3aed;
+}
+
+.shared-project-add {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 10px;
+  border-style: dashed;
+  color: var(--muted);
+  background: transparent;
+}
+
 .schedule-panel {
   padding: 22px;
   display: grid;
@@ -555,8 +686,7 @@ fieldset {
 .room-live-count,
 .study-detail-badges > span,
 .member-status,
-.task-detail-badges > span,
-.project-priority {
+.task-detail-badges > span {
   width: fit-content;
   padding: 3px 7px;
   border-radius: 999px;
@@ -810,8 +940,7 @@ fieldset {
 
 .progress-track,
 .room-progress-track,
-.weekly-progress-visual,
-.project-progress-card > div {
+.weekly-progress-visual {
   height: 5px;
   margin: 14px 0 18px;
   overflow: hidden;
@@ -821,8 +950,7 @@ fieldset {
 
 .progress-track span,
 .room-progress-track span,
-.weekly-progress-visual span,
-.project-progress-card > div i {
+.weekly-progress-visual span {
   height: 100%;
   display: block;
   border-radius: inherit;
@@ -889,16 +1017,14 @@ fieldset {
   text-decoration: line-through;
 }
 
-.todo-check-control input,
-.project-task-list label input {
+.todo-check-control input {
   position: absolute;
   width: 20px;
   min-height: 20px;
   opacity: 0;
 }
 
-.custom-checkbox,
-.project-task-list label > span[aria-hidden="true"] {
+.custom-checkbox {
   width: 20px;
   height: 20px;
   display: grid;
@@ -909,8 +1035,7 @@ fieldset {
   cursor: pointer;
 }
 
-.todo-check-control input:checked + .custom-checkbox,
-.project-task-list label input:checked + span {
+.todo-check-control input:checked + .custom-checkbox {
   color: #fff;
   border-color: var(--success);
   background: var(--success);
@@ -970,8 +1095,6 @@ fieldset {
 }
 
 .empty-todos,
-.project-panel-empty,
-.project-empty-state,
 .task-missing,
 .study-room-missing {
   padding: 44px 20px;
@@ -980,7 +1103,6 @@ fieldset {
 }
 
 .empty-todos > span,
-.project-panel-empty > span,
 .task-missing > span,
 .study-room-missing > span {
   width: 34px;
@@ -1134,8 +1256,7 @@ fieldset {
 
 .event-color-field label > span,
 .project-color-options label > span,
-.project-tree-children a > span,
-.project-event-list article > span {
+.project-filter-icon {
   width: 8px;
   height: 8px;
   margin: 0;
@@ -1144,23 +1265,17 @@ fieldset {
 }
 
 .event-color-field .coral,
-.project-color-options .coral,
-.project-tree-children .coral,
-.project-event-list .coral {
+.project-color-options .coral {
   background: #d65c4a;
 }
 
 .event-color-field .green,
-.project-color-options .green,
-.project-tree-children .green,
-.project-event-list .green {
+.project-color-options .green {
   background: var(--success);
 }
 
 .event-color-field .violet,
-.project-color-options .violet,
-.project-tree-children .violet,
-.project-event-list .violet {
+.project-color-options .violet {
   background: #7c3aed;
 }
 
@@ -1187,6 +1302,16 @@ fieldset {
   gap: 8px;
 }
 
+.project-modal-actions > div:last-child {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.project-modal-actions > div:first-child:empty {
+  display: none;
+}
+
 .event-delete-button {
   color: var(--danger);
   border-color: #efc5c1;
@@ -1204,321 +1329,6 @@ fieldset {
   color: #fff;
   border-color: var(--danger);
   background: var(--danger);
-}
-
-/* Projects */
-.projects-page {
-  width: min(1240px, calc(100% - 32px));
-  margin: 28px auto 64px;
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
-  align-items: start;
-  gap: 18px;
-}
-
-.project-tree {
-  position: sticky;
-  top: 78px;
-  padding: 14px;
-}
-
-.project-tree-heading,
-.project-overview-link,
-.project-category-button,
-.project-tree-children a {
-  display: flex;
-  align-items: center;
-}
-
-.project-tree-heading {
-  justify-content: space-between;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--line);
-}
-
-.project-tree-heading h1 {
-  margin: 0;
-  font-size: 1.25rem;
-}
-
-.project-tree-heading button {
-  min-width: 34px;
-  min-height: 34px;
-  padding: 0;
-}
-
-.project-overview-link {
-  padding: 12px 4px;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--line);
-  font-size: 0.8rem;
-}
-
-.project-overview-link a {
-  text-decoration: none;
-}
-
-.project-category-tree {
-  padding: 8px 0;
-  display: grid;
-  gap: 4px;
-}
-
-.project-category-button {
-  width: 100%;
-  min-height: 34px;
-  padding: 0 6px;
-  gap: 7px;
-  justify-content: flex-start;
-  border: 0;
-  background: transparent;
-  font-size: 0.78rem;
-}
-
-.project-category-button small {
-  margin-left: auto;
-  color: var(--muted);
-}
-
-.project-category-button i {
-  color: var(--muted);
-  font-style: normal;
-}
-
-.project-tree-children {
-  display: grid;
-  gap: 2px;
-}
-
-.project-tree-children a {
-  min-height: 34px;
-  padding: 0 8px 0 27px;
-  gap: 8px;
-  border-radius: 6px;
-  color: var(--muted);
-  font-size: 0.78rem;
-  text-decoration: none;
-}
-
-.project-tree-children a:hover,
-.project-tree-children a.active {
-  color: var(--text);
-  background: var(--surface-subtle);
-}
-
-.project-tree-children a small {
-  margin-left: auto;
-}
-
-.project-tree-add {
-  width: 100%;
-  min-height: 36px;
-  margin-top: 8px;
-  border-style: dashed;
-  color: var(--muted);
-  background: transparent;
-}
-
-.project-workspace {
-  min-width: 0;
-  display: grid;
-  gap: 14px;
-}
-
-.project-hero {
-  padding: 20px;
-}
-
-.project-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
-.project-breadcrumb i {
-  font-style: normal;
-}
-
-.project-hero-main {
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 210px;
-  gap: 20px;
-}
-
-.project-hero-main p {
-  margin-bottom: 0;
-  color: var(--muted);
-}
-
-.project-progress-card {
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-subtle);
-}
-
-.project-progress-card span,
-.project-progress-card strong,
-.project-progress-card small {
-  display: block;
-}
-
-.project-progress-card strong {
-  margin-top: 3px;
-  font-size: 1.35rem;
-}
-
-.project-progress-card > div {
-  margin: 9px 0;
-  background: var(--surface);
-}
-
-.project-progress-card small {
-  color: var(--muted);
-  font-size: 0.68rem;
-}
-
-.project-goal-line {
-  margin-top: 16px;
-  padding-top: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-top: 1px solid var(--line);
-}
-
-.project-goal-line small {
-  color: var(--muted);
-}
-
-.project-content-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
-  gap: 14px;
-}
-
-.project-task-panel,
-.project-schedule-panel {
-  padding: 18px;
-}
-
-.project-panel-heading {
-  align-items: center;
-  margin-bottom: 14px;
-}
-
-.project-panel-heading > span {
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
-.project-quick-form {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-}
-
-.project-quick-form > span {
-  color: var(--muted);
-}
-
-.project-task-list {
-  margin-top: 14px;
-  display: grid;
-  gap: 6px;
-}
-
-.project-task-list li {
-  padding: 10px;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-}
-
-.project-task-list li.completed {
-  opacity: 0.55;
-}
-
-.project-task-list li.completed strong {
-  text-decoration: line-through;
-}
-
-.project-task-list a {
-  min-width: 0;
-  text-decoration: none;
-}
-
-.project-task-list a strong,
-.project-task-list a small {
-  display: block;
-}
-
-.project-task-list a small {
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: 0.68rem;
-}
-
-.project-priority.priority-high {
-  color: var(--danger);
-}
-
-.project-priority.priority-low {
-  color: var(--success);
-}
-
-.project-event-form {
-  display: grid;
-  grid-template-columns: 100px minmax(0, 1fr);
-  gap: 8px;
-}
-
-.project-event-form > button {
-  grid-column: 1 / -1;
-}
-
-.project-event-list {
-  margin-top: 14px;
-  display: grid;
-  gap: 6px;
-}
-
-.project-event-list article {
-  padding: 10px 0;
-  display: grid;
-  grid-template-columns: 66px 8px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  border-bottom: 1px solid var(--line);
-}
-
-.project-event-list time strong,
-.project-event-list time small {
-  display: block;
-}
-
-.project-event-list time small {
-  color: var(--muted);
-  font-size: 0.65rem;
-}
-
-.project-event-list p {
-  margin: 0;
-}
-
-.project-panel-empty {
-  padding: 34px 10px;
-}
-
-.project-panel-empty.compact {
-  padding: 24px 10px;
 }
 
 /* Studies */
@@ -2469,7 +2279,6 @@ footer a {
   .schedule-panel,
   .study-detail-hero,
   .study-detail-grid,
-  .project-content-grid,
   .profile-dashboard,
   .task-detail-card {
     grid-template-columns: 1fr;
@@ -2487,12 +2296,8 @@ footer a {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .projects-page {
-    grid-template-columns: 210px minmax(0, 1fr);
-  }
-
-  .project-hero-main {
-    grid-template-columns: 1fr;
+  .project-filter-layout {
+    grid-template-columns: 190px minmax(0, 1fr);
   }
 
   .task-focus-invitation {
@@ -2533,11 +2338,27 @@ footer a {
   .todos-page,
   .study-page,
   .profile-page,
-  .task-flow-page,
-  .projects-page {
+  .task-flow-page {
     width: min(100% - 20px, var(--content));
     margin-top: 18px;
     margin-bottom: 40px;
+  }
+
+  .project-filter-layout {
+    display: block;
+  }
+
+  .shared-project-sidebar {
+    position: static;
+    margin-bottom: 14px;
+  }
+
+  .shared-project-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shared-project-row {
+    min-width: 0;
   }
 
   .section-heading,
@@ -2569,10 +2390,7 @@ footer a {
   .profile-rooms,
   .task-detail-card,
   .focus-result-hero,
-  .focus-next-step,
-  .project-hero,
-  .project-task-panel,
-  .project-schedule-panel {
+  .focus-next-step {
     padding: 15px;
   }
 
@@ -2630,6 +2448,11 @@ footer a {
     flex-direction: column-reverse;
   }
 
+  .project-modal-actions > div:last-child {
+    width: 100%;
+    margin-left: 0;
+  }
+
   .event-form-actions > div:last-child {
     margin-left: 0;
   }
@@ -2675,31 +2498,6 @@ footer a {
     grid-column: 3;
   }
 
-  .projects-page {
-    display: block;
-  }
-
-  .project-tree {
-    position: static;
-    margin-bottom: 12px;
-  }
-
-  .project-tree-children {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .project-tree-children a {
-    padding-left: 8px;
-  }
-
-  .project-event-form {
-    grid-template-columns: 1fr;
-  }
-
-  .project-event-form > button {
-    grid-column: auto;
-  }
-
   .focus-timer-ring {
     width: 210px;
     height: 210px;
@@ -2732,10 +2530,6 @@ footer a {
   .add-todo-button,
   .today-button {
     width: 100%;
-  }
-
-  .project-tree-children {
-    grid-template-columns: 1fr;
   }
 
   .weekly-focus-chart {
