@@ -18,6 +18,11 @@ import {
   toDateKey,
 } from './data/initialData'
 import {
+  createInitialProjectCategories,
+  type ProjectCategory,
+  type ProjectCreateInput,
+} from './data/projects'
+import {
   createInitialStudyRooms,
   type StudyRoom,
   type StudyRoomCreateInput,
@@ -27,6 +32,7 @@ import CalendarPage from './pages/CalendarPage'
 import FocusResultPage from './pages/FocusResultPage'
 import FocusSessionPage from './pages/FocusSessionPage'
 import ProfilePage from './pages/ProfilePage'
+import ProjectsPage from './pages/ProjectsPage'
 import StudyRoomDetailPage from './pages/StudyRoomDetailPage'
 import StudyRoomsPage from './pages/StudyRoomsPage'
 import TaskDetailPage from './pages/TaskDetailPage'
@@ -36,6 +42,7 @@ const TODO_STORAGE_KEY = 'haru.todos'
 const EVENT_STORAGE_KEY = 'haru.events'
 const STUDY_STORAGE_KEY = 'haru.study-rooms'
 const FOCUS_STORAGE_KEY = 'haru.focus-results'
+const PROJECT_STORAGE_KEY = 'haru.project-categories'
 
 const readStorage = <T,>(key: string, fallback: () => T): T => {
   try {
@@ -54,6 +61,20 @@ const getDefaultEndTime = (startTime: string) => {
   ).padStart(2, '0')}`
 }
 
+const eventProjects: Record<string, string> = {
+  '주간 계획 회의': '주간 계획',
+  '화면 프로토타입 리뷰': '하루 리뉴얼',
+  '다음 스프린트 정리': '팀 운영',
+  '아이디어 공유': '하루 리뉴얼',
+}
+
+const todoProjects: Record<string, string> = {
+  '이번 주 우선순위 정리하기': '주간 계획',
+  '캘린더 화면 피드백 남기기': '하루 리뉴얼',
+  '오후 회의 자료 훑어보기': '팀 운영',
+  '프로토타입 검토 결과 공유하기': '하루 리뉴얼',
+}
+
 const readEvents = () =>
   readStorage<CalendarEvent[]>(EVENT_STORAGE_KEY, createInitialEvents).map(
     (event) => {
@@ -68,6 +89,7 @@ const readEvents = () =>
         note: event.note ?? '',
         repeat: event.repeat ?? 'none',
         reminder: event.reminder ?? 'none',
+        project: event.project ?? eventProjects[event.title] ?? '받은 편지함',
       }
     },
   )
@@ -95,7 +117,7 @@ const normalizeTodo = (todo: LegacyTodo, date: string): Todo => ({
   reminder: todo.reminder ?? 'none',
   color: todo.color ?? 'blue',
   note: todo.note ?? todo.memo ?? '',
-  project: todo.project,
+  project: todo.project ?? todoProjects[todo.text] ?? '받은 편지함',
   estimatedMinutes: todo.estimatedMinutes ?? 30,
   memo: todo.memo,
 })
@@ -225,8 +247,9 @@ export default function App() {
     new Date(today.getFullYear(), today.getMonth(), 1),
   )
   const [todos, setTodos] = useState<Todo[]>(readTodos)
-  const [events, setEvents] = useState<CalendarEvent[]>(() =>
-    readEvents(),
+  const [events, setEvents] = useState<CalendarEvent[]>(readEvents)
+  const [projectCategories, setProjectCategories] = useState<ProjectCategory[]>(
+    () => readStorage(PROJECT_STORAGE_KEY, createInitialProjectCategories),
   )
   const [studyRooms, setStudyRooms] = useState<StudyRoom[]>(() =>
     readStudyRooms(),
@@ -251,6 +274,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(FOCUS_STORAGE_KEY, JSON.stringify(focusResults))
   }, [focusResults])
+
+  useEffect(() => {
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(projectCategories))
+  }, [projectCategories])
 
   useEffect(() => {
     setIsProfileMenuOpen(false)
@@ -299,13 +326,16 @@ export default function App() {
       {
         id: crypto.randomUUID(),
         ...event,
+        project: event.project ?? '받은 편지함',
       },
     ])
   }
 
   const updateEvent = (eventId: string, event: CalendarEventInput) => {
     setEvents((current) =>
-      current.map((item) => (item.id === eventId ? { id: eventId, ...event } : item)),
+      current.map((item) =>
+        item.id === eventId ? { ...item, ...event, id: eventId } : item,
+      ),
     )
   }
 
@@ -329,6 +359,84 @@ export default function App() {
         todo.id === todoId ? { ...todo, ...input } : todo,
       ),
     )
+  }
+
+  const addProjectTodo = (projectName: string, text: string) => {
+    const newTodo: Todo = {
+      id: crypto.randomUUID(),
+      date: selectedKey,
+      text,
+      done: false,
+      priority: 'medium',
+      category: '업무',
+      dueTime: '',
+      reminder: 'none',
+      color: 'blue',
+      note: '',
+      project: projectName,
+      estimatedMinutes: 30,
+    }
+
+    setTodos((current) => [...current, newTodo])
+  }
+
+  const toggleProjectTodo = (todoId: string) => {
+    setTodos((current) =>
+      current.map((todo) =>
+        todo.id === todoId ? { ...todo, done: !todo.done } : todo,
+      ),
+    )
+  }
+
+  const addProjectEvent = (
+    projectName: string,
+    title: string,
+    time: string,
+  ) => {
+    setEvents((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        date: selectedKey,
+        title,
+        startTime: time,
+        endTime: getDefaultEndTime(time),
+        allDay: false,
+        color: 'coral',
+        project: projectName,
+        category: '업무',
+        location: '',
+        note: '',
+        repeat: 'none',
+        reminder: 'none',
+      },
+    ])
+  }
+
+  const createProject = (input: ProjectCreateInput) => {
+    const projectId = `project-${crypto.randomUUID()}`
+
+    setProjectCategories((current) =>
+      current.map((category) =>
+        category.id === input.categoryId
+          ? {
+              ...category,
+              projects: [
+                ...category.projects,
+                {
+                  id: projectId,
+                  name: input.name,
+                  description: input.description,
+                  accent: input.accent,
+                  goal: '첫 할 일과 일정을 연결해 보세요',
+                },
+              ],
+            }
+          : category,
+      ),
+    )
+
+    return projectId
   }
 
   const toggleTodo = (todoId: string) => {
@@ -450,15 +558,19 @@ export default function App() {
         <nav className="primary-nav" aria-label="주요 메뉴">
           <NavLink to="/calendar">
             <span aria-hidden="true">▦</span>
-            캘린더
+            <span className="nav-label">캘린더</span>
           </NavLink>
           <NavLink to="/todos">
             <span aria-hidden="true">✓</span>
-            할 일
+            <span className="nav-label">할 일</span>
+          </NavLink>
+          <NavLink to="/projects">
+            <span aria-hidden="true">◆</span>
+            <span className="nav-label">계획</span>
           </NavLink>
           <NavLink to="/studies">
             <span aria-hidden="true">◉</span>
-            모임
+            <span className="nav-label">모임</span>
           </NavLink>
         </nav>
 
@@ -555,6 +667,21 @@ export default function App() {
               onUpdateTodo={updateTodo}
               onToggleTodo={toggleTodo}
               onRemoveTodo={removeTodo}
+            />
+          }
+        />
+        <Route
+          path="/projects/:projectId?"
+          element={
+            <ProjectsPage
+              categories={projectCategories}
+              todos={todos}
+              events={events}
+              todayKey={selectedKey}
+              onCreateProject={createProject}
+              onAddTodo={addProjectTodo}
+              onToggleTodo={toggleProjectTodo}
+              onAddEvent={addProjectEvent}
             />
           }
         />

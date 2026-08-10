@@ -24,6 +24,7 @@ export type CalendarEvent = {
   endTime: string
   allDay: boolean
   color: 'coral' | 'blue' | 'green'
+  project?: string
   category: '개인' | '업무' | '약속' | '운동' | '기타'
   location: string
   note: string
@@ -123,6 +124,7 @@ export const createInitialEvents = (): CalendarEvent[] => {
       endTime: '11:30',
       allDay: false,
       color: 'coral',
+      project: '주간 계획',
       category: '업무',
       location: '3층 회의실',
       note: '이번 주 우선순위와 담당 업무를 정리합니다.',
@@ -137,6 +139,7 @@ export const createInitialEvents = (): CalendarEvent[] => {
       endTime: '15:30',
       allDay: false,
       color: 'blue',
+      project: '하루 리뉴얼',
       category: '업무',
       location: '온라인 미팅',
       note: '주요 화면 흐름과 다음 실험 범위를 확인합니다.',
@@ -151,6 +154,7 @@ export const createInitialEvents = (): CalendarEvent[] => {
       endTime: '17:30',
       allDay: false,
       color: 'green',
+      project: '팀 운영',
       category: '업무',
       location: '',
       note: '',
@@ -165,6 +169,7 @@ export const createInitialEvents = (): CalendarEvent[] => {
       endTime: '12:00',
       allDay: false,
       color: 'blue',
+      project: '하루 리뉴얼',
       category: '약속',
       location: '라운지',
       note: '',
