@@ -22,14 +22,18 @@ import {
 } from './data/studyRooms'
 import { formatHeaderDate } from './lib/date'
 import CalendarPage from './pages/CalendarPage'
+import FocusResultPage from './pages/FocusResultPage'
+import FocusSessionPage from './pages/FocusSessionPage'
 import ProfilePage from './pages/ProfilePage'
 import StudyRoomDetailPage from './pages/StudyRoomDetailPage'
 import StudyRoomsPage from './pages/StudyRoomsPage'
+import TaskDetailPage from './pages/TaskDetailPage'
 import TodosPage from './pages/TodosPage'
 
 const TODO_STORAGE_KEY = 'haru.todos'
 const EVENT_STORAGE_KEY = 'haru.events'
 const STUDY_STORAGE_KEY = 'haru.study-rooms'
+const FOCUS_STORAGE_KEY = 'haru.focus-results'
 
 const readStorage = <T,>(key: string, fallback: () => T): T => {
   try {
@@ -66,6 +70,82 @@ function StudyRoomRoute({ rooms, onJoinRoom }: StudyRoomRouteProps) {
   )
 }
 
+type TaskEntry = {
+  todo: Todo
+  dateKey: string
+}
+
+const findTask = (
+  todos: Record<string, Todo[]>,
+  todoId?: string,
+): TaskEntry | undefined => {
+  if (!todoId) return undefined
+
+  for (const [dateKey, dateTodos] of Object.entries(todos)) {
+    const todo = dateTodos.find((item) => item.id === todoId)
+    if (todo) return { todo, dateKey }
+  }
+}
+
+type TaskRouteProps = {
+  todos: Record<string, Todo[]>
+  focusResults: Record<string, number>
+}
+
+function TaskDetailRoute({ todos, focusResults }: TaskRouteProps) {
+  const { todoId } = useParams()
+  const task = findTask(todos, todoId)
+
+  return (
+    <TaskDetailPage
+      todo={task?.todo}
+      dateKey={task?.dateKey}
+      focusedSeconds={todoId ? focusResults[todoId] : undefined}
+    />
+  )
+}
+
+type FocusSessionRouteProps = {
+  todos: Record<string, Todo[]>
+  onFinish: (todoId: string, elapsedSeconds: number) => void
+}
+
+function FocusSessionRoute({ todos, onFinish }: FocusSessionRouteProps) {
+  const { todoId } = useParams()
+  const task = findTask(todos, todoId)
+
+  return <FocusSessionPage todo={task?.todo} onFinish={onFinish} />
+}
+
+type FocusResultRouteProps = TaskRouteProps & {
+  onComplete: (todoId: string, dateKey: string) => void
+  onReschedule: (
+    todoId: string,
+    fromDateKey: string,
+    toDateKey: string,
+  ) => void
+}
+
+function FocusResultRoute({
+  todos,
+  focusResults,
+  onComplete,
+  onReschedule,
+}: FocusResultRouteProps) {
+  const { todoId } = useParams()
+  const task = findTask(todos, todoId)
+
+  return (
+    <FocusResultPage
+      todo={task?.todo}
+      dateKey={task?.dateKey}
+      focusedSeconds={todoId ? focusResults[todoId] : undefined}
+      onComplete={onComplete}
+      onReschedule={onReschedule}
+    />
+  )
+}
+
 export default function App() {
   const location = useLocation()
   const today = useMemo(() => new Date(), [])
@@ -84,6 +164,9 @@ export default function App() {
   const [studyRooms, setStudyRooms] = useState<StudyRoom[]>(() =>
     readStudyRooms(),
   )
+  const [focusResults, setFocusResults] = useState<Record<string, number>>(() =>
+    readStorage(FOCUS_STORAGE_KEY, () => ({})),
+  )
   const selectedKey = toDateKey(selectedDate)
 
   useEffect(() => {
@@ -97,6 +180,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STUDY_STORAGE_KEY, JSON.stringify(studyRooms))
   }, [studyRooms])
+
+  useEffect(() => {
+    localStorage.setItem(FOCUS_STORAGE_KEY, JSON.stringify(focusResults))
+  }, [focusResults])
 
   useEffect(() => {
     setIsProfileMenuOpen(false)
@@ -157,6 +244,9 @@ export default function App() {
       id: crypto.randomUUID(),
       text,
       done: false,
+      project: '받은 편지함',
+      estimatedMinutes: 30,
+      priority: '보통',
     }
 
     setTodos((current) => ({
@@ -181,6 +271,48 @@ export default function App() {
         (todo) => todo.id !== todoId,
       ),
     }))
+  }
+
+  const finishFocus = (todoId: string, elapsedSeconds: number) => {
+    setFocusResults((current) => ({
+      ...current,
+      [todoId]: elapsedSeconds,
+    }))
+  }
+
+  const completeTodo = (todoId: string, dateKey: string) => {
+    setTodos((current) => ({
+      ...current,
+      [dateKey]: (current[dateKey] ?? []).map((todo) =>
+        todo.id === todoId ? { ...todo, done: true } : todo,
+      ),
+    }))
+    selectDate(new Date(`${dateKey}T00:00:00`))
+  }
+
+  const rescheduleTodo = (
+    todoId: string,
+    fromDateKey: string,
+    toDateKey: string,
+  ) => {
+    if (fromDateKey === toDateKey) {
+      selectDate(new Date(`${toDateKey}T00:00:00`))
+      return
+    }
+
+    setTodos((current) => {
+      const todo = (current[fromDateKey] ?? []).find((item) => item.id === todoId)
+      if (!todo) return current
+
+      return {
+        ...current,
+        [fromDateKey]: (current[fromDateKey] ?? []).filter(
+          (item) => item.id !== todoId,
+        ),
+        [toDateKey]: [...(current[toDateKey] ?? []), { ...todo, done: false }],
+      }
+    })
+    selectDate(new Date(`${toDateKey}T00:00:00`))
   }
 
   const joinStudyRoom = (roomId: string) => {
@@ -356,6 +488,27 @@ export default function App() {
               onAddTodo={addTodo}
               onToggleTodo={toggleTodo}
               onRemoveTodo={removeTodo}
+            />
+          }
+        />
+        <Route
+          path="/todos/:todoId"
+          element={
+            <TaskDetailRoute todos={todos} focusResults={focusResults} />
+          }
+        />
+        <Route
+          path="/todos/:todoId/focus"
+          element={<FocusSessionRoute todos={todos} onFinish={finishFocus} />}
+        />
+        <Route
+          path="/todos/:todoId/result"
+          element={
+            <FocusResultRoute
+              todos={todos}
+              focusResults={focusResults}
+              onComplete={completeTodo}
+              onReschedule={rescheduleTodo}
             />
           }
         />

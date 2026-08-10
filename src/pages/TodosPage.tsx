@@ -1,6 +1,8 @@
 import { type CSSProperties, FormEvent, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { Todo } from '../data/initialData'
 import { formatSelectedDate, moveDate } from '../lib/date'
+import { getTaskEstimate, getTaskProject } from '../lib/task'
 
 type TodosPageProps = {
   today: Date
@@ -114,7 +116,7 @@ export default function TodosPage({
         <ul className="todo-list todo-page-list">
           {todos.map((todo) => (
             <li className={todo.done ? 'completed' : ''} key={todo.id}>
-              <label>
+              <label className="todo-check">
                 <input
                   type="checkbox"
                   checked={todo.done}
@@ -123,8 +125,21 @@ export default function TodosPage({
                 <span className="custom-checkbox" aria-hidden="true">
                   ✓
                 </span>
-                <span className="todo-text">{todo.text}</span>
+                <span className="sr-only">{todo.text} 완료 상태 변경</span>
               </label>
+              <Link className="todo-task-link" to={`/todos/${todo.id}`}>
+                <span className="todo-text">{todo.text}</span>
+                <small>
+                  {getTaskProject(todo)} · 예상 {getTaskEstimate(todo)}분
+                </small>
+              </Link>
+              <Link
+                className="todo-detail-link"
+                to={`/todos/${todo.id}`}
+                aria-label={`${todo.text} 상세 보기`}
+              >
+                상세 <span aria-hidden="true">›</span>
+              </Link>
               <button
                 className="delete-todo"
                 type="button"
