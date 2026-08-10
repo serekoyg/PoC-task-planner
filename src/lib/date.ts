@@ -12,6 +12,17 @@ export const getCalendarDays = (month: Date) => {
   })
 }
 
+export const getWeekDays = (selectedDate: Date) => {
+  const weekStart = new Date(selectedDate)
+  weekStart.setDate(selectedDate.getDate() - selectedDate.getDay())
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(weekStart)
+    date.setDate(weekStart.getDate() + index)
+    return date
+  })
+}
+
 export const formatSelectedDate = (date: Date) =>
   new Intl.DateTimeFormat('ko-KR', {
     month: 'long',

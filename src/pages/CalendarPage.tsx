@@ -14,11 +14,30 @@ import type { StudyRoom, StudySharedItemEntry } from '../data/studyRooms'
 import {
   formatSelectedDate,
   getCalendarDays,
+  getWeekDays,
   isCalendarEventOnDate,
+  moveDate,
 } from '../lib/date'
 import { isSharedItemOnDate } from '../lib/studyShared'
 
 const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토']
+
+type CalendarView = 'day' | 'week' | 'month'
+
+const viewLabels: Record<CalendarView, string> = {
+  day: '일간',
+  week: '주간',
+  month: '월간',
+}
+
+const formatShortDate = (date: Date) =>
+  `${date.getMonth() + 1}월 ${date.getDate()}일`
+
+const formatWeekTitle = (weekDays: Date[]) => {
+  const start = weekDays[0]
+  const end = weekDays[weekDays.length - 1]
+  return `${start.getFullYear()}년 ${formatShortDate(start)} – ${formatShortDate(end)}`
+}
 
 type CalendarPageProps = {
   today: Date
@@ -63,12 +82,14 @@ export default function CalendarPage({
 }: CalendarPageProps) {
   const [selectedProjectId, setSelectedProjectId] =
     useState<ProjectFilter>('all')
+  const [calendarView, setCalendarView] = useState<CalendarView>('month')
   const selectedKey = toDateKey(selectedDate)
   const todayKey = toDateKey(today)
   const calendarDays = useMemo(
     () => getCalendarDays(visibleMonth),
     [visibleMonth],
   )
+  const weekDays = useMemo(() => getWeekDays(selectedDate), [selectedDate])
   const selectedProject = projects.find(
     (project) => project.id === selectedProjectId,
   )
@@ -91,7 +112,9 @@ export default function CalendarPage({
   )
   const projectCounts = useMemo(() => {
     const counts: Record<string, number> = {
-      all: events.length + sharedItems.filter((entry) => entry.item.type === 'event').length,
+      all:
+        events.length +
+        sharedItems.filter((entry) => entry.item.type === 'event').length,
       inbox: events.filter(isInboxEvent).length,
     }
     projects.forEach((project) => {
@@ -101,6 +124,36 @@ export default function CalendarPage({
     })
     return counts
   }, [events, projects, sharedItems])
+  const selectedProjectName =
+    selectedProject?.name ??
+    (selectedProjectId === 'inbox' ? '받은 편지함' : '모든 프로젝트')
+  const periodTitle =
+    calendarView === 'day'
+      ? formatSelectedDate(selectedDate)
+      : calendarView === 'week'
+        ? formatWeekTitle(weekDays)
+        : `${visibleMonth.getFullYear()}년 ${visibleMonth.getMonth() + 1}월`
+
+  const movePeriod = (amount: number) => {
+    if (calendarView === 'month') {
+      const nextMonth = new Date(
+        visibleMonth.getFullYear(),
+        visibleMonth.getMonth() + amount,
+        1,
+      )
+      onMoveMonth(amount)
+      onSelectDate(nextMonth)
+      return
+    }
+    onSelectDate(
+      moveDate(selectedDate, calendarView === 'week' ? amount * 7 : amount),
+    )
+  }
+
+  const openDayView = (date: Date) => {
+    onSelectDate(date)
+    setCalendarView('day')
+  }
 
   return (
     <main className="planner calendar-page">
@@ -116,33 +169,27 @@ export default function CalendarPage({
           onDeleteProject={onDeleteProject}
         />
 
-        <div className="project-filter-content">
-          <SchedulePanel
-            selectedDate={selectedDate}
-            events={filteredEvents}
-            projects={projects}
-            studyRooms={studyRooms}
-            sharedItems={visibleSharedEvents}
-            defaultProjectName={selectedProject?.name}
-            onAddEvent={onAddEvent}
-            onAddTodo={onAddTodo}
-            onUpdateEvent={onUpdateEvent}
-            onRemoveEvent={onRemoveEvent}
-            onToggleSharedItemStatus={onToggleSharedItemStatus}
-          />
-
-          <section className="calendar-card" aria-labelledby="calendar-title">
-            <div className="section-heading calendar-heading">
-              <div>
-                <p className="eyebrow">
-                  {selectedProject?.name ??
-                    (selectedProjectId === 'inbox' ? '받은 편지함' : '모든 프로젝트')}
-                </p>
-                <h1 id="calendar-title">
-                  {visibleMonth.getFullYear()}년 {visibleMonth.getMonth() + 1}월
-                </h1>
+        <div className="project-filter-content calendar-view-content">
+          <header className="calendar-view-toolbar">
+            <div>
+              <p className="eyebrow">{selectedProjectName}</p>
+              <h1>{periodTitle}</h1>
+            </div>
+            <div className="calendar-view-actions">
+              <div className="calendar-view-tabs" aria-label="캘린더 보기 선택">
+                {(Object.keys(viewLabels) as CalendarView[]).map((view) => (
+                  <button
+                    className={calendarView === view ? 'active' : ''}
+                    type="button"
+                    key={view}
+                    onClick={() => setCalendarView(view)}
+                    aria-pressed={calendarView === view}
+                  >
+                    {viewLabels[view]}
+                  </button>
+                ))}
               </div>
-              <div className="calendar-actions">
+              <div className="calendar-period-navigation">
                 <button
                   className="today-button"
                   type="button"
@@ -150,79 +197,182 @@ export default function CalendarPage({
                 >
                   오늘
                 </button>
-                <div className="month-navigation" aria-label="월 이동">
+                <div
+                  className="month-navigation"
+                  aria-label={`${viewLabels[calendarView]} 이동`}
+                >
                   <button
                     type="button"
-                    onClick={() => onMoveMonth(-1)}
-                    aria-label="이전 달"
+                    onClick={() => movePeriod(-1)}
+                    aria-label={`이전 ${viewLabels[calendarView]}`}
                   >
                     ‹
                   </button>
                   <button
                     type="button"
-                    onClick={() => onMoveMonth(1)}
-                    aria-label="다음 달"
+                    onClick={() => movePeriod(1)}
+                    aria-label={`다음 ${viewLabels[calendarView]}`}
                   >
                     ›
                   </button>
                 </div>
               </div>
             </div>
+          </header>
 
-            <div className="calendar-grid weekday-row" aria-hidden="true">
-              {weekdayLabels.map((weekday) => (
-                <span key={weekday}>{weekday}</span>
-              ))}
-            </div>
+          {calendarView === 'day' && (
+            <SchedulePanel
+              selectedDate={selectedDate}
+              events={filteredEvents}
+              projects={projects}
+              studyRooms={studyRooms}
+              sharedItems={visibleSharedEvents}
+              defaultProjectName={selectedProject?.name}
+              onAddEvent={onAddEvent}
+              onAddTodo={onAddTodo}
+              onUpdateEvent={onUpdateEvent}
+              onRemoveEvent={onRemoveEvent}
+              onToggleSharedItemStatus={onToggleSharedItemStatus}
+            />
+          )}
 
-            <div className="calendar-grid month-grid">
-              {calendarDays.map((date) => {
-                const dateKey = toDateKey(date)
-                const dateEvents = filteredEvents.filter(
-                  (item) => isCalendarEventOnDate(item, dateKey),
-                )
-                const dateSharedEvents = visibleSharedEvents.filter(
-                  (entry) => isSharedItemOnDate(entry.item, dateKey),
-                )
-                const dateEventCount = dateEvents.length + dateSharedEvents.length
-                const isSelected = dateKey === selectedKey
-                const isToday = dateKey === todayKey
-                const isCurrentMonth = date.getMonth() === visibleMonth.getMonth()
+          {calendarView === 'week' && (
+            <section className="calendar-card week-calendar-card" aria-label="주간 일정">
+              <div className="week-calendar-grid">
+                {weekDays.map((date, index) => {
+                  const dateKey = toDateKey(date)
+                  const dateEvents = filteredEvents
+                    .filter((event) => isCalendarEventOnDate(event, dateKey))
+                    .sort((first, second) =>
+                      first.startTime.localeCompare(second.startTime),
+                    )
+                  const dateSharedEvents = visibleSharedEvents.filter((entry) =>
+                    isSharedItemOnDate(entry.item, dateKey),
+                  )
+                  const isSelected = dateKey === selectedKey
+                  const isToday = dateKey === todayKey
 
-                return (
-                  <button
-                    className={`calendar-day${isSelected ? ' selected' : ''}${
-                      isToday ? ' today' : ''
-                    }${isCurrentMonth ? '' : ' muted'}`}
-                    type="button"
-                    key={dateKey}
-                    onClick={() => onSelectDate(date)}
-                    aria-label={`${formatSelectedDate(date)}${
-                      dateEventCount ? `, 일정 ${dateEventCount}개` : ''
-                    }`}
-                    aria-pressed={isSelected}
-                  >
-                    <span className="day-number">{date.getDate()}</span>
-                    <span className="day-events" aria-hidden="true">
-                      {dateEvents.slice(0, 2).map((item) => (
-                        <span className={`event-chip ${item.color}`} key={item.id}>
-                          {item.allDay ? '종일' : item.startTime} {item.title}
-                        </span>
-                      ))}
-                      {dateEvents.length < 2 && dateSharedEvents.slice(0, 2 - dateEvents.length).map((entry) => (
-                        <span className="event-chip blue shared" key={`${entry.roomId}-${entry.item.id}`}>
-                          {entry.item.time ?? '종일'} {entry.item.title}
-                        </span>
-                      ))}
-                      {dateEventCount > 2 && (
-                        <span className="more-events">+{dateEventCount - 2}</span>
-                      )}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </section>
+                  return (
+                    <article
+                      className={`week-day${isSelected ? ' selected' : ''}${
+                        isToday ? ' today' : ''
+                      }`}
+                      key={dateKey}
+                    >
+                      <button
+                        className="week-day-heading"
+                        type="button"
+                        onClick={() => onSelectDate(date)}
+                        aria-label={`${formatSelectedDate(date)} 선택`}
+                        aria-pressed={isSelected}
+                      >
+                        <span>{weekdayLabels[index]}</span>
+                        <strong>{date.getDate()}</strong>
+                      </button>
+                      <div className="week-day-events">
+                        {dateEvents.map((event) => (
+                          <button
+                            className={`week-event ${event.color}`}
+                            type="button"
+                            key={event.id}
+                            onClick={() => openDayView(date)}
+                            aria-label={`${event.title}, 일간 보기에서 열기`}
+                          >
+                            <time>{event.allDay ? '종일' : event.startTime}</time>
+                            <strong>{event.title}</strong>
+                            <small>{event.project ?? '받은 편지함'}</small>
+                          </button>
+                        ))}
+                        {dateSharedEvents.map((entry) => (
+                          <button
+                            className="week-event blue shared"
+                            type="button"
+                            key={`${entry.roomId}-${entry.item.id}`}
+                            onClick={() => openDayView(date)}
+                            aria-label={`${entry.item.title}, 공동 일정, 일간 보기에서 열기`}
+                          >
+                            <time>{entry.item.time ?? '종일'}</time>
+                            <strong>{entry.item.title}</strong>
+                            <small>{entry.roomName} · 공동 일정</small>
+                          </button>
+                        ))}
+                        {!dateEvents.length && !dateSharedEvents.length && (
+                          <span className="week-day-empty">일정 없음</span>
+                        )}
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            </section>
+          )}
+
+          {calendarView === 'month' && (
+            <section className="calendar-card" aria-label="월간 일정">
+              <div className="calendar-grid weekday-row" aria-hidden="true">
+                {weekdayLabels.map((weekday) => (
+                  <span key={weekday}>{weekday}</span>
+                ))}
+              </div>
+
+              <div className="calendar-grid month-grid">
+                {calendarDays.map((date) => {
+                  const dateKey = toDateKey(date)
+                  const dateEvents = filteredEvents.filter((event) =>
+                    isCalendarEventOnDate(event, dateKey),
+                  )
+                  const dateSharedEvents = visibleSharedEvents.filter((entry) =>
+                    isSharedItemOnDate(entry.item, dateKey),
+                  )
+                  const dateEventCount =
+                    dateEvents.length + dateSharedEvents.length
+                  const isSelected = dateKey === selectedKey
+                  const isToday = dateKey === todayKey
+                  const isCurrentMonth =
+                    date.getMonth() === visibleMonth.getMonth()
+
+                  return (
+                    <button
+                      className={`calendar-day${isSelected ? ' selected' : ''}${
+                        isToday ? ' today' : ''
+                      }${isCurrentMonth ? '' : ' muted'}`}
+                      type="button"
+                      key={dateKey}
+                      onClick={() => onSelectDate(date)}
+                      onDoubleClick={() => openDayView(date)}
+                      aria-label={`${formatSelectedDate(date)}${
+                        dateEventCount ? `, 일정 ${dateEventCount}개` : ''
+                      }`}
+                      aria-pressed={isSelected}
+                    >
+                      <span className="day-number">{date.getDate()}</span>
+                      <span className="day-events" aria-hidden="true">
+                        {dateEvents.slice(0, 2).map((item) => (
+                          <span className={`event-chip ${item.color}`} key={item.id}>
+                            {item.allDay ? '종일' : item.startTime} {item.title}
+                          </span>
+                        ))}
+                        {dateEvents.length < 2 &&
+                          dateSharedEvents
+                            .slice(0, 2 - dateEvents.length)
+                            .map((entry) => (
+                              <span
+                                className="event-chip blue shared"
+                                key={`${entry.roomId}-${entry.item.id}`}
+                              >
+                                {entry.item.time ?? '종일'} {entry.item.title}
+                              </span>
+                            ))}
+                        {dateEventCount > 2 && (
+                          <span className="more-events">+{dateEventCount - 2}</span>
+                        )}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </section>
+          )}
         </div>
       </div>
     </main>
