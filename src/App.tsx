@@ -671,7 +671,6 @@ export default function App() {
               selectedDate={selectedDate}
               todos={todos}
               projects={projects}
-              onSelectDate={selectDate}
               onAddTodo={addTodo}
               onUpdateTodo={updateTodo}
               onToggleTodo={toggleTodo}

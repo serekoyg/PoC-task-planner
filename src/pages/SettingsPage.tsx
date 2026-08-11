@@ -105,7 +105,7 @@ const initialValues: Record<string, SettingValue> = {
   language: '한국어',
   dateFormat: '2026년 8월 10일',
   startPage: '오늘 할 일',
-  defaultTodoView: '오늘',
+  defaultTodoView: '날짜별',
   theme: '시스템 설정',
   accent: '파랑',
   sidebarCalendar: true,
@@ -287,7 +287,7 @@ export default function SettingsPage() {
               </select>
             </SettingRow>
             <SettingRow title="할 일 기본 보기" description="할 일 화면에서 처음 사용할 보기예요.">
-              <Choice label="할 일 기본 보기" options={['오늘', '칸반', '프로젝트 목록']} value={String(values.defaultTodoView)} onChange={(value) => setValue('defaultTodoView', value)} />
+              <Choice label="할 일 기본 보기" options={['날짜별', '칸반', '프로젝트 목록']} value={String(values.defaultTodoView)} onChange={(value) => setValue('defaultTodoView', value)} />
             </SettingRow>
           </section>
         )
