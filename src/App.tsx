@@ -33,6 +33,7 @@ import CalendarPage from './pages/CalendarPage'
 import FocusResultPage from './pages/FocusResultPage'
 import FocusSessionPage from './pages/FocusSessionPage'
 import ProfilePage from './pages/ProfilePage'
+import SettingsPage from './pages/SettingsPage'
 import StudyRoomDetailPage from './pages/StudyRoomDetailPage'
 import StudyRoomsPage from './pages/StudyRoomsPage'
 import TaskDetailPage from './pages/TaskDetailPage'
@@ -254,6 +255,9 @@ export default function App() {
   const today = useMemo(() => new Date(), [])
   const profileMenuRef = useRef<HTMLDivElement>(null)
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+  const [profileActionMessage, setProfileActionMessage] = useState(
+    '오늘 오후 9:27에 동기화됨',
+  )
   const [selectedDate, setSelectedDate] = useState(today)
   const [visibleMonth, setVisibleMonth] = useState(
     new Date(today.getFullYear(), today.getMonth(), 1),
@@ -590,20 +594,37 @@ export default function App() {
                     내 프로필
                     <i aria-hidden="true">›</i>
                   </Link>
-                  <Link role="menuitem" to="/todos">
-                    <span aria-hidden="true">✓</span>
-                    오늘 할 일
+                  <Link role="menuitem" to="/settings">
+                    <span aria-hidden="true">⚙</span>
+                    설정
                     <i aria-hidden="true">›</i>
                   </Link>
-                  <Link role="menuitem" to="/studies">
-                    <span aria-hidden="true">◉</span>
-                    참여 중인 모임
+                  <button
+                    role="menuitem"
+                    type="button"
+                    onClick={() =>
+                      setProfileActionMessage('방금 모든 데이터를 동기화했어요')
+                    }
+                  >
+                    <span aria-hidden="true">↻</span>
+                    지금 동기화
                     <i aria-hidden="true">›</i>
-                  </Link>
+                  </button>
                 </div>
-                <p className="profile-menu-message">
-                  이번 주 목표까지 <strong>2일</strong> 남았어요.
+                <p className="profile-menu-message" aria-live="polite">
+                  <span aria-hidden="true">●</span> {profileActionMessage}
                 </p>
+                <button
+                  className="profile-menu-logout"
+                  role="menuitem"
+                  type="button"
+                  onClick={() =>
+                    setProfileActionMessage('데모에서는 실제로 로그아웃하지 않아요')
+                  }
+                >
+                  <span aria-hidden="true">↪</span>
+                  로그아웃
+                </button>
               </div>
             )}
           </div>
@@ -706,6 +727,7 @@ export default function App() {
           path="/profile"
           element={<ProfilePage todos={todos} rooms={studyRooms} />}
         />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/calendar" replace />} />
       </Routes>
 
