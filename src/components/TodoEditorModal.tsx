@@ -1,9 +1,12 @@
 import { FormEvent, useEffect, useState } from 'react'
 import type { Todo, TodoInput } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
+import type { PlannerProject } from '../data/projects'
 
 type TodoEditorModalProps = {
   selectedDate: Date
+  projects: PlannerProject[]
+  defaultProjectName?: string
   todo?: Todo
   onClose: () => void
   onSave: (todo: TodoInput) => void
@@ -16,7 +19,11 @@ const colorOptions: Array<{ value: TodoInput['color']; label: string }> = [
   { value: 'green', label: '그린' },
 ]
 
-const createForm = (selectedDate: Date, todo?: Todo): TodoInput => ({
+const createForm = (
+  selectedDate: Date,
+  todo?: Todo,
+  defaultProjectName?: string,
+): TodoInput => ({
   date: todo?.date ?? toDateKey(selectedDate),
   text: todo?.text ?? '',
   priority: todo?.priority ?? 'medium',
@@ -25,19 +32,23 @@ const createForm = (selectedDate: Date, todo?: Todo): TodoInput => ({
   reminder: todo?.reminder ?? 'none',
   color: todo?.color ?? 'blue',
   note: todo?.note ?? '',
-  project: todo?.project ?? '',
+  project: todo?.project ?? defaultProjectName ?? '받은 편지함',
   estimatedMinutes: todo?.estimatedMinutes ?? 30,
   memo: todo?.memo,
 })
 
 export default function TodoEditorModal({
   selectedDate,
+  projects,
+  defaultProjectName,
   todo,
   onClose,
   onSave,
   onDelete,
 }: TodoEditorModalProps) {
-  const [form, setForm] = useState(() => createForm(selectedDate, todo))
+  const [form, setForm] = useState(() =>
+    createForm(selectedDate, todo, defaultProjectName),
+  )
   const [error, setError] = useState('')
   const [isDeleteConfirming, setIsDeleteConfirming] = useState(false)
   const isEditing = Boolean(todo)
@@ -172,14 +183,17 @@ export default function TodoEditorModal({
           <div className="event-form-row">
             <label>
               <span>프로젝트</span>
-              <input
-                maxLength={30}
-                placeholder="예: 하루 리뉴얼"
-                value={form.project ?? ''}
+              <select
+                value={form.project ?? '받은 편지함'}
                 onChange={(changeEvent) =>
                   setForm({ ...form, project: changeEvent.target.value })
                 }
-              />
+              >
+                <option value="받은 편지함">받은 편지함</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.name}>{project.name}</option>
+                ))}
+              </select>
             </label>
             <label>
               <span>예상 소요 시간</span>

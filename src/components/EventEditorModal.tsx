@@ -4,9 +4,12 @@ import type {
   CalendarEventInput,
 } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
+import type { PlannerProject } from '../data/projects'
 
 type EventEditorModalProps = {
   selectedDate: Date
+  projects: PlannerProject[]
+  defaultProjectName?: string
   event?: CalendarEvent
   onClose: () => void
   onSave: (event: CalendarEventInput) => void
@@ -25,6 +28,7 @@ const colorOptions: Array<{
 const createForm = (
   selectedDate: Date,
   event?: CalendarEvent,
+  defaultProjectName?: string,
 ): CalendarEventInput => ({
   date: event?.date ?? toDateKey(selectedDate),
   title: event?.title ?? '',
@@ -32,6 +36,7 @@ const createForm = (
   endTime: event?.endTime ?? '10:00',
   allDay: event?.allDay ?? false,
   color: event?.color ?? 'coral',
+  project: event?.project ?? defaultProjectName ?? '받은 편지함',
   category: event?.category ?? '개인',
   location: event?.location ?? '',
   note: event?.note ?? '',
@@ -41,12 +46,16 @@ const createForm = (
 
 export default function EventEditorModal({
   selectedDate,
+  projects,
+  defaultProjectName,
   event,
   onClose,
   onSave,
   onDelete,
 }: EventEditorModalProps) {
-  const [form, setForm] = useState(() => createForm(selectedDate, event))
+  const [form, setForm] = useState(() =>
+    createForm(selectedDate, event, defaultProjectName),
+  )
   const [error, setError] = useState('')
   const [isDeleteConfirming, setIsDeleteConfirming] = useState(false)
   const isEditing = Boolean(event)
@@ -179,22 +188,20 @@ export default function EventEditorModal({
 
           <div className="event-form-row">
             <label>
-              <span>분류</span>
+              <span>프로젝트</span>
               <select
-                value={form.category}
+                value={form.project ?? '받은 편지함'}
                 onChange={(changeEvent) =>
                   setForm({
                     ...form,
-                    category: changeEvent.target
-                      .value as CalendarEventInput['category'],
+                    project: changeEvent.target.value,
                   })
                 }
               >
-                <option>개인</option>
-                <option>업무</option>
-                <option>약속</option>
-                <option>운동</option>
-                <option>기타</option>
+                <option value="받은 편지함">받은 편지함</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.name}>{project.name}</option>
+                ))}
               </select>
             </label>
             <label>
