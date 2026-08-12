@@ -5,14 +5,16 @@ import type {
 } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
+import type { StudyRoom } from '../data/studyRooms'
 
 type EventEditorModalProps = {
   selectedDate: Date
   projects: PlannerProject[]
+  studyRooms: StudyRoom[]
   defaultProjectName?: string
   event?: CalendarEvent
   onClose: () => void
-  onSave: (event: CalendarEventInput) => void
+  onSave: (event: CalendarEventInput, sharedRoomId?: string) => void
   onDelete?: () => void
 }
 
@@ -24,6 +26,15 @@ const colorOptions: Array<{
   { value: 'blue', label: '블루' },
   { value: 'green', label: '그린' },
 ]
+
+const monthWeekOptions = [
+  ['first', '첫째'],
+  ['second', '둘째'],
+  ['third', '셋째'],
+  ['fourth', '넷째'],
+  ['last', '마지막'],
+] as const
+const eventWeekdayLabels = ['일', '월', '화', '수', '목', '금', '토']
 
 const createForm = (
   selectedDate: Date,
@@ -41,12 +52,17 @@ const createForm = (
   location: event?.location ?? '',
   note: event?.note ?? '',
   repeat: event?.repeat ?? 'none',
+  repeatMonthlyWeek: event?.repeatMonthlyWeek ?? 'first',
+  repeatMonthlyWeekday:
+    event?.repeatMonthlyWeekday ??
+    new Date(`${event?.date ?? toDateKey(selectedDate)}T00:00:00`).getDay(),
   reminder: event?.reminder ?? '30m',
 })
 
 export default function EventEditorModal({
   selectedDate,
   projects,
+  studyRooms,
   defaultProjectName,
   event,
   onClose,
@@ -58,7 +74,9 @@ export default function EventEditorModal({
   )
   const [error, setError] = useState('')
   const [isDeleteConfirming, setIsDeleteConfirming] = useState(false)
+  const [sharedRoomId, setSharedRoomId] = useState('')
   const isEditing = Boolean(event)
+  const selectedRoom = studyRooms.find((room) => room.id === sharedRoomId)
 
   useEffect(() => {
     const closeOnEscape = (keyboardEvent: KeyboardEvent) => {
@@ -82,12 +100,15 @@ export default function EventEditorModal({
       return
     }
 
-    onSave({
-      ...form,
-      title,
-      location: form.location.trim(),
-      note: form.note.trim(),
-    })
+    onSave(
+      {
+        ...form,
+        title,
+        location: form.location.trim(),
+        note: form.note.trim(),
+      },
+      sharedRoomId || undefined,
+    )
   }
 
   return (
@@ -234,7 +255,10 @@ export default function EventEditorModal({
                 <option value="daily">매일</option>
                 <option value="weekdays">평일마다</option>
                 <option value="weekly">매주</option>
-                <option value="monthly">매월</option>
+                <option value="monthly">
+                  매월 {new Date(`${form.date}T00:00:00`).getDate()}일
+                </option>
+                <option value="monthlyWeekday">매월 특정 요일</option>
               </select>
             </label>
             <label>
@@ -257,6 +281,51 @@ export default function EventEditorModal({
               </select>
             </label>
           </div>
+
+          {form.repeat === 'monthlyWeekday' && (
+            <fieldset className="event-monthly-weekday-setting">
+              <legend>매월 반복 요일</legend>
+              <div className="event-form-row">
+                <label>
+                  <span>몇 번째 주</span>
+                  <select
+                    value={form.repeatMonthlyWeek}
+                    onChange={(changeEvent) =>
+                      setForm({
+                        ...form,
+                        repeatMonthlyWeek: changeEvent.target
+                          .value as CalendarEventInput['repeatMonthlyWeek'],
+                      })
+                    }
+                  >
+                    {monthWeekOptions.map(([value, label]) => (
+                      <option value={value} key={value}>{label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span>요일</span>
+                  <select
+                    value={form.repeatMonthlyWeekday}
+                    onChange={(changeEvent) =>
+                      setForm({
+                        ...form,
+                        repeatMonthlyWeekday: Number(changeEvent.target.value),
+                      })
+                    }
+                  >
+                    {eventWeekdayLabels.map((label, index) => (
+                      <option value={index} key={label}>{label}요일</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <p>
+                매월 {monthWeekOptions.find(([value]) => value === form.repeatMonthlyWeek)?.[1] ?? '첫째'}{' '}
+                {eventWeekdayLabels[form.repeatMonthlyWeekday ?? 0]}요일에 반복돼요.
+              </p>
+            </fieldset>
+          )}
 
           <fieldset className="event-color-field">
             <legend>색상</legend>
@@ -288,6 +357,43 @@ export default function EventEditorModal({
               }
             />
           </label>
+
+          {!isEditing && (
+            <>
+              <label className="share-scope-field">
+                <span>공유 범위</span>
+                <select
+                  value={sharedRoomId}
+                  onChange={(changeEvent) =>
+                    setSharedRoomId(changeEvent.target.value)
+                  }
+                  aria-describedby={selectedRoom ? 'event-share-scope-note' : undefined}
+                >
+                  <option value="">나만 보기</option>
+                  {studyRooms.map((room) => {
+                    const me = room.members.find((member) => member.isMe)
+                    const canShare = Boolean(
+                      me &&
+                        (room.ownerId === me.id ||
+                          room.managerIds.includes(me.id) ||
+                          room.allowMemberSharing),
+                    )
+                    return (
+                      <option value={room.id} disabled={!canShare} key={room.id}>
+                        {room.name}{canShare ? '' : ' · 공유 권한 없음'}
+                      </option>
+                    )
+                  })}
+                </select>
+              </label>
+              {selectedRoom && (
+                <p className="share-scope-notice" id="event-share-scope-note">
+                  <span aria-hidden="true">◉</span>
+                  이 항목은 모임의 공동 계획으로 등록되며 모든 멤버에게 표시됩니다.
+                </p>
+              )}
+            </>
+          )}
 
           {error && <p className="event-form-error" role="alert">{error}</p>}
 

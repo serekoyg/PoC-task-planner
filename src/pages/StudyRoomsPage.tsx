@@ -82,14 +82,14 @@ export default function StudyRoomsPage({
     <main className="study-page">
       <section className="study-hero" aria-labelledby="study-page-title">
         <div className="study-hero-copy">
-          <p className="eyebrow">함께하는 집중</p>
+          <p className="eyebrow">함께 만드는 꾸준함</p>
           <h1 id="study-page-title">
             혼자보다 꾸준하게,
             <br />함께 이어가요.
           </h1>
           <p>
-            목표가 비슷한 사람들과 모임을 만들고, 오늘의 집중과 실천을
-            가볍게 나눠보세요.
+            공부, 운동, 게임, 취미처럼 함께 이어갈 목표를 정하고 오늘의
+            활동과 실천을 가볍게 나눠보세요.
           </p>
           <div className="study-hero-actions">
             <button type="button" onClick={() => setIsCreateOpen(true)}>
@@ -107,12 +107,12 @@ export default function StudyRoomsPage({
 
         <div className="study-hero-board" aria-label="나의 모임 요약">
           <div className="live-study-label">
-            <span aria-hidden="true" /> 지금 {studyingCount}명이 집중 중
+            <span aria-hidden="true" /> 지금 {studyingCount}명이 활동 중
           </div>
           <div className="study-today-time">
-            <p>오늘 나의 집중</p>
+            <p>오늘 나의 활동</p>
             <strong>{formatMinutes(myTodayMinutes)}</strong>
-            <span>어제보다 18분 더 집중했어요</span>
+            <span>어제보다 18분 더 함께했어요</span>
           </div>
           <div className="study-mini-grid">
             <div>
@@ -124,7 +124,7 @@ export default function StudyRoomsPage({
               <strong>{Math.max(...joinedRooms.map((room) => room.streak), 0)}일</strong>
             </div>
           </div>
-          <div className="study-people-stack" aria-label="함께 집중 중인 멤버">
+          <div className="study-people-stack" aria-label="함께 활동 중인 멤버">
             {rooms
               .flatMap((room) => room.members)
               .filter((member) => member.status === 'studying')
@@ -132,7 +132,7 @@ export default function StudyRoomsPage({
               .map((member) => (
                 <span key={`${member.id}-${member.name}`}>{member.avatar}</span>
               ))}
-            <small>함께 집중하면 더 오래가요</small>
+            <small>함께 실천하면 더 오래가요</small>
           </div>
         </div>
       </section>
@@ -175,7 +175,7 @@ export default function StudyRoomsPage({
                   <span className="room-category">{room.category}</span>
                   {liveMembers > 0 && (
                     <span className="room-live-count">
-                      <i aria-hidden="true" /> {liveMembers}명 집중 중
+                      <i aria-hidden="true" /> {liveMembers}명 활동 중
                     </span>
                   )}
                 </div>
@@ -293,11 +293,13 @@ export default function StudyRoomsPage({
                       setForm({ ...form, category: event.target.value })
                     }
                   >
+                    <option>공부</option>
                     <option>자격증</option>
                     <option>취업</option>
                     <option>어학</option>
-                    <option>학교 공부</option>
                     <option>운동</option>
+                    <option>게임</option>
+                    <option>취미</option>
                     <option>생활 루틴</option>
                     <option>프로젝트</option>
                     <option>기타</option>
@@ -326,7 +328,7 @@ export default function StudyRoomsPage({
                   maxLength={60}
                   value={form.goal}
                   onChange={(event) => setForm({ ...form, goal: event.target.value })}
-                  placeholder="예: 평일 오전 7시, 하루 90분 집중"
+                  placeholder="예: 평일 저녁 8시, 하루 30분 함께 실천"
                 />
               </label>
               <label className="study-private-toggle">

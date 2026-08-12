@@ -3,10 +3,20 @@ import ProjectSidebar, {
   type ProjectFilter,
 } from '../components/ProjectSidebar'
 import SchedulePanel from '../components/SchedulePanel'
-import type { CalendarEvent, CalendarEventInput } from '../data/initialData'
+import type {
+  CalendarEvent,
+  CalendarEventInput,
+  TodoInput,
+} from '../data/initialData'
 import { toDateKey } from '../data/initialData'
 import type { PlannerProject, ProjectInput } from '../data/projects'
-import { formatSelectedDate, getCalendarDays } from '../lib/date'
+import type { StudyRoom, StudySharedItemEntry } from '../data/studyRooms'
+import {
+  formatSelectedDate,
+  getCalendarDays,
+  isCalendarEventOnDate,
+} from '../lib/date'
+import { isSharedItemOnDate } from '../lib/studyShared'
 
 const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -16,15 +26,19 @@ type CalendarPageProps = {
   visibleMonth: Date
   events: CalendarEvent[]
   projects: PlannerProject[]
+  studyRooms: StudyRoom[]
+  sharedItems: StudySharedItemEntry[]
   onSelectDate: (date: Date) => void
   onMoveMonth: (amount: number) => void
   onSelectToday: () => void
-  onAddEvent: (event: CalendarEventInput) => void
+  onAddEvent: (event: CalendarEventInput, sharedRoomId?: string) => void
+  onAddTodo: (todo: TodoInput, sharedRoomId?: string) => void
   onUpdateEvent: (eventId: string, event: CalendarEventInput) => void
   onRemoveEvent: (eventId: string) => void
   onCreateProject: (input: ProjectInput) => string
   onUpdateProject: (projectId: string, input: ProjectInput) => void
   onDeleteProject: (projectId: string) => void
+  onToggleSharedItemStatus: (roomId: string, itemId: string) => void
 }
 
 export default function CalendarPage({
@@ -33,15 +47,19 @@ export default function CalendarPage({
   visibleMonth,
   events,
   projects,
+  studyRooms,
+  sharedItems,
   onSelectDate,
   onMoveMonth,
   onSelectToday,
   onAddEvent,
+  onAddTodo,
   onUpdateEvent,
   onRemoveEvent,
   onCreateProject,
   onUpdateProject,
   onDeleteProject,
+  onToggleSharedItemStatus,
 }: CalendarPageProps) {
   const [selectedProjectId, setSelectedProjectId] =
     useState<ProjectFilter>('all')
@@ -64,9 +82,16 @@ export default function CalendarPage({
       ? events.filter((event) => event.project === project.name)
       : events
   }, [events, projects, selectedProjectId])
+  const visibleSharedEvents = useMemo(
+    () =>
+      selectedProjectId === 'all'
+        ? sharedItems.filter((entry) => entry.item.type === 'event')
+        : [],
+    [selectedProjectId, sharedItems],
+  )
   const projectCounts = useMemo(() => {
     const counts: Record<string, number> = {
-      all: events.length,
+      all: events.length + sharedItems.filter((entry) => entry.item.type === 'event').length,
       inbox: events.filter(isInboxEvent).length,
     }
     projects.forEach((project) => {
@@ -75,7 +100,7 @@ export default function CalendarPage({
       ).length
     })
     return counts
-  }, [events, projects])
+  }, [events, projects, sharedItems])
 
   return (
     <main className="planner calendar-page">
@@ -96,10 +121,14 @@ export default function CalendarPage({
             selectedDate={selectedDate}
             events={filteredEvents}
             projects={projects}
+            studyRooms={studyRooms}
+            sharedItems={visibleSharedEvents}
             defaultProjectName={selectedProject?.name}
             onAddEvent={onAddEvent}
+            onAddTodo={onAddTodo}
             onUpdateEvent={onUpdateEvent}
             onRemoveEvent={onRemoveEvent}
+            onToggleSharedItemStatus={onToggleSharedItemStatus}
           />
 
           <section className="calendar-card" aria-labelledby="calendar-title">
@@ -150,8 +179,12 @@ export default function CalendarPage({
               {calendarDays.map((date) => {
                 const dateKey = toDateKey(date)
                 const dateEvents = filteredEvents.filter(
-                  (item) => item.date === dateKey,
+                  (item) => isCalendarEventOnDate(item, dateKey),
                 )
+                const dateSharedEvents = visibleSharedEvents.filter(
+                  (entry) => isSharedItemOnDate(entry.item, dateKey),
+                )
+                const dateEventCount = dateEvents.length + dateSharedEvents.length
                 const isSelected = dateKey === selectedKey
                 const isToday = dateKey === todayKey
                 const isCurrentMonth = date.getMonth() === visibleMonth.getMonth()
@@ -165,7 +198,7 @@ export default function CalendarPage({
                     key={dateKey}
                     onClick={() => onSelectDate(date)}
                     aria-label={`${formatSelectedDate(date)}${
-                      dateEvents.length ? `, 일정 ${dateEvents.length}개` : ''
+                      dateEventCount ? `, 일정 ${dateEventCount}개` : ''
                     }`}
                     aria-pressed={isSelected}
                   >
@@ -176,8 +209,13 @@ export default function CalendarPage({
                           {item.allDay ? '종일' : item.startTime} {item.title}
                         </span>
                       ))}
-                      {dateEvents.length > 2 && (
-                        <span className="more-events">+{dateEvents.length - 2}</span>
+                      {dateEvents.length < 2 && dateSharedEvents.slice(0, 2 - dateEvents.length).map((entry) => (
+                        <span className="event-chip blue shared" key={`${entry.roomId}-${entry.item.id}`}>
+                          {entry.item.time ?? '종일'} {entry.item.title}
+                        </span>
+                      ))}
+                      {dateEventCount > 2 && (
+                        <span className="more-events">+{dateEventCount - 2}</span>
                       )}
                     </span>
                   </button>
