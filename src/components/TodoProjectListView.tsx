@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import type { Todo } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
 import { formatTaskDate, getTaskPriority } from '../lib/task'
 import { getBucketTodos, getTodoProjectBuckets } from '../lib/todoView'
 import type { ProjectFilter } from './ProjectSidebar'
+import TodoPlayLink from './TodoPlayLink'
 
 const PROJECT_BATCH_SIZE = 2
 
@@ -86,19 +86,22 @@ export default function TodoProjectListView({
                     </span>
                   </label>
                   <div>
-                    <Link to={`/todos/${todo.id}`}>{todo.text}</Link>
+                    <button
+                      className="todo-item-title-button"
+                      type="button"
+                      onClick={() => onEditTodo(todo)}
+                    >
+                      {todo.text}
+                    </button>
                     <span>
                       우선순위 {getTaskPriority(todo)}
                       {todo.dueTime ? ` · 마감 ${todo.dueTime}` : ''}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onEditTodo(todo)}
-                    aria-label={`${todo.text} 편집`}
-                  >
-                    편집
-                  </button>
+                  <TodoPlayLink
+                    to={`/todos/${todo.id}/focus`}
+                    label={`${todo.text} 집중 시작`}
+                  />
                 </article>
               ))}
 

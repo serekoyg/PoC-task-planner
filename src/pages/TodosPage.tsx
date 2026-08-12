@@ -78,12 +78,13 @@ export default function TodosPage({
     !todo.project || todo.project === '받은 편지함'
   const projectCounts = useMemo(() => {
     const openTodos = todos.filter((todo) => !todo.done)
-    const openSharedTodos = sharedItems.filter(
-      ({ item, memberId }) =>
-        item.type === 'todo' && !item.completedMemberIds.includes(memberId),
+    const openSharedPlans = sharedItems.filter(({ item, memberId }) =>
+      item.type === 'todo'
+        ? !item.completedMemberIds.includes(memberId)
+        : !item.participantMemberIds.includes(memberId),
     )
     const counts: Record<string, number> = {
-      all: openTodos.length + openSharedTodos.length,
+      all: openTodos.length + openSharedPlans.length,
       inbox: openTodos.filter(isInboxTodo).length,
     }
     projects.forEach((project) => {

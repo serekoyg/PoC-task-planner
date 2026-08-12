@@ -8,6 +8,7 @@ import { formatSelectedDate } from '../lib/date'
 import { getSharedRepeatLabel } from '../lib/studyShared'
 import { getTaskPriority, getTaskProject } from '../lib/task'
 import type { ProjectFilter } from './ProjectSidebar'
+import TodoPlayLink from './TodoPlayLink'
 
 const DATE_BATCH_SIZE = 2
 
@@ -54,7 +55,7 @@ export default function TodoDateListView({
     })
     const visibleSharedItems =
       selectedProjectId === 'all'
-        ? sharedItems.filter((entry) => entry.item.type === 'todo')
+        ? sharedItems
         : []
     const grouped = new Map<string, TodoDateGroup>()
     const getGroup = (date: string) => {
@@ -119,7 +120,11 @@ export default function TodoDateListView({
     <section className="todo-date-list" aria-label="날짜별 할 일">
       {dateGroups.slice(0, visibleDateCount).map((group) => {
         const completedSharedCount = group.sharedItems.filter(
-          ({ item, memberId }) => item.completedMemberIds.includes(memberId),
+          ({ item, memberId }) =>
+            (item.type === 'todo'
+              ? item.completedMemberIds
+              : item.participantMemberIds
+            ).includes(memberId),
         ).length
         const totalCount = group.todos.length + group.sharedItems.length
         const openCount =
@@ -157,7 +162,13 @@ export default function TodoDateListView({
                   </label>
                   <div className="todo-date-copy">
                     <div>
-                      <Link to={`/todos/${todo.id}`}>{todo.text}</Link>
+                      <button
+                        className="todo-item-title-button"
+                        type="button"
+                        onClick={() => onEditTodo(todo)}
+                      >
+                        {todo.text}
+                      </button>
                       <span>{getTaskProject(todo)}</span>
                     </div>
                     <p>
@@ -166,18 +177,25 @@ export default function TodoDateListView({
                       {todo.estimatedMinutes ? ` · 예상 ${todo.estimatedMinutes}분` : ''}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => onEditTodo(todo)}
-                    aria-label={`${todo.text} 편집`}
-                  >
-                    편집
-                  </button>
+                  <TodoPlayLink
+                    to={`/todos/${todo.id}/focus`}
+                    label={`${todo.text} 집중 시작`}
+                  />
                 </article>
               ))}
 
               {group.sharedItems.map(({ roomId, roomName, memberId, item }) => {
-                const isCompleted = item.completedMemberIds.includes(memberId)
+                const statusMemberIds =
+                  item.type === 'todo'
+                    ? item.completedMemberIds
+                    : item.participantMemberIds
+                const isCompleted = statusMemberIds.includes(memberId)
+                const typeLabel =
+                  item.type === 'todo' ? '함께할 일' : '함께할 일정'
+                const statusLabel =
+                  item.type === 'todo'
+                    ? `${item.completedMemberIds.length}명 완료`
+                    : `${item.participantMemberIds.length}명 참여`
                 return (
                   <article
                     className={`todo-date-row color-blue shared-todo-item${isCompleted ? ' completed' : ''}`}
@@ -191,25 +209,38 @@ export default function TodoDateListView({
                       />
                       <span className="custom-checkbox" aria-hidden="true">✓</span>
                       <span className="sr-only">
-                        {isCompleted ? `${item.title} 완료 취소` : `${item.title} 완료`}
+                        {item.type === 'todo'
+                          ? isCompleted
+                            ? `${item.title} 완료 취소`
+                            : `${item.title} 완료`
+                          : isCompleted
+                            ? `${item.title} 참여 취소`
+                            : `${item.title} 참여`}
                       </span>
                     </label>
                     <div className="todo-date-copy">
-                      <div>
-                        <span className="shared-source-badge">
-                          {roomName} · 함께할 일
+                      <div className="shared-todo-context">
+                        <span className="shared-room-mark" aria-hidden="true">
+                          ◉
                         </span>
-                        <Link to={`/studies/${roomId}`}>{item.title}</Link>
+                        <span className="shared-source-badge">
+                          모임 · {roomName}
+                        </span>
+                        <span className="shared-plan-type">{typeLabel}</span>
                       </div>
+                      <Link to={`/studies/${roomId}`}>{item.title}</Link>
                       <p>
+                        {item.time ? `${item.time} · ` : ''}
                         {item.repeat === 'none'
-                          ? `${item.completedMemberIds.length}명 완료`
-                          : `${getSharedRepeatLabel(item)} · ${item.completedMemberIds.length}명 완료`}
+                          ? statusLabel
+                          : `${getSharedRepeatLabel(item)} · ${statusLabel}`}
                       </p>
                     </div>
-                    <Link className="todo-date-room-link" to={`/studies/${roomId}`}>
-                      모임 보기
-                    </Link>
+                    <TodoPlayLink
+                      to={`/studies/${roomId}?startActivity=${item.id}`}
+                      label={`${roomName}에서 ${item.title} 활동 시작`}
+                      shared
+                    />
                   </article>
                 )
               })}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import PlanEditorModal from '../components/PlanEditorModal'
 import StudyRoomChat from '../components/StudyRoomChat'
 import type {
@@ -62,8 +62,10 @@ export default function StudyRoomDetailPage({
   onJoinRoom,
   onChangeRoom,
 }: StudyRoomDetailPageProps) {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [isFocusing, setIsFocusing] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [activeActivityTitle, setActiveActivityTitle] = useState('')
   const [activeTab, setActiveTab] = useState<StudyRoomTab>('home')
   const [isPlanEditorOpen, setIsPlanEditorOpen] = useState(false)
   const [editingSharedItem, setEditingSharedItem] = useState<StudySharedItem>()
@@ -72,6 +74,21 @@ export default function StudyRoomDetailPage({
     () => [...(room?.members ?? [])].sort((a, b) => b.minutes - a.minutes),
     [room],
   )
+
+  useEffect(() => {
+    const activityId = searchParams.get('startActivity')
+    if (!activityId || !room) return
+
+    const activity = room.sharedItems.find((item) => item.id === activityId)
+    setActiveActivityTitle(activity?.title ?? '')
+    setActiveTab('home')
+    setIsFocusing(true)
+    setElapsedSeconds(0)
+
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('startActivity')
+    setSearchParams(nextParams, { replace: true })
+  }, [room, searchParams, setSearchParams])
 
   useEffect(() => {
     if (!isFocusing) return
@@ -272,7 +289,11 @@ export default function StudyRoomDetailPage({
             </span>
             <div>
               <p id="focus-console-title">
-                {isFocusing ? '지금 함께 활동하고 있어요' : '오늘의 활동을 시작해 볼까요?'}
+                {isFocusing
+                  ? activeActivityTitle
+                    ? `‘${activeActivityTitle}’ 활동 중이에요`
+                    : '지금 함께 활동하고 있어요'
+                  : '오늘의 활동을 시작해 볼까요?'}
               </p>
               <strong>{formatTimer(elapsedSeconds)}</strong>
             </div>
@@ -280,7 +301,10 @@ export default function StudyRoomDetailPage({
           <button
             className={isFocusing ? 'stop' : ''}
             type="button"
-            onClick={() => setIsFocusing((current) => !current)}
+            onClick={() => {
+              setIsFocusing((current) => !current)
+              if (isFocusing) setActiveActivityTitle('')
+            }}
           >
             <span aria-hidden="true">{isFocusing ? '■' : '▶'}</span>
             {isFocusing ? '활동 마치기' : '활동 시작'}
