@@ -34,6 +34,9 @@ export type StudySharedItem = {
   repeatMonthDay?: number
   repeatMonthlyWeek?: StudySharedMonthWeek
   repeatMonthlyWeekday?: number
+  repeatEnd?: 'never' | 'count' | 'date'
+  repeatCount?: number
+  repeatEndDate?: string
   note: string
   createdById: string
   completedMemberIds: string[]
@@ -146,7 +149,9 @@ export const createInitialStudyRooms = (): StudyRoom[] => [
         type: 'todo',
         title: '평일 아침 30분 활동 인증',
         date: '2026-08-11',
-        repeat: 'weekdays',
+        repeat: 'weekly',
+        repeatWeekdays: [1, 2, 3, 4, 5],
+        repeatIntervalWeeks: 1,
         note: '공부, 운동, 정리 등 오늘 이어갈 활동을 30분 실천해요.',
         createdById: 'me',
         completedMemberIds: ['member-1', 'member-4'],

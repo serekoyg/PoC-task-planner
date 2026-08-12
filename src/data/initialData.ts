@@ -18,6 +18,9 @@ export type Todo = {
   repeatMonthDay?: number
   repeatMonthlyWeek?: CalendarEvent['repeatMonthlyWeek']
   repeatMonthlyWeekday?: number
+  repeatEnd?: 'never' | 'count' | 'date'
+  repeatCount?: number
+  repeatEndDate?: string
 }
 
 export type TodoInput = Omit<Todo, 'id' | 'done'>
@@ -46,6 +49,9 @@ export type CalendarEvent = {
   repeatWeekdays?: number[]
   repeatIntervalWeeks?: number
   repeatMonthDay?: number
+  repeatEnd?: 'never' | 'count' | 'date'
+  repeatCount?: number
+  repeatEndDate?: string
   reminder: 'none' | '10m' | '30m' | '1h' | '1d'
   time?: string
 }

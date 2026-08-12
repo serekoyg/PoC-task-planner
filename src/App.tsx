@@ -340,6 +340,9 @@ export default function App() {
           event.repeat === 'monthlyWeekday'
             ? event.repeatMonthlyWeekday ?? new Date(`${event.date}T00:00:00`).getDay()
             : undefined,
+        repeatEnd: event.repeatEnd,
+        repeatCount: event.repeatCount,
+        repeatEndDate: event.repeatEndDate,
         note: event.note,
         createdById: memberId,
         completedMemberIds: [],
@@ -383,6 +386,9 @@ export default function App() {
         repeatMonthDay: input.repeatMonthDay,
         repeatMonthlyWeek: input.repeatMonthlyWeek,
         repeatMonthlyWeekday: input.repeatMonthlyWeekday,
+        repeatEnd: input.repeatEnd,
+        repeatCount: input.repeatCount,
+        repeatEndDate: input.repeatEndDate,
         note: input.note,
         createdById: memberId,
         completedMemberIds: [],

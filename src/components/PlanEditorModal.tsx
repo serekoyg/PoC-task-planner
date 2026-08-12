@@ -14,9 +14,20 @@ import type {
   StudySharedMonthWeek,
   StudySharedRepeat,
 } from '../data/studyRooms'
-import { monthWeekLabels, weekdayLabels } from '../lib/studyShared'
+import {
+  getWeekdaySelectionLabel,
+  monthWeekLabels,
+  weekdayLabels,
+} from '../lib/studyShared'
 
 type PlanType = 'todo' | 'event'
+type RepeatEnd = 'never' | 'count' | 'date'
+
+const getDefaultRepeatEndDate = (date: string) => {
+  const target = new Date(`${date}T00:00:00`)
+  target.setMonth(target.getMonth() + 1)
+  return toDateKey(target)
+}
 
 type PlanEditorModalProps = {
   initialType: PlanType
@@ -58,7 +69,19 @@ export default function PlanEditorModal({
   const isPersonalEditing = Boolean(personalItem)
   const initialDate = item?.date ?? personalItem?.date ?? toDateKey(selectedDate)
   const initialPlanType: PlanType = item?.type ?? (todo ? 'todo' : calendarEvent ? 'event' : initialType)
-  const initialRepeat = item?.repeat ?? personalItem?.repeat ?? 'none'
+  const storedRepeat = item?.repeat ?? personalItem?.repeat ?? 'none'
+  const initialRepeat = storedRepeat === 'daily' || storedRepeat === 'weekdays'
+    ? 'weekly'
+    : storedRepeat
+  const initialRepeatWeekdays = storedRepeat === 'daily'
+    ? [0, 1, 2, 3, 4, 5, 6]
+    : storedRepeat === 'weekdays'
+      ? [1, 2, 3, 4, 5]
+      : item?.repeatWeekdays?.length
+        ? item.repeatWeekdays
+        : personalItem?.repeatWeekdays?.length
+          ? personalItem.repeatWeekdays
+          : [new Date(`${initialDate}T00:00:00`).getDay()]
   const [type, setType] = useState<PlanType>(initialPlanType)
   const [destination, setDestination] = useState(fixedRoom?.id ?? 'personal')
   const [title, setTitle] = useState(item?.title ?? todo?.text ?? calendarEvent?.title ?? '')
@@ -71,11 +94,7 @@ export default function PlanEditorModal({
   const [note, setNote] = useState(item?.note ?? personalItem?.note ?? '')
   const [repeat, setRepeat] = useState<StudySharedRepeat>(initialRepeat)
   const [repeatWeekdays, setRepeatWeekdays] = useState<number[]>([
-    ...(item?.repeatWeekdays?.length
-      ? item.repeatWeekdays
-      : personalItem?.repeatWeekdays?.length
-        ? personalItem.repeatWeekdays
-        : [new Date(`${initialDate}T00:00:00`).getDay()]),
+    ...initialRepeatWeekdays,
   ])
   const itemRepeatInterval = item?.repeatIntervalWeeks ?? personalItem?.repeatIntervalWeeks ?? 1
   const [repeatIntervalMode, setRepeatIntervalMode] = useState<'one' | 'two' | 'custom'>(itemRepeatInterval === 1 ? 'one' : itemRepeatInterval === 2 ? 'two' : 'custom')
@@ -88,6 +107,15 @@ export default function PlanEditorModal({
   )
   const [repeatMonthlyWeekday, setRepeatMonthlyWeekday] = useState(
     item?.repeatMonthlyWeekday ?? personalItem?.repeatMonthlyWeekday ?? new Date(`${initialDate}T00:00:00`).getDay(),
+  )
+  const [repeatEnd, setRepeatEnd] = useState<RepeatEnd>(
+    item?.repeatEnd ?? personalItem?.repeatEnd ?? 'never',
+  )
+  const [repeatCount, setRepeatCount] = useState(
+    item?.repeatCount ?? personalItem?.repeatCount ?? 10,
+  )
+  const [repeatEndDate, setRepeatEndDate] = useState(
+    item?.repeatEndDate ?? personalItem?.repeatEndDate ?? getDefaultRepeatEndDate(initialDate),
   )
   const [project, setProject] = useState(personalItem?.project ?? defaultProjectName ?? '받은 편지함')
   const [priority, setPriority] = useState<TodoInput['priority']>(todo?.priority ?? 'medium')
@@ -130,6 +158,9 @@ export default function PlanEditorModal({
       repeat === 'monthlyWeekday' ? repeatMonthlyWeek : undefined,
     repeatMonthlyWeekday:
       repeat === 'monthlyWeekday' ? repeatMonthlyWeekday : undefined,
+    repeatEnd: repeat === 'none' ? undefined : repeatEnd,
+    repeatCount: repeat !== 'none' && repeatEnd === 'count' ? repeatCount : undefined,
+    repeatEndDate: repeat !== 'none' && repeatEnd === 'date' ? repeatEndDate : undefined,
   }
 
   const savePlan = (event: FormEvent<HTMLFormElement>) => {
@@ -140,6 +171,10 @@ export default function PlanEditorModal({
     }
     if (repeat === 'weekly' && !repeatWeekdays.length) {
       setError('반복할 요일을 하나 이상 선택해 주세요.')
+      return
+    }
+    if (repeat !== 'none' && repeatEnd === 'date' && repeatEndDate < date) {
+      setError('반복 마감 날짜는 시작일 이후로 선택해 주세요.')
       return
     }
     if (type === 'event' && endTime <= time) {
@@ -306,8 +341,6 @@ export default function PlanEditorModal({
               <span>반복</span>
               <select value={repeat} onChange={(event) => setRepeat(event.target.value as StudySharedRepeat)}>
                 <option value="none">반복 안 함</option>
-                <option value="daily">매일</option>
-                <option value="weekdays">평일</option>
                 <option value="weekly">특정 요일</option>
                 <option value="monthly">매월 특정 날짜</option>
                 <option value="monthlyWeekday">매월 특정 요일</option>
@@ -337,7 +370,11 @@ export default function PlanEditorModal({
                 </div>
               </fieldset>
               <fieldset className="shared-repeat-weekdays">
-                <legend>반복 요일 <small>여러 요일을 선택할 수 있어요.</small></legend>
+                <legend>
+                  반복 요일
+                  <small>여러 요일을 선택할 수 있어요.</small>
+                  <strong>{getWeekdaySelectionLabel(repeatWeekdays)}</strong>
+                </legend>
                 <div>
                   {weekdayLabels.map((label, index) => (
                     <label className={repeatWeekdays.includes(index) ? 'active' : ''} key={label}>
@@ -366,6 +403,38 @@ export default function PlanEditorModal({
                 <label><span>요일</span><select value={repeatMonthlyWeekday} onChange={(event) => setRepeatMonthlyWeekday(Number(event.target.value))}>{weekdayLabels.map((label, index) => <option value={index} key={label}>{label}요일</option>)}</select></label>
               </div>
               <p>매월 {monthWeekLabels[repeatMonthlyWeek]} {weekdayLabels[repeatMonthlyWeekday]}요일에 반복돼요.</p>
+            </fieldset>
+          )}
+
+          {repeat !== 'none' && (
+            <fieldset className="shared-repeat-end">
+              <legend>반복 종료</legend>
+              <div className="shared-repeat-end-options">
+                <label className={repeatEnd === 'never' ? 'active' : ''}>
+                  <input type="radio" name="repeat-end" checked={repeatEnd === 'never'} onChange={() => setRepeatEnd('never')} />
+                  <span>계속 반복</span>
+                </label>
+                <label className={repeatEnd === 'count' ? 'active' : ''}>
+                  <input type="radio" name="repeat-end" checked={repeatEnd === 'count'} onChange={() => setRepeatEnd('count')} />
+                  <span>횟수 제한</span>
+                </label>
+                <label className={repeatEnd === 'date' ? 'active' : ''}>
+                  <input type="radio" name="repeat-end" checked={repeatEnd === 'date'} onChange={() => setRepeatEnd('date')} />
+                  <span>날짜까지</span>
+                </label>
+              </div>
+              {repeatEnd === 'count' && (
+                <label className="shared-repeat-end-value">
+                  <span>총 반복 횟수</span>
+                  <div><input type="number" min={1} max={999} value={repeatCount} onChange={(event) => setRepeatCount(Math.min(999, Math.max(1, Number(event.target.value) || 1)))} /><span>회</span></div>
+                </label>
+              )}
+              {repeatEnd === 'date' && (
+                <label className="shared-repeat-end-value">
+                  <span>마감 날짜</span>
+                  <input type="date" min={date} value={repeatEndDate} onChange={(event) => setRepeatEndDate(event.target.value)} />
+                </label>
+              )}
             </fieldset>
           )}
 
