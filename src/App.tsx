@@ -6,8 +6,11 @@ import {
   Route,
   Routes,
   useLocation,
+  useNavigate,
   useParams,
 } from 'react-router-dom'
+import GlobalSearch from './components/GlobalSearch'
+import NotificationInbox from './components/NotificationInbox'
 import {
   type CalendarEvent,
   type CalendarEventInput,
@@ -28,7 +31,12 @@ import {
   type StudyRoom,
   type StudyRoomCreateInput,
 } from './data/studyRooms'
+import {
+  createInitialNotifications,
+  type PlannerNotification,
+} from './data/notifications'
 import { formatHeaderDate } from './lib/date'
+import type { PlannerTarget } from './lib/plannerNavigation'
 import CalendarPage from './pages/CalendarPage'
 import FocusResultPage from './pages/FocusResultPage'
 import FocusSessionPage from './pages/FocusSessionPage'
@@ -47,6 +55,7 @@ const STUDY_STORAGE_KEY = 'haru.v2.study-rooms'
 const FOCUS_STORAGE_KEY = 'haru.v2.focus-results'
 const PROJECT_STORAGE_KEY = 'haru.v2.projects'
 const AUTH_STORAGE_KEY = 'haru.demo-authenticated'
+const NOTIFICATION_STORAGE_KEY = 'haru.v2.notification-inbox'
 
 const readStorage = <T,>(key: string, fallback: () => T): T => {
   try {
@@ -68,6 +77,12 @@ const readTodos = () =>
 
 const readStudyRooms = () =>
   readStorage<StudyRoom[]>(STUDY_STORAGE_KEY, createInitialStudyRooms)
+
+const readNotifications = () =>
+  readStorage<PlannerNotification[]>(
+    NOTIFICATION_STORAGE_KEY,
+    createInitialNotifications,
+  )
 
 type StudyRoomRouteProps = {
   rooms: StudyRoom[]
@@ -189,12 +204,15 @@ function FocusResultRoute({
 
 export default function App() {
   const location = useLocation()
+  const navigate = useNavigate()
   const today = useMemo(() => new Date(), [])
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => localStorage.getItem(AUTH_STORAGE_KEY) === 'true',
   )
   const profileMenuRef = useRef<HTMLDivElement>(null)
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isNotificationInboxOpen, setIsNotificationInboxOpen] = useState(false)
   const [profileActionMessage, setProfileActionMessage] = useState(
     '오늘 오후 9:27에 동기화됨',
   )
@@ -205,6 +223,8 @@ export default function App() {
   const [todos, setTodos] = useState<Todo[]>(readTodos)
   const [events, setEvents] = useState<CalendarEvent[]>(readEvents)
   const [projects, setProjects] = useState<PlannerProject[]>(readProjects)
+  const [notifications, setNotifications] =
+    useState<PlannerNotification[]>(readNotifications)
   const [studyRooms, setStudyRooms] = useState<StudyRoom[]>(() =>
     readStudyRooms(),
   )
@@ -215,6 +235,9 @@ export default function App() {
     () => studyRooms.filter((room) => room.joined),
     [studyRooms],
   )
+  const unreadNotificationCount = notifications.filter(
+    (notification) => !notification.read,
+  ).length
 
   const login = () => {
     localStorage.setItem(AUTH_STORAGE_KEY, 'true')
@@ -266,8 +289,31 @@ export default function App() {
   }, [projects])
 
   useEffect(() => {
+    localStorage.setItem(
+      NOTIFICATION_STORAGE_KEY,
+      JSON.stringify(notifications),
+    )
+  }, [notifications])
+
+  useEffect(() => {
     setIsProfileMenuOpen(false)
+    setIsSearchOpen(false)
+    setIsNotificationInboxOpen(false)
   }, [location.pathname])
+
+  useEffect(() => {
+    const openGlobalSearch = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setIsProfileMenuOpen(false)
+        setIsNotificationInboxOpen(false)
+        setIsSearchOpen(true)
+      }
+    }
+
+    window.addEventListener('keydown', openGlobalSearch)
+    return () => window.removeEventListener('keydown', openGlobalSearch)
+  }, [])
 
   useEffect(() => {
     if (!isProfileMenuOpen) return
@@ -304,6 +350,51 @@ export default function App() {
           ? current
           : new Date(date.getFullYear(), date.getMonth(), 1),
     )
+  }
+
+  const navigateToTarget = (target: PlannerTarget) => {
+    if (target.kind === 'event') {
+      selectDate(new Date(`${target.date}T00:00:00`))
+      navigate('/calendar')
+    } else if (target.kind === 'todo') {
+      navigate(`/todos/${target.id}`)
+    } else {
+      navigate(`/studies/${target.id}`)
+    }
+    setIsSearchOpen(false)
+    setIsNotificationInboxOpen(false)
+  }
+
+  const openSearch = () => {
+    setIsProfileMenuOpen(false)
+    setIsNotificationInboxOpen(false)
+    setIsSearchOpen(true)
+  }
+
+  const toggleNotificationInbox = () => {
+    setIsProfileMenuOpen(false)
+    setIsSearchOpen(false)
+    setIsNotificationInboxOpen((current) => !current)
+  }
+
+  const markAllNotificationsRead = () => {
+    setNotifications((current) =>
+      current.map((notification) => ({ ...notification, read: true })),
+    )
+  }
+
+  const openNotification = (
+    notificationId: string,
+    target: PlannerTarget,
+  ) => {
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.id === notificationId
+          ? { ...notification, read: true }
+          : notification,
+      ),
+    )
+    navigateToTarget(target)
   }
 
   const addSharedItem = (
@@ -661,6 +752,39 @@ export default function App() {
 
         <div className="header-meta">
           <p className="today-label">{formatHeaderDate(today)}</p>
+          <div className="header-utilities">
+            <button
+              className="header-utility-button"
+              type="button"
+              aria-label="통합 검색 열기"
+              onClick={openSearch}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="6" />
+                <path d="m16 16 4 4" />
+              </svg>
+              <span className="header-shortcut">⌘K</span>
+            </button>
+            <button
+              className={`header-utility-button notification-button${
+                isNotificationInboxOpen ? ' active' : ''
+              }`}
+              type="button"
+              aria-label={`알림 수신함, 읽지 않은 알림 ${unreadNotificationCount}개`}
+              aria-expanded={isNotificationInboxOpen}
+              onClick={toggleNotificationInbox}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 8h18c0-1-3-1-3-8" />
+                <path d="M10 21h4" />
+              </svg>
+              {unreadNotificationCount > 0 && (
+                <span className="notification-badge">
+                  {unreadNotificationCount}
+                </span>
+              )}
+            </button>
+          </div>
           <div className="profile-menu" ref={profileMenuRef}>
             <button
               className={`avatar${isProfileMenuOpen ? ' active' : ''}`}
@@ -726,6 +850,25 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {isSearchOpen && (
+        <GlobalSearch
+          events={events}
+          todos={todos}
+          rooms={studyRooms}
+          onClose={() => setIsSearchOpen(false)}
+          onSelect={navigateToTarget}
+        />
+      )}
+
+      {isNotificationInboxOpen && (
+        <NotificationInbox
+          notifications={notifications}
+          onClose={() => setIsNotificationInboxOpen(false)}
+          onMarkAllRead={markAllNotificationsRead}
+          onSelect={openNotification}
+        />
+      )}
 
       <Routes>
         <Route path="/" element={<Navigate to="/calendar" replace />} />
