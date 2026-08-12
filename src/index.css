@@ -1436,7 +1436,8 @@ fieldset {
   opacity: 0.58;
 }
 
-.todo-date-row.completed .todo-date-copy a {
+.todo-date-row.completed .todo-date-copy a,
+.todo-date-row.completed .todo-item-title-button {
   text-decoration: line-through;
 }
 
@@ -1453,7 +1454,8 @@ fieldset {
   gap: 7px;
 }
 
-.todo-date-copy a {
+.todo-date-copy a,
+.todo-item-title-button {
   overflow: hidden;
   color: var(--text);
   font-weight: 700;
@@ -1462,8 +1464,23 @@ fieldset {
   white-space: nowrap;
 }
 
-.todo-date-copy a:hover {
+.todo-date-copy a:hover,
+.todo-item-title-button:hover {
   color: var(--accent);
+}
+
+.todo-item-title-button {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  text-align: left;
+}
+
+.todo-item-title-button:hover {
+  border-color: transparent;
+  background: transparent;
 }
 
 .todo-date-copy > div > span {
@@ -1481,20 +1498,101 @@ fieldset {
   font-size: 0.69rem;
 }
 
-.todo-date-row > button,
-.todo-date-room-link {
-  min-height: 29px;
-  padding: 0 9px;
-  color: var(--muted);
-  font-size: 0.68rem;
+.todo-play-button {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #cdd8f4;
+  border-radius: 50%;
+  color: var(--accent);
+  background: var(--accent-soft);
+  text-decoration: none;
 }
 
-.todo-date-room-link {
+.todo-play-button span {
+  margin-left: 2px;
+  font-size: 0.7rem;
+}
+
+.todo-play-button:hover {
+  border-color: var(--accent);
+  background: #e1e9ff;
+}
+
+.todo-play-button.shared {
+  color: #fff;
+  border-color: #6d56c7;
+  background: #6d56c7;
+}
+
+.todo-play-button.shared:hover {
+  border-color: #5941b5;
+  background: #5941b5;
+}
+
+.shared-todo-item {
+  background: linear-gradient(90deg, #f8f6ff 0%, #fff 62%);
+}
+
+.shared-todo-item::before {
+  width: 4px;
+  background: #7c3aed;
+}
+
+.shared-todo-context {
+  min-width: 0;
   display: inline-flex;
   align-items: center;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  text-decoration: none;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.shared-room-mark {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  color: #6d56c7;
+  border-radius: 50%;
+  background: #f1eff8;
+  font-size: 0.72rem;
+}
+
+.todo-date-copy .shared-source-badge {
+  overflow: hidden;
+  max-width: 170px;
+  padding: 0;
+  color: #5941b5;
+  background: transparent;
+  font-size: 0.68rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.todo-date-copy .shared-todo-type-badge {
+  width: auto;
+  height: auto;
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  color: #5941b5;
+  background: #ebe7fb;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.shared-todo-item .todo-date-copy > a {
+  width: fit-content;
+  max-width: 100%;
+  font-size: 0.86rem;
 }
 
 .todo-date-list-empty {
@@ -1611,8 +1709,8 @@ fieldset {
   opacity: 0.58;
 }
 
-.todo-kanban-card.completed > a,
-.todo-project-row.completed a {
+.todo-kanban-card.completed > .todo-item-title-button,
+.todo-project-row.completed .todo-item-title-button {
   text-decoration: line-through;
 }
 
@@ -1624,7 +1722,7 @@ fieldset {
   gap: 8px;
 }
 
-.todo-kanban-card > a {
+.todo-kanban-card > .todo-item-title-button {
   color: var(--text);
   font-size: 0.84rem;
   font-weight: 700;
@@ -1638,12 +1736,10 @@ fieldset {
   font-size: 0.68rem;
 }
 
-.todo-kanban-card > div:last-child > button,
-.todo-project-row > button {
-  min-height: 28px;
-  padding: 0 8px;
-  color: var(--muted);
-  font-size: 0.68rem;
+.todo-kanban-card .todo-play-button,
+.todo-project-row .todo-play-button {
+  width: 30px;
+  height: 30px;
 }
 
 .todo-kanban-empty {
@@ -1726,7 +1822,7 @@ fieldset {
   gap: 4px;
 }
 
-.todo-project-row > div a {
+.todo-project-row > div .todo-item-title-button {
   overflow: hidden;
   color: var(--text);
   font-weight: 700;
@@ -5195,13 +5291,7 @@ footer a {
 
   .todo-date-row {
     padding: 13px;
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .todo-date-row > button,
-  .todo-date-room-link {
-    grid-column: 2;
-    justify-self: start;
+    grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
   .todo-project-row > time {
