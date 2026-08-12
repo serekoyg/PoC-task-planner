@@ -226,7 +226,9 @@ export default function TodoDateListView({
                         <span className="shared-source-badge">
                           모임 · {roomName}
                         </span>
-                        <span className="shared-plan-type">{typeLabel}</span>
+                        <span className="shared-todo-type-badge">
+                          {typeLabel}
+                        </span>
                       </div>
                       <Link to={`/studies/${roomId}`}>{item.title}</Link>
                       <p>

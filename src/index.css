@@ -1549,7 +1549,15 @@ fieldset {
 }
 
 .shared-room-mark {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  padding: 0;
+  display: grid;
+  place-items: center;
   color: #6d56c7;
+  border-radius: 50%;
+  background: #f1eff8;
   font-size: 0.72rem;
 }
 
@@ -1565,11 +1573,19 @@ fieldset {
   white-space: nowrap;
 }
 
-.todo-date-copy .shared-plan-type {
+.todo-date-copy .shared-todo-type-badge {
+  width: auto;
+  height: auto;
   flex: 0 0 auto;
   padding: 2px 7px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
   color: #5941b5;
   background: #ebe7fb;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.35;
   white-space: nowrap;
 }
 
