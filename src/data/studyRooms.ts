@@ -10,6 +10,56 @@ export type StudyMember = {
   isMe?: boolean
 }
 
+export type StudySharedItemType = 'todo' | 'event'
+export type StudySharedRepeat =
+  | 'none'
+  | 'daily'
+  | 'weekdays'
+  | 'weekly'
+  | 'monthly'
+  | 'monthlyWeekday'
+export type StudySharedMonthWeek = 'first' | 'second' | 'third' | 'fourth' | 'last'
+
+export type StudySharedItem = {
+  id: string
+  type: StudySharedItemType
+  title: string
+  date: string
+  time?: string
+  endTime?: string
+  location?: string
+  repeat: StudySharedRepeat
+  repeatWeekdays?: number[]
+  repeatIntervalWeeks?: number
+  repeatMonthDay?: number
+  repeatMonthlyWeek?: StudySharedMonthWeek
+  repeatMonthlyWeekday?: number
+  note: string
+  createdById: string
+  completedMemberIds: string[]
+  participantMemberIds: string[]
+}
+
+export type StudyChatMessage = {
+  id: string
+  memberId: string
+  text: string
+  createdAt: string
+}
+
+export type StudySharedItemInput = Omit<
+  StudySharedItem,
+  'id' | 'createdById' | 'completedMemberIds' | 'participantMemberIds'
+>
+
+export type StudySharedItemEntry = {
+  roomId: string
+  roomName: string
+  memberId: string
+  canManage: boolean
+  item: StudySharedItem
+}
+
 export type StudyRoom = {
   id: string
   name: string
@@ -24,6 +74,11 @@ export type StudyRoom = {
   todayMinutes: number
   weeklyProgress: number
   streak: number
+  ownerId: string
+  managerIds: string[]
+  allowMemberSharing: boolean
+  sharedItems: StudySharedItem[]
+  chatMessages: StudyChatMessage[]
   members: StudyMember[]
 }
 
@@ -47,6 +102,71 @@ export const createInitialStudyRooms = (): StudyRoom[] => [
     todayMinutes: 428,
     weeklyProgress: 72,
     streak: 12,
+    ownerId: 'me',
+    managerIds: ['member-1'],
+    allowMemberSharing: true,
+    sharedItems: [
+      {
+        id: 'shared-morning-1',
+        type: 'todo',
+        title: '이번 주 기출문제 2회 풀기',
+        date: '2026-08-14',
+        repeat: 'none',
+        note: '과목은 달라도 괜찮아요. 각자 필요한 기출문제를 풀고 완료해요.',
+        createdById: 'me',
+        completedMemberIds: ['me', 'member-1', 'member-2'],
+        participantMemberIds: [],
+      },
+      {
+        id: 'shared-morning-2',
+        type: 'event',
+        title: '일요일 온라인 회고',
+        date: '2026-08-16',
+        time: '20:30',
+        endTime: '21:10',
+        repeat: 'none',
+        note: '이번 주에 잘된 점 하나와 다음 주 목표를 나눠요.',
+        createdById: 'member-1',
+        completedMemberIds: [],
+        participantMemberIds: ['me', 'member-1', 'member-2', 'member-3'],
+      },
+      {
+        id: 'shared-morning-3',
+        type: 'todo',
+        title: '오답노트 한 페이지 인증',
+        date: '2026-08-12',
+        repeat: 'none',
+        note: '완벽하게 정리하기보다 한 페이지를 채우는 데 집중해요.',
+        createdById: 'member-2',
+        completedMemberIds: ['member-2', 'member-3'],
+        participantMemberIds: [],
+      },
+      {
+        id: 'shared-morning-4',
+        type: 'todo',
+        title: '평일 아침 30분 활동 인증',
+        date: '2026-08-11',
+        repeat: 'weekdays',
+        note: '공부, 운동, 정리 등 오늘 이어갈 활동을 30분 실천해요.',
+        createdById: 'me',
+        completedMemberIds: ['member-1', 'member-4'],
+        participantMemberIds: [],
+      },
+    ],
+    chatMessages: [
+      {
+        id: 'chat-morning-1',
+        memberId: 'member-1',
+        text: '오늘도 각자 목표만큼 가볍게 시작해봐요!',
+        createdAt: '2026-08-12T07:03:00+09:00',
+      },
+      {
+        id: 'chat-morning-2',
+        memberId: 'me',
+        text: '좋아요. 저는 기출문제부터 풀게요.',
+        createdAt: '2026-08-12T07:05:00+09:00',
+      },
+    ],
     members: [
       {
         id: 'me',
@@ -113,6 +233,11 @@ export const createInitialStudyRooms = (): StudyRoom[] => [
     todayMinutes: 962,
     weeklyProgress: 81,
     streak: 23,
+    ownerId: 'job-1',
+    managerIds: ['job-2'],
+    allowMemberSharing: true,
+    sharedItems: [],
+    chatMessages: [],
     members: [
       {
         id: 'job-1',
@@ -154,6 +279,32 @@ export const createInitialStudyRooms = (): StudyRoom[] => [
     todayMinutes: 611,
     weeklyProgress: 64,
     streak: 8,
+    ownerId: 'side-1',
+    managerIds: [],
+    allowMemberSharing: true,
+    sharedItems: [
+      {
+        id: 'shared-side-1',
+        type: 'event',
+        title: '금요일 데모 공유',
+        date: '2026-08-14',
+        time: '21:00',
+        endTime: '22:00',
+        repeat: 'none',
+        note: '이번 주에 만든 화면이나 고민을 10분씩 공유해요.',
+        createdById: 'side-1',
+        completedMemberIds: [],
+        participantMemberIds: ['side-1'],
+      },
+    ],
+    chatMessages: [
+      {
+        id: 'chat-side-1',
+        memberId: 'side-1',
+        text: '금요일 데모에서 이번 주 작업을 짧게 공유해요.',
+        createdAt: '2026-08-11T20:12:00+09:00',
+      },
+    ],
     members: [
       {
         id: 'side-1',
@@ -187,6 +338,11 @@ export const createInitialStudyRooms = (): StudyRoom[] => [
     todayMinutes: 1380,
     weeklyProgress: 88,
     streak: 41,
+    ownerId: 'english-1',
+    managerIds: [],
+    allowMemberSharing: true,
+    sharedItems: [],
+    chatMessages: [],
     members: [
       {
         id: 'english-1',

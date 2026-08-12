@@ -1,21 +1,30 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type {
   CalendarEvent,
   CalendarEventInput,
+  TodoInput,
 } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
-import { formatSelectedDate } from '../lib/date'
+import type { StudyRoom, StudySharedItemEntry } from '../data/studyRooms'
+import { formatSelectedDate, isCalendarEventOnDate } from '../lib/date'
+import { getSharedRepeatLabel, isSharedItemOnDate } from '../lib/studyShared'
 import EventEditorModal from './EventEditorModal'
+import PlanEditorModal from './PlanEditorModal'
 
 type SchedulePanelProps = {
   selectedDate: Date
   events: CalendarEvent[]
   projects: PlannerProject[]
+  studyRooms: StudyRoom[]
+  sharedItems: StudySharedItemEntry[]
   defaultProjectName?: string
-  onAddEvent: (event: CalendarEventInput) => void
+  onAddEvent: (event: CalendarEventInput, sharedRoomId?: string) => void
+  onAddTodo: (todo: TodoInput, sharedRoomId?: string) => void
   onUpdateEvent: (eventId: string, event: CalendarEventInput) => void
   onRemoveEvent: (eventId: string) => void
+  onToggleSharedItemStatus: (roomId: string, itemId: string) => void
 }
 
 const repeatLabels: Record<CalendarEvent['repeat'], string> = {
@@ -24,6 +33,7 @@ const repeatLabels: Record<CalendarEvent['repeat'], string> = {
   weekdays: '평일 반복',
   weekly: '매주 반복',
   monthly: '매월 반복',
+  monthlyWeekday: '매월 특정 요일 반복',
 }
 
 const reminderLabels: Record<CalendarEvent['reminder'], string> = {
@@ -50,10 +60,14 @@ export default function SchedulePanel({
   selectedDate,
   events,
   projects,
+  studyRooms,
+  sharedItems,
   defaultProjectName,
   onAddEvent,
+  onAddTodo,
   onUpdateEvent,
   onRemoveEvent,
+  onToggleSharedItemStatus,
 }: SchedulePanelProps) {
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent>()
@@ -61,18 +75,31 @@ export default function SchedulePanel({
   const selectedEvents = useMemo(
     () =>
       events
-        .filter((event) => event.date === selectedKey)
+        .filter((event) => isCalendarEventOnDate(event, selectedKey))
         .sort((a, b) => {
           if (a.allDay !== b.allDay) return a.allDay ? -1 : 1
           return a.startTime.localeCompare(b.startTime)
         }),
     [events, selectedKey],
   )
+  const selectedSharedEvents = useMemo(
+    () =>
+      sharedItems.filter(
+        (entry) =>
+          entry.item.type === 'event' &&
+          isSharedItemOnDate(entry.item, selectedKey),
+      ),
+    [selectedKey, sharedItems],
+  )
   const scheduledMinutes = selectedEvents.reduce((total, event) => {
     if (event.allDay) return total
     return total + Math.max(toMinutes(event.endTime) - toMinutes(event.startTime), 0)
+  }, 0) + selectedSharedEvents.reduce((total, { item }) => {
+    if (!item.time || !item.endTime) return total
+    return total + Math.max(toMinutes(item.endTime) - toMinutes(item.time), 0)
   }, 0)
   const nextReminder = selectedEvents.find((event) => event.reminder !== 'none')
+  const totalEventCount = selectedEvents.length + selectedSharedEvents.length
 
   const openNewEvent = () => {
     setEditingEvent(undefined)
@@ -89,9 +116,9 @@ export default function SchedulePanel({
     setEditingEvent(undefined)
   }
 
-  const saveEvent = (event: CalendarEventInput) => {
+  const saveEvent = (event: CalendarEventInput, sharedRoomId?: string) => {
     if (editingEvent) onUpdateEvent(editingEvent.id, event)
-    else onAddEvent(event)
+    else onAddEvent(event, sharedRoomId)
     closeEditor()
   }
 
@@ -105,8 +132,8 @@ export default function SchedulePanel({
           <p className="eyebrow">선택한 날짜</p>
           <h2 id="selected-date-title">{formatSelectedDate(selectedDate)}</h2>
           <p className="schedule-heading-summary">
-            {selectedEvents.length
-              ? `${selectedEvents.length}개의 일정이 있어요.`
+            {totalEventCount
+              ? `${totalEventCount}개의 일정이 있어요.`
               : '아직 등록된 일정이 없어요.'}
           </p>
         </div>
@@ -116,9 +143,10 @@ export default function SchedulePanel({
       </div>
 
       <div className="schedule-list" aria-label="선택한 날짜의 일정">
-        {selectedEvents.length ? (
-          selectedEvents.map((item) => (
-            <article className={`schedule-item ${item.color}`} key={item.id}>
+        {totalEventCount ? (
+          <>
+            {selectedEvents.map((item) => (
+              <article className={`schedule-item ${item.color}`} key={item.id}>
               <div className="schedule-time-block">
                 {item.allDay ? (
                   <strong>하루 종일</strong>
@@ -154,8 +182,42 @@ export default function SchedulePanel({
               >
                 편집
               </button>
-            </article>
-          ))
+              </article>
+            ))}
+            {selectedSharedEvents.map(({ roomId, roomName, memberId, item }) => {
+              const isParticipating = item.participantMemberIds.includes(memberId)
+              return (
+                <article className="schedule-item blue shared-schedule-item" key={`${roomId}-${item.id}`}>
+                  <div className="schedule-time-block">
+                    <strong>{item.time ?? '시간 미정'}</strong>
+                    {item.endTime && <span>{item.endTime}</span>}
+                  </div>
+                  <span className="schedule-dot blue" aria-hidden="true" />
+                  <div className="schedule-item-copy">
+                    <div className="schedule-item-title">
+                      <h3>{item.title}</h3>
+                      <Link className="shared-source-badge" to={`/studies/${roomId}`}>
+                        {roomName} · 공동 일정
+                      </Link>
+                      {item.repeat !== 'none' && <span>{getSharedRepeatLabel(item)}</span>}
+                    </div>
+                    <div className="schedule-item-meta">
+                      {item.location && <span><i aria-hidden="true">⌖</i>{item.location}</span>}
+                      <span>{item.participantMemberIds.length}명 참여 예정</span>
+                    </div>
+                    {item.note && <p>{item.note}</p>}
+                  </div>
+                  <button
+                    className={isParticipating ? 'edit-event-button shared-active' : 'edit-event-button'}
+                    type="button"
+                    onClick={() => onToggleSharedItemStatus(roomId, item.id)}
+                  >
+                    {isParticipating ? '✓ 참여함' : '참여할게요'}
+                  </button>
+                </article>
+              )
+            })}
+          </>
         ) : (
           <button className="empty-schedule-card" type="button" onClick={openNewEvent}>
             <span aria-hidden="true">＋</span>
@@ -170,7 +232,7 @@ export default function SchedulePanel({
           <p className="eyebrow">하루 요약</p>
           <div>
             <span>등록된 일정</span>
-            <strong>{selectedEvents.length}개</strong>
+            <strong>{totalEventCount}개</strong>
           </div>
           <div>
             <span>예정된 시간</span>
@@ -191,14 +253,34 @@ export default function SchedulePanel({
         </div>
       </div>
 
-      {isEditorOpen && (
+      {isEditorOpen && !editingEvent && (
+        <PlanEditorModal
+          initialType="event"
+          selectedDate={selectedDate}
+          projects={projects}
+          studyRooms={studyRooms}
+          defaultProjectName={defaultProjectName}
+          onClose={closeEditor}
+          onSaveTodo={(input, sharedRoomId) => {
+            onAddTodo(input, sharedRoomId)
+            closeEditor()
+          }}
+          onSaveEvent={(input, sharedRoomId) => {
+            onAddEvent(input, sharedRoomId)
+            closeEditor()
+          }}
+        />
+      )}
+
+      {isEditorOpen && editingEvent && (
         <EventEditorModal
           selectedDate={selectedDate}
           projects={projects}
+          studyRooms={studyRooms}
           defaultProjectName={defaultProjectName}
           event={editingEvent}
           onClose={closeEditor}
-          onSave={saveEvent}
+          onSave={(input) => saveEvent(input)}
           onDelete={
             editingEvent
               ? () => {

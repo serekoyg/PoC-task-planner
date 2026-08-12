@@ -2,14 +2,16 @@ import { FormEvent, useEffect, useState } from 'react'
 import type { Todo, TodoInput } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
+import type { StudyRoom } from '../data/studyRooms'
 
 type TodoEditorModalProps = {
   selectedDate: Date
   projects: PlannerProject[]
+  studyRooms: StudyRoom[]
   defaultProjectName?: string
   todo?: Todo
   onClose: () => void
-  onSave: (todo: TodoInput) => void
+  onSave: (todo: TodoInput, sharedRoomId?: string) => void
   onDelete?: () => void
 }
 
@@ -40,6 +42,7 @@ const createForm = (
 export default function TodoEditorModal({
   selectedDate,
   projects,
+  studyRooms,
   defaultProjectName,
   todo,
   onClose,
@@ -51,7 +54,9 @@ export default function TodoEditorModal({
   )
   const [error, setError] = useState('')
   const [isDeleteConfirming, setIsDeleteConfirming] = useState(false)
+  const [sharedRoomId, setSharedRoomId] = useState('')
   const isEditing = Boolean(todo)
+  const selectedRoom = studyRooms.find((room) => room.id === sharedRoomId)
 
   useEffect(() => {
     const closeOnEscape = (keyboardEvent: KeyboardEvent) => {
@@ -70,12 +75,15 @@ export default function TodoEditorModal({
       return
     }
 
-    onSave({
-      ...form,
-      text,
-      note: form.note.trim(),
-      project: form.project?.trim() || undefined,
-    })
+    onSave(
+      {
+        ...form,
+        text,
+        note: form.note.trim(),
+        project: form.project?.trim() || undefined,
+      },
+      sharedRoomId || undefined,
+    )
   }
 
   return (
@@ -262,6 +270,41 @@ export default function TodoEditorModal({
               }
             />
           </label>
+
+          {!isEditing && (
+            <>
+              <label className="share-scope-field">
+                <span>공유 범위</span>
+                <select
+                  value={sharedRoomId}
+                  onChange={(event) => setSharedRoomId(event.target.value)}
+                  aria-describedby={selectedRoom ? 'todo-share-scope-note' : undefined}
+                >
+                  <option value="">나만 보기</option>
+                  {studyRooms.map((room) => {
+                    const me = room.members.find((member) => member.isMe)
+                    const canShare = Boolean(
+                      me &&
+                        (room.ownerId === me.id ||
+                          room.managerIds.includes(me.id) ||
+                          room.allowMemberSharing),
+                    )
+                    return (
+                      <option value={room.id} disabled={!canShare} key={room.id}>
+                        {room.name}{canShare ? '' : ' · 공유 권한 없음'}
+                      </option>
+                    )
+                  })}
+                </select>
+              </label>
+              {selectedRoom && (
+                <p className="share-scope-notice" id="todo-share-scope-note">
+                  <span aria-hidden="true">◉</span>
+                  이 항목은 모임의 공동 계획으로 등록되며 모든 멤버에게 표시됩니다.
+                </p>
+              )}
+            </>
+          )}
 
           {error && <p className="event-form-error" role="alert">{error}</p>}
 

@@ -3,11 +3,14 @@ import { Link } from 'react-router-dom'
 import ProjectSidebar, {
   type ProjectFilter,
 } from '../components/ProjectSidebar'
+import PlanEditorModal from '../components/PlanEditorModal'
 import TodoEditorModal from '../components/TodoEditorModal'
-import type { Todo, TodoInput } from '../data/initialData'
+import type { CalendarEventInput, Todo, TodoInput } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
 import type { PlannerProject, ProjectInput } from '../data/projects'
-import { formatSelectedDate, moveDate } from '../lib/date'
+import type { StudyRoom, StudySharedItemEntry } from '../data/studyRooms'
+import { formatSelectedDate, isTodoOnDate, moveDate } from '../lib/date'
+import { getSharedRepeatLabel, isSharedItemOnDate } from '../lib/studyShared'
 import { getTaskEstimate, getTaskProject } from '../lib/task'
 
 type TodosPageProps = {
@@ -15,14 +18,18 @@ type TodosPageProps = {
   selectedDate: Date
   todos: Todo[]
   projects: PlannerProject[]
+  studyRooms: StudyRoom[]
+  sharedItems: StudySharedItemEntry[]
   onSelectDate: (date: Date) => void
-  onAddTodo: (todo: TodoInput) => void
+  onAddTodo: (todo: TodoInput, sharedRoomId?: string) => void
+  onAddEvent: (event: CalendarEventInput, sharedRoomId?: string) => void
   onUpdateTodo: (todoId: string, todo: TodoInput) => void
   onToggleTodo: (todoId: string) => void
   onRemoveTodo: (todoId: string) => void
   onCreateProject: (input: ProjectInput) => string
   onUpdateProject: (projectId: string, input: ProjectInput) => void
   onDeleteProject: (projectId: string) => void
+  onToggleSharedItemStatus: (roomId: string, itemId: string) => void
 }
 
 const priorityLabels: Record<Todo['priority'], string> = {
@@ -50,14 +57,18 @@ export default function TodosPage({
   selectedDate,
   todos,
   projects,
+  studyRooms,
+  sharedItems,
   onSelectDate,
   onAddTodo,
+  onAddEvent,
   onUpdateTodo,
   onToggleTodo,
   onRemoveTodo,
   onCreateProject,
   onUpdateProject,
   onDeleteProject,
+  onToggleSharedItemStatus,
 }: TodosPageProps) {
   const [selectedProjectId, setSelectedProjectId] =
     useState<ProjectFilter>('all')
@@ -69,7 +80,18 @@ export default function TodosPage({
   )
   const isInboxTodo = (todo: Todo) =>
     !todo.project || todo.project === '받은 편지함'
-  const dateTodos = todos.filter((todo) => todo.date === selectedDateKey)
+  const dateTodos = todos.filter((todo) => isTodoOnDate(todo, selectedDateKey))
+  const dateSharedItems = useMemo(
+    () =>
+      selectedProjectId === 'all'
+        ? sharedItems.filter(
+            (entry) =>
+              entry.item.type === 'todo' &&
+              isSharedItemOnDate(entry.item, selectedDateKey),
+          )
+        : [],
+    [selectedDateKey, selectedProjectId, sharedItems],
+  )
   const filteredTodos = useMemo(() => {
     if (selectedProjectId === 'all') return dateTodos
     if (selectedProjectId === 'inbox') return dateTodos.filter(isInboxTodo)
@@ -90,9 +112,14 @@ export default function TodosPage({
     })
     return counts
   }, [projects, todos])
-  const completedCount = filteredTodos.filter((todo) => todo.done).length
-  const completionRate = filteredTodos.length
-    ? Math.round((completedCount / filteredTodos.length) * 100)
+  const completedSharedCount = dateSharedItems.filter(({ item, memberId }) =>
+    item.completedMemberIds.includes(memberId),
+  ).length
+  const completedCount =
+    filteredTodos.filter((todo) => todo.done).length + completedSharedCount
+  const totalTodoCount = filteredTodos.length + dateSharedItems.length
+  const completionRate = totalTodoCount
+    ? Math.round((completedCount / totalTodoCount) * 100)
     : 0
   const sortedTodos = useMemo(
     () =>
@@ -186,11 +213,11 @@ export default function TodosPage({
               <div>
                 <p>{selectedProjectName} 진행률</p>
                 <strong>
-                  {completedCount}개 완료 · {filteredTodos.length - completedCount}개 남음
+                  {completedCount}개 완료 · {totalTodoCount - completedCount}개 남음
                 </strong>
               </div>
               <span className="task-count">
-                {completedCount}/{filteredTodos.length}
+                {completedCount}/{totalTodoCount}
               </span>
             </div>
 
@@ -203,7 +230,7 @@ export default function TodosPage({
                 <strong>{formatSelectedDate(selectedDate)} 할 일</strong>
                 <span>미완료 항목은 우선순위와 마감 시간 순으로 보여요.</span>
               </div>
-              <span>{filteredTodos.length}개</span>
+              <span>{totalTodoCount}개</span>
             </div>
 
             <ul className="todo-list todo-page-list">
@@ -263,9 +290,48 @@ export default function TodosPage({
                   </div>
                 </li>
               ))}
+              {dateSharedItems.map(({ roomId, roomName, memberId, item }) => {
+                const isCompleted = item.completedMemberIds.includes(memberId)
+                return (
+                  <li
+                    className={`${isCompleted ? 'completed ' : ''}color-blue shared-todo-item`}
+                    key={`${roomId}-${item.id}`}
+                  >
+                    <label className="todo-check-control">
+                      <input
+                        type="checkbox"
+                        checked={isCompleted}
+                        onChange={() => onToggleSharedItemStatus(roomId, item.id)}
+                      />
+                      <span className="custom-checkbox" aria-hidden="true">✓</span>
+                      <span className="sr-only">
+                        {isCompleted ? `${item.title} 완료 취소` : `${item.title} 완료`}
+                      </span>
+                    </label>
+                    <div className="todo-item-content">
+                      <div className="todo-item-title-row">
+                        <Link className="shared-source-badge" to={`/studies/${roomId}`}>
+                          {roomName} · 함께할 일
+                        </Link>
+                        <span className="todo-text">{item.title}</span>
+                      </div>
+                      <div className="todo-item-meta">
+                        <span>{item.repeat !== 'none' ? getSharedRepeatLabel(item) : `${formatSelectedDate(new Date(`${item.date}T00:00:00`))}까지`}</span>
+                        <span>{item.completedMemberIds.length}명 완료</span>
+                      </div>
+                      {item.note && <p className="todo-note">{item.note}</p>}
+                    </div>
+                    <div className="todo-item-actions">
+                      <Link className="todo-detail-link" to={`/studies/${roomId}`}>
+                        모임 보기 <span aria-hidden="true">›</span>
+                      </Link>
+                    </div>
+                  </li>
+                )
+              })}
             </ul>
 
-            {!filteredTodos.length && (
+            {!totalTodoCount && (
               <div className="empty-todos">
                 <span aria-hidden="true">✓</span>
                 <p>{selectedProjectName}에 이날 등록된 할 일이 없어요.</p>
@@ -279,16 +345,35 @@ export default function TodosPage({
         </div>
       </div>
 
-      {(isCreating || editingTodo) && (
+      {isCreating && (
+        <PlanEditorModal
+          initialType="todo"
+          selectedDate={selectedDate}
+          projects={projects}
+          studyRooms={studyRooms}
+          defaultProjectName={selectedProject?.name}
+          onClose={closeEditor}
+          onSaveTodo={(input, sharedRoomId) => {
+            onAddTodo(input, sharedRoomId)
+            closeEditor()
+          }}
+          onSaveEvent={(input, sharedRoomId) => {
+            onAddEvent(input, sharedRoomId)
+            closeEditor()
+          }}
+        />
+      )}
+
+      {editingTodo && (
         <TodoEditorModal
           selectedDate={selectedDate}
           projects={projects}
+          studyRooms={studyRooms}
           defaultProjectName={selectedProject?.name}
           todo={editingTodo}
           onClose={closeEditor}
           onSave={(input) => {
-            if (editingTodo) onUpdateTodo(editingTodo.id, input)
-            else onAddTodo(input)
+            onUpdateTodo(editingTodo.id, input)
             closeEditor()
           }}
           onDelete={

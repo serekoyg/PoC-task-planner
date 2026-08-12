@@ -1,10 +1,25 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { StudyMemberStatus, StudyRoom } from '../data/studyRooms'
+import PlanEditorModal from '../components/PlanEditorModal'
+import StudyRoomChat from '../components/StudyRoomChat'
+import type {
+  StudyMemberStatus,
+  StudyRoom,
+  StudySharedItem,
+  StudySharedItemInput,
+} from '../data/studyRooms'
+import {
+  getSharedRepeatLabel,
+  sharedItemTypeLabels,
+} from '../lib/studyShared'
 
 type StudyRoomDetailPageProps = {
   room?: StudyRoom
   onJoinRoom: (roomId: string) => void
+  onChangeRoom: (
+    roomId: string,
+    update: (current: StudyRoom) => StudyRoom,
+  ) => void
 }
 
 const formatMinutes = (minutes: number) => {
@@ -21,17 +36,38 @@ const formatTimer = (seconds: number) => {
 }
 
 const statusLabels: Record<StudyMemberStatus, string> = {
-  studying: '집중 중',
+  studying: '활동 중',
   resting: '쉬는 중',
   offline: '오늘 참여',
 }
 
+const formatSharedDate = (item: StudySharedItem) => {
+  const date = new Date(`${item.date}T00:00:00`)
+  const label = new Intl.DateTimeFormat('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  }).format(date)
+  if (item.type === 'event' && item.time) {
+    return `${label}${item.repeat !== 'none' ? ' 시작' : ''} · ${item.time}${item.endTime ? `–${item.endTime}` : ''}`
+  }
+  if (item.repeat !== 'none') return `${label} 시작`
+  return `${label}까지`
+}
+
+type StudyRoomTab = 'home' | 'plans' | 'chat'
+
 export default function StudyRoomDetailPage({
   room,
   onJoinRoom,
+  onChangeRoom,
 }: StudyRoomDetailPageProps) {
   const [isFocusing, setIsFocusing] = useState(false)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [activeTab, setActiveTab] = useState<StudyRoomTab>('home')
+  const [isPlanEditorOpen, setIsPlanEditorOpen] = useState(false)
+  const [editingSharedItem, setEditingSharedItem] = useState<StudySharedItem>()
+  const [deletingSharedItemId, setDeletingSharedItemId] = useState<string>()
   const rankedMembers = useMemo(
     () => [...(room?.members ?? [])].sort((a, b) => b.minutes - a.minutes),
     [room],
@@ -62,19 +98,100 @@ export default function StudyRoomDetailPage({
     (member) => member.status === 'studying',
   ).length
   const achievedDays = Math.round((room.weeklyProgress / 100) * 7)
+  const me = room.members.find((member) => member.isMe)
+  const hasManagementRole = Boolean(
+    me && (room.ownerId === me.id || room.managerIds.includes(me.id)),
+  )
+  const canCreatePlan = Boolean(
+    room.joined && me && (hasManagementRole || room.allowMemberSharing),
+  )
+
+  const changeSharedItemStatus = (itemId: string) => {
+    if (!me) return
+    onChangeRoom(room.id, (current) => ({
+      ...current,
+      sharedItems: current.sharedItems.map((item) => {
+        if (item.id !== itemId) return item
+        const memberIds =
+          item.type === 'event'
+            ? item.participantMemberIds
+            : item.completedMemberIds
+        const nextMemberIds = memberIds.includes(me.id)
+          ? memberIds.filter((memberId) => memberId !== me.id)
+          : [...memberIds, me.id]
+        return item.type === 'event'
+          ? { ...item, participantMemberIds: nextMemberIds }
+          : { ...item, completedMemberIds: nextMemberIds }
+      }),
+    }))
+  }
+
+  const saveSharedItem = (input: StudySharedItemInput) => {
+    if (!me) return
+    onChangeRoom(room.id, (current) => ({
+      ...current,
+      sharedItems: editingSharedItem
+        ? current.sharedItems.map((item) =>
+            item.id === editingSharedItem.id ? { ...item, ...input } : item,
+          )
+        : [
+            {
+              id: `shared-${crypto.randomUUID()}`,
+              ...input,
+              createdById: me.id,
+              completedMemberIds: [],
+              participantMemberIds: [],
+            },
+            ...current.sharedItems,
+          ],
+    }))
+    setEditingSharedItem(undefined)
+    setIsPlanEditorOpen(false)
+  }
+
+  const deleteSharedItem = (itemId: string) => {
+    onChangeRoom(room.id, (current) => ({
+      ...current,
+      sharedItems: current.sharedItems.filter((item) => item.id !== itemId),
+    }))
+    setDeletingSharedItemId(undefined)
+  }
+
+  const sendChatMessage = (text: string) => {
+    if (!me) return
+    onChangeRoom(room.id, (current) => ({
+      ...current,
+      chatMessages: [
+        ...current.chatMessages,
+        {
+          id: `chat-${crypto.randomUUID()}`,
+          memberId: me.id,
+          text,
+          createdAt: new Date().toISOString(),
+        },
+      ],
+    }))
+  }
 
   return (
-    <main className="study-page study-detail-page">
-      <Link className="study-back-link" to="/studies">
-        <span aria-hidden="true">←</span> 모임 라운지
-      </Link>
+    <main className={`study-page study-detail-page tab-${activeTab}`}>
+      <div className="study-detail-topline">
+        <Link className="study-back-link" to="/studies">
+          <span aria-hidden="true">←</span> 모임 라운지
+        </Link>
+        {room.joined && (
+          <Link className="study-manage-link" to={`/studies/${room.id}/manage`}>
+            <span aria-hidden="true">⚙</span> 모임 관리
+          </Link>
+        )}
+      </div>
 
       <section className={`study-detail-hero ${room.accent}`}>
         <div>
           <div className="study-detail-badges">
             <span>{room.category}</span>
             <span className="study-detail-live">
-              <i aria-hidden="true" /> {liveMembers}명 집중 중
+              <i aria-hidden="true" /> {liveMembers}명 활동 중
             </span>
           </div>
           <h1>{room.name}</h1>
@@ -90,7 +207,7 @@ export default function StudyRoomDetailPage({
 
         <div className="study-detail-summary" aria-label="모임 현황">
           <div>
-            <span>오늘 총 집중</span>
+            <span>오늘 함께한 시간</span>
             <strong>{formatMinutes(room.todayMinutes)}</strong>
           </div>
           <div>
@@ -104,13 +221,43 @@ export default function StudyRoomDetailPage({
         </div>
       </section>
 
+      <nav className="study-room-tabs" aria-label="모임 메뉴">
+        <button
+          className={activeTab === 'home' ? 'active' : ''}
+          type="button"
+          aria-current={activeTab === 'home' ? 'page' : undefined}
+          onClick={() => setActiveTab('home')}
+        >
+          <span aria-hidden="true">⌂</span> 홈
+        </button>
+        <button
+          className={activeTab === 'plans' ? 'active' : ''}
+          type="button"
+          aria-current={activeTab === 'plans' ? 'page' : undefined}
+          onClick={() => setActiveTab('plans')}
+        >
+          <span aria-hidden="true">✓</span> 함께할 계획
+          {!!room.sharedItems.length && <small>{room.sharedItems.length}</small>}
+        </button>
+        {room.joined && me && (
+          <button
+            className={activeTab === 'chat' ? 'active' : ''}
+            type="button"
+            aria-current={activeTab === 'chat' ? 'page' : undefined}
+            onClick={() => setActiveTab('chat')}
+          >
+            <span aria-hidden="true">◇</span> 채팅
+          </button>
+        )}
+      </nav>
+
       {!room.joined ? (
-        <section className="study-join-banner" aria-label="모임 참여 안내">
+        <section className="study-join-banner" aria-label="모임 참여 안내" hidden={activeTab !== 'home'}>
           <div>
             <span aria-hidden="true">👋</span>
             <div>
               <strong>이 모임과 목표가 잘 맞나요?</strong>
-              <p>참여하면 내 집중 시간을 기록하고 멤버 현황을 볼 수 있어요.</p>
+              <p>참여하면 내 활동 시간을 기록하고 멤버 현황을 볼 수 있어요.</p>
             </div>
           </div>
           <button type="button" onClick={() => onJoinRoom(room.id)}>
@@ -118,14 +265,14 @@ export default function StudyRoomDetailPage({
           </button>
         </section>
       ) : (
-        <section className="focus-console" aria-labelledby="focus-console-title">
+        <section className="focus-console" aria-labelledby="focus-console-title" hidden={activeTab !== 'home'}>
           <div className="focus-console-copy">
             <span className={isFocusing ? 'focus-pulse active' : 'focus-pulse'}>
               <i aria-hidden="true" />
             </span>
             <div>
               <p id="focus-console-title">
-                {isFocusing ? '지금 함께 집중하고 있어요' : '오늘의 집중을 시작해 볼까요?'}
+                {isFocusing ? '지금 함께 활동하고 있어요' : '오늘의 활동을 시작해 볼까요?'}
               </p>
               <strong>{formatTimer(elapsedSeconds)}</strong>
             </div>
@@ -136,17 +283,123 @@ export default function StudyRoomDetailPage({
             onClick={() => setIsFocusing((current) => !current)}
           >
             <span aria-hidden="true">{isFocusing ? '■' : '▶'}</span>
-            {isFocusing ? '집중 마치기' : '집중 시작'}
+            {isFocusing ? '활동 마치기' : '활동 시작'}
           </button>
         </section>
       )}
 
-      <div className="study-detail-grid">
+      <section className="study-shared-plans" aria-labelledby="shared-plans-title" hidden={activeTab !== 'plans'}>
+        <div className="study-panel-heading">
+          <div>
+            <p className="eyebrow">공동 계획</p>
+            <h2 id="shared-plans-title">함께할 계획</h2>
+            <p>같은 계획을 보되 완료와 참여 상태는 멤버마다 따로 기록해요.</p>
+          </div>
+          {canCreatePlan && (
+            <button
+              className="room-primary-button"
+              type="button"
+              onClick={() => {
+                setEditingSharedItem(undefined)
+                setIsPlanEditorOpen(true)
+              }}
+            >
+              <span aria-hidden="true">＋</span> 계획 만들기
+            </button>
+          )}
+        </div>
+
+        <div className="study-shared-plan-list">
+          {room.sharedItems.map((item) => {
+            const creator = room.members.find(
+              (member) => member.id === item.createdById,
+            )
+            const isMineActive = Boolean(
+              me &&
+                (item.type === 'event'
+                  ? item.participantMemberIds.includes(me.id)
+                  : item.completedMemberIds.includes(me.id)),
+            )
+            const canManage = Boolean(
+              me && (hasManagementRole || item.createdById === me.id),
+            )
+            return (
+              <article className={`study-shared-plan-card ${item.type}`} key={item.id}>
+                <div className="study-shared-plan-card-heading">
+                  <div>
+                    <span className={`shared-plan-kind ${item.type}`}>
+                      {sharedItemTypeLabels[item.type]}
+                    </span>
+                    <time>{formatSharedDate(item)}</time>
+                    <span>{getSharedRepeatLabel(item)}</span>
+                  </div>
+                  {canManage && (
+                    <div className="study-shared-plan-actions">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingSharedItem(item)
+                          setIsPlanEditorOpen(true)
+                        }}
+                      >
+                        수정
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingSharedItemId(item.id)}
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <h3>{item.title}</h3>
+                {item.location && <p className="shared-plan-location">⌖ {item.location}</p>}
+                {item.note && <p>{item.note}</p>}
+                <div className="study-shared-plan-footer">
+                  <span>{creator?.name ?? '멤버'}님이 작성</span>
+                  <span>
+                    {item.type === 'event'
+                      ? `${item.participantMemberIds.length}명 참여 예정`
+                      : `${item.completedMemberIds.length}/${room.memberCount}명 완료`}
+                  </span>
+                  {room.joined && me && (
+                    <button
+                      className={isMineActive ? 'active' : ''}
+                      type="button"
+                      onClick={() => changeSharedItemStatus(item.id)}
+                    >
+                      {item.type === 'event'
+                        ? isMineActive ? '✓ 참여함' : '참여할게요'
+                        : isMineActive ? '✓ 완료함' : '내 완료 체크'}
+                    </button>
+                  )}
+                </div>
+                {deletingSharedItemId === item.id && (
+                  <div className="shared-plan-delete-confirm" role="alert">
+                    <span>모든 멤버에게서 이 계획이 사라져요.</span>
+                    <button type="button" onClick={() => setDeletingSharedItemId(undefined)}>취소</button>
+                    <button type="button" onClick={() => deleteSharedItem(item.id)}>삭제</button>
+                  </div>
+                )}
+              </article>
+            )
+          })}
+          {!room.sharedItems.length && (
+            <div className="study-shared-plan-empty">
+              <span aria-hidden="true">＋</span>
+              <strong>아직 함께할 계획이 없어요. 모임의 첫 계획을 만들어보세요.</strong>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <div className="study-detail-grid" hidden={activeTab !== 'home'}>
         <section className="study-members-panel" aria-labelledby="members-title">
           <div className="study-panel-heading">
             <div>
-              <p className="eyebrow">오늘의 멤버</p>
-              <h2 id="members-title">함께 집중 중이에요</h2>
+              <p className="eyebrow">오늘 함께한 멤버</p>
+              <h2 id="members-title">오늘도 함께하고 있어요</h2>
             </div>
             <span>{room.memberCount}/{room.maxMembers}명</span>
           </div>
@@ -218,6 +471,25 @@ export default function StudyRoomDetailPage({
           </section>
         </aside>
       </div>
+
+      {activeTab === 'chat' && room.joined && me && (
+        <StudyRoomChat room={room} me={me} onSend={sendChatMessage} />
+      )}
+
+      {isPlanEditorOpen && me && (
+        <PlanEditorModal
+          initialType={editingSharedItem?.type ?? 'todo'}
+          selectedDate={new Date(`${editingSharedItem?.date ?? '2026-08-14'}T00:00:00`)}
+          fixedRoom={room}
+          memberId={me.id}
+          item={editingSharedItem}
+          onClose={() => {
+            setEditingSharedItem(undefined)
+            setIsPlanEditorOpen(false)
+          }}
+          onSaveShared={saveSharedItem}
+        />
+      )}
     </main>
   )
 }

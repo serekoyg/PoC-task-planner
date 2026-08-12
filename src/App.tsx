@@ -25,6 +25,8 @@ import {
 } from './data/projects'
 import {
   createInitialStudyRooms,
+  type StudySharedItem,
+  type StudySharedItemEntry,
   type StudyRoom,
   type StudyRoomCreateInput,
 } from './data/studyRooms'
@@ -34,6 +36,7 @@ import FocusResultPage from './pages/FocusResultPage'
 import FocusSessionPage from './pages/FocusSessionPage'
 import ProfilePage from './pages/ProfilePage'
 import StudyRoomDetailPage from './pages/StudyRoomDetailPage'
+import StudyRoomManagementPage from './pages/StudyRoomManagementPage'
 import StudyRoomsPage from './pages/StudyRoomsPage'
 import TaskDetailPage from './pages/TaskDetailPage'
 import TodosPage from './pages/TodosPage'
@@ -100,6 +103,21 @@ const readEvents = () =>
         location: event.location ?? '',
         note: event.note ?? '',
         repeat: event.repeat ?? 'none',
+        repeatMonthlyWeek:
+          event.repeatMonthlyWeek ??
+          (event.repeat === 'monthlyWeekday' ? 'first' : undefined),
+        repeatMonthlyWeekday:
+          event.repeatMonthlyWeekday ??
+          (event.repeat === 'monthlyWeekday'
+            ? new Date(`${event.date}T00:00:00`).getDay()
+            : undefined),
+        repeatWeekdays: event.repeatWeekdays,
+        repeatIntervalWeeks: event.repeatIntervalWeeks ?? 1,
+        repeatMonthDay:
+          event.repeatMonthDay ??
+          (event.repeat === 'monthly'
+            ? new Date(`${event.date}T00:00:00`).getDate()
+            : undefined),
         reminder: event.reminder ?? 'none',
         project: event.project ?? eventProjects[event.title] ?? '받은 편지함',
       }
@@ -132,6 +150,12 @@ const normalizeTodo = (todo: LegacyTodo, date: string): Todo => ({
   project: todo.project ?? todoProjects[todo.text] ?? '받은 편지함',
   estimatedMinutes: todo.estimatedMinutes ?? 30,
   memo: todo.memo,
+  repeat: todo.repeat ?? 'none',
+  repeatWeekdays: todo.repeatWeekdays,
+  repeatIntervalWeeks: todo.repeatIntervalWeeks ?? 1,
+  repeatMonthDay: todo.repeatMonthDay,
+  repeatMonthlyWeek: todo.repeatMonthlyWeek,
+  repeatMonthlyWeekday: todo.repeatMonthlyWeekday,
 })
 
 const readTodos = () => {
@@ -150,28 +174,105 @@ const readTodos = () => {
   )
 }
 
-const readStudyRooms = () =>
-  readStorage(STUDY_STORAGE_KEY, createInitialStudyRooms).map((room) =>
-    room.description ===
-    '출근 전 조용히 모여 각자 준비하는 아침 집중 스터디예요.'
-      ? {
-          ...room,
-          description: '출근 전 조용히 모여 각자 준비하는 아침 집중 모임이에요.',
-        }
-      : room,
+const readStudyRooms = () => {
+  const defaults = new Map(
+    createInitialStudyRooms().map((room) => [room.id, room]),
   )
+
+  return readStorage(STUDY_STORAGE_KEY, createInitialStudyRooms).map((room) => {
+    const initialRoom = defaults.get(room.id)
+    return {
+      ...room,
+      description:
+        room.description ===
+        '출근 전 조용히 모여 각자 준비하는 아침 집중 스터디예요.'
+          ? '출근 전 조용히 모여 각자 준비하는 아침 집중 모임이에요.'
+          : room.description,
+      ownerId:
+        room.ownerId ?? initialRoom?.ownerId ?? room.members[0]?.id ?? 'me',
+      managerIds: room.managerIds ?? initialRoom?.managerIds ?? [],
+      allowMemberSharing:
+        room.allowMemberSharing ?? initialRoom?.allowMemberSharing ?? true,
+      sharedItems: (room.sharedItems ?? initialRoom?.sharedItems ?? []).map(
+        (item) => {
+          const legacyItem = item as Omit<StudySharedItem, 'type'> & {
+            type: StudySharedItem['type'] | 'routine'
+            repeatWeekday?: number
+          }
+          return {
+            ...item,
+            type: legacyItem.type === 'routine' ? 'todo' as const : legacyItem.type,
+            repeat: item.repeat ?? 'none',
+            repeatWeekdays:
+              item.repeatWeekdays ??
+              (legacyItem.repeatWeekday === undefined
+                ? undefined
+                : [legacyItem.repeatWeekday]),
+            repeatIntervalWeeks: item.repeatIntervalWeeks ?? 1,
+            repeatMonthDay:
+              item.repeatMonthDay ??
+              (item.repeat === 'monthly'
+                ? new Date(`${item.date}T00:00:00`).getDate()
+                : undefined),
+            repeatMonthlyWeek:
+              item.repeatMonthlyWeek ??
+              (item.repeat === 'monthlyWeekday' ? 'first' : undefined),
+            repeatMonthlyWeekday:
+              item.repeatMonthlyWeekday ??
+              (item.repeat === 'monthlyWeekday'
+                ? new Date(`${item.date}T00:00:00`).getDay()
+                : undefined),
+            completedMemberIds: item.completedMemberIds ?? [],
+            participantMemberIds: item.participantMemberIds ?? [],
+          }
+        },
+      ),
+      chatMessages: room.chatMessages ?? initialRoom?.chatMessages ?? [],
+    }
+  })
+}
 
 type StudyRoomRouteProps = {
   rooms: StudyRoom[]
   onJoinRoom: (roomId: string) => void
+  onChangeRoom: (
+    roomId: string,
+    update: (current: StudyRoom) => StudyRoom,
+  ) => void
 }
 
-function StudyRoomRoute({ rooms, onJoinRoom }: StudyRoomRouteProps) {
+function StudyRoomRoute({
+  rooms,
+  onJoinRoom,
+  onChangeRoom,
+}: StudyRoomRouteProps) {
   const { roomId } = useParams()
   return (
     <StudyRoomDetailPage
       room={rooms.find((room) => room.id === roomId)}
       onJoinRoom={onJoinRoom}
+      onChangeRoom={onChangeRoom}
+    />
+  )
+}
+
+type StudyRoomManagementRouteProps = {
+  rooms: StudyRoom[]
+  onChangeRoom: (
+    roomId: string,
+    update: (current: StudyRoom) => StudyRoom,
+  ) => void
+}
+
+function StudyRoomManagementRoute({
+  rooms,
+  onChangeRoom,
+}: StudyRoomManagementRouteProps) {
+  const { roomId } = useParams()
+  return (
+    <StudyRoomManagementPage
+      room={rooms.find((room) => room.id === roomId)}
+      onChangeRoom={onChangeRoom}
     />
   )
 }
@@ -267,6 +368,28 @@ export default function App() {
   const [focusResults, setFocusResults] = useState<Record<string, number>>(() =>
     readStorage(FOCUS_STORAGE_KEY, () => ({})),
   )
+  const joinedStudyRooms = useMemo(
+    () => studyRooms.filter((room) => room.joined),
+    [studyRooms],
+  )
+  const sharedItemEntries = useMemo<StudySharedItemEntry[]>(
+    () =>
+      joinedStudyRooms.flatMap((room) => {
+        const me = room.members.find((member) => member.isMe)
+        if (!me) return []
+        const hasRoomManagementRole =
+          room.ownerId === me.id || room.managerIds.includes(me.id)
+        return room.sharedItems.map((item) => ({
+          roomId: room.id,
+          roomName: room.name,
+          memberId: me.id,
+          canManage:
+            hasRoomManagementRole || item.createdById === me.id,
+          item,
+        }))
+      }),
+    [joinedStudyRooms],
+  )
   useEffect(() => {
     localStorage.setItem(TODO_STORAGE_KEY, JSON.stringify(todos))
   }, [todos])
@@ -328,7 +451,64 @@ export default function App() {
     )
   }
 
-  const addEvent = (event: CalendarEventInput) => {
+  const addSharedItem = (
+    roomId: string,
+    createItem: (memberId: string) => StudySharedItem,
+  ) => {
+    setStudyRooms((current) =>
+      current.map((room) => {
+        if (room.id !== roomId) return room
+        const me = room.members.find((member) => member.isMe)
+        if (!me) return room
+        const canShare =
+          room.ownerId === me.id ||
+          room.managerIds.includes(me.id) ||
+          room.allowMemberSharing
+        if (!canShare) return room
+        return {
+          ...room,
+          sharedItems: [createItem(me.id), ...room.sharedItems],
+        }
+      }),
+    )
+  }
+
+  const addEvent = (event: CalendarEventInput, sharedRoomId?: string) => {
+    if (sharedRoomId) {
+      addSharedItem(sharedRoomId, (memberId) => ({
+        id: `shared-${crypto.randomUUID()}`,
+        type: 'event',
+        title: event.title,
+        date: event.date,
+        time: event.allDay ? undefined : event.startTime,
+        endTime: event.allDay ? undefined : event.endTime,
+        location: event.location,
+        repeat: event.repeat,
+        repeatWeekdays:
+          event.repeat === 'weekly'
+            ? event.repeatWeekdays ?? [new Date(`${event.date}T00:00:00`).getDay()]
+            : undefined,
+        repeatIntervalWeeks:
+          event.repeat === 'weekly' ? event.repeatIntervalWeeks ?? 1 : undefined,
+        repeatMonthDay:
+          event.repeat === 'monthly'
+            ? event.repeatMonthDay ?? new Date(`${event.date}T00:00:00`).getDate()
+            : undefined,
+        repeatMonthlyWeek:
+          event.repeat === 'monthlyWeekday'
+            ? event.repeatMonthlyWeek ?? 'first'
+            : undefined,
+        repeatMonthlyWeekday:
+          event.repeat === 'monthlyWeekday'
+            ? event.repeatMonthlyWeekday ?? new Date(`${event.date}T00:00:00`).getDay()
+            : undefined,
+        note: event.note,
+        createdById: memberId,
+        completedMemberIds: [],
+        participantMemberIds: [],
+      }))
+      return
+    }
     setEvents((current) => [
       ...current,
       {
@@ -351,7 +531,27 @@ export default function App() {
     setEvents((current) => current.filter((event) => event.id !== eventId))
   }
 
-  const addTodo = (input: TodoInput) => {
+  const addTodo = (input: TodoInput, sharedRoomId?: string) => {
+    if (sharedRoomId) {
+      addSharedItem(sharedRoomId, (memberId) => ({
+        id: `shared-${crypto.randomUUID()}`,
+        type: 'todo',
+        title: input.text,
+        date: input.date,
+        time: input.dueTime || undefined,
+        repeat: input.repeat ?? 'none',
+        repeatWeekdays: input.repeatWeekdays,
+        repeatIntervalWeeks: input.repeatIntervalWeeks,
+        repeatMonthDay: input.repeatMonthDay,
+        repeatMonthlyWeek: input.repeatMonthlyWeek,
+        repeatMonthlyWeekday: input.repeatMonthlyWeekday,
+        note: input.note,
+        createdById: memberId,
+        completedMemberIds: [],
+        participantMemberIds: [],
+      }))
+      return
+    }
     const newTodo: Todo = {
       id: crypto.randomUUID(),
       done: false,
@@ -491,13 +691,45 @@ export default function App() {
               avatar: '민',
               minutes: 0,
               status: 'resting',
-              focusLabel: '오늘의 공부를 준비 중이에요',
+              focusLabel: '오늘의 활동을 준비 중이에요',
               isMe: true,
             },
           ],
         }
       }),
     )
+  }
+
+  const changeStudyRoom = (
+    roomId: string,
+    update: (current: StudyRoom) => StudyRoom,
+  ) => {
+    setStudyRooms((current) =>
+      current.map((room) => (room.id === roomId ? update(room) : room)),
+    )
+  }
+
+  const toggleSharedItemStatus = (roomId: string, itemId: string) => {
+    changeStudyRoom(roomId, (room) => {
+      const me = room.members.find((member) => member.isMe)
+      if (!me) return room
+      return {
+        ...room,
+        sharedItems: room.sharedItems.map((item) => {
+          if (item.id !== itemId) return item
+          const statusMemberIds =
+            item.type === 'event'
+              ? item.participantMemberIds
+              : item.completedMemberIds
+          const nextMemberIds = statusMemberIds.includes(me.id)
+            ? statusMemberIds.filter((memberId) => memberId !== me.id)
+            : [...statusMemberIds, me.id]
+          return item.type === 'event'
+            ? { ...item, participantMemberIds: nextMemberIds }
+            : { ...item, completedMemberIds: nextMemberIds }
+        }),
+      }
+    })
   }
 
   const createStudyRoom = (input: StudyRoomCreateInput) => {
@@ -514,6 +746,11 @@ export default function App() {
         todayMinutes: 0,
         weeklyProgress: 0,
         streak: 1,
+        ownerId: 'me',
+        managerIds: [],
+        allowMemberSharing: true,
+        sharedItems: [],
+        chatMessages: [],
         members: [
           {
             id: 'me',
@@ -521,7 +758,7 @@ export default function App() {
             avatar: '민',
             minutes: 0,
             status: 'resting',
-            focusLabel: '첫 집중을 준비 중이에요',
+            focusLabel: '첫 활동을 준비 중이에요',
             isMe: true,
           },
         ],
@@ -621,6 +858,8 @@ export default function App() {
               visibleMonth={visibleMonth}
               events={events}
               projects={projects}
+              studyRooms={joinedStudyRooms}
+              sharedItems={sharedItemEntries}
               onSelectDate={selectDate}
               onMoveMonth={(amount) =>
                 setVisibleMonth(
@@ -634,11 +873,13 @@ export default function App() {
               }
               onSelectToday={selectToday}
               onAddEvent={addEvent}
+              onAddTodo={addTodo}
               onUpdateEvent={updateEvent}
               onRemoveEvent={removeEvent}
               onCreateProject={createProject}
               onUpdateProject={updateProject}
               onDeleteProject={deleteProject}
+              onToggleSharedItemStatus={toggleSharedItemStatus}
             />
           }
         />
@@ -650,14 +891,18 @@ export default function App() {
               selectedDate={selectedDate}
               todos={todos}
               projects={projects}
+              studyRooms={joinedStudyRooms}
+              sharedItems={sharedItemEntries}
               onSelectDate={selectDate}
               onAddTodo={addTodo}
+              onAddEvent={addEvent}
               onUpdateTodo={updateTodo}
               onToggleTodo={toggleTodo}
               onRemoveTodo={removeTodo}
               onCreateProject={createProject}
               onUpdateProject={updateProject}
               onDeleteProject={deleteProject}
+              onToggleSharedItemStatus={toggleSharedItemStatus}
             />
           }
         />
@@ -697,9 +942,22 @@ export default function App() {
           }
         />
         <Route
+          path="/studies/:roomId/manage"
+          element={
+            <StudyRoomManagementRoute
+              rooms={studyRooms}
+              onChangeRoom={changeStudyRoom}
+            />
+          }
+        />
+        <Route
           path="/studies/:roomId"
           element={
-            <StudyRoomRoute rooms={studyRooms} onJoinRoom={joinStudyRoom} />
+            <StudyRoomRoute
+              rooms={studyRooms}
+              onJoinRoom={joinStudyRoom}
+              onChangeRoom={changeStudyRoom}
+            />
           }
         />
         <Route

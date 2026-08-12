@@ -12,6 +12,12 @@ export type Todo = {
   project?: string
   estimatedMinutes?: number
   memo?: string
+  repeat?: CalendarEvent['repeat']
+  repeatWeekdays?: number[]
+  repeatIntervalWeeks?: number
+  repeatMonthDay?: number
+  repeatMonthlyWeek?: CalendarEvent['repeatMonthlyWeek']
+  repeatMonthlyWeekday?: number
 }
 
 export type TodoInput = Omit<Todo, 'id' | 'done'>
@@ -28,7 +34,18 @@ export type CalendarEvent = {
   category: '개인' | '업무' | '약속' | '운동' | '기타'
   location: string
   note: string
-  repeat: 'none' | 'daily' | 'weekdays' | 'weekly' | 'monthly'
+  repeat:
+    | 'none'
+    | 'daily'
+    | 'weekdays'
+    | 'weekly'
+    | 'monthly'
+    | 'monthlyWeekday'
+  repeatMonthlyWeek?: 'first' | 'second' | 'third' | 'fourth' | 'last'
+  repeatMonthlyWeekday?: number
+  repeatWeekdays?: number[]
+  repeatIntervalWeeks?: number
+  repeatMonthDay?: number
   reminder: 'none' | '10m' | '30m' | '1h' | '1d'
   time?: string
 }
