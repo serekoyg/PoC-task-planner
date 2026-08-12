@@ -1,9 +1,9 @@
-import { Link } from 'react-router-dom'
 import type { Todo } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
 import type { ProjectFilter } from './ProjectSidebar'
 import { formatTaskDate, getTaskPriority } from '../lib/task'
 import { getBucketTodos, getTodoProjectBuckets } from '../lib/todoView'
+import TodoPlayLink from './TodoPlayLink'
 
 type TodoKanbanViewProps = {
   todos: Todo[]
@@ -59,17 +59,20 @@ export default function TodoKanbanView({
                         {getTaskPriority(todo)}
                       </span>
                     </div>
-                    <Link to={`/todos/${todo.id}`}>{todo.text}</Link>
+                    <button
+                      className="todo-item-title-button"
+                      type="button"
+                      onClick={() => onEditTodo(todo)}
+                    >
+                      {todo.text}
+                    </button>
                     <time dateTime={todo.date}>{formatTaskDate(todo.date)}</time>
                     <div>
                       {todo.dueTime && <span>마감 {todo.dueTime}</span>}
-                      <button
-                        type="button"
-                        onClick={() => onEditTodo(todo)}
-                        aria-label={`${todo.text} 편집`}
-                      >
-                        편집
-                      </button>
+                      <TodoPlayLink
+                        to={`/todos/${todo.id}/focus`}
+                        label={`${todo.text} 집중 시작`}
+                      />
                     </div>
                   </article>
                 ))}
