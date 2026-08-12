@@ -21,6 +21,10 @@ export const monthWeekLabels = {
 export const getWeekdaySelectionLabel = (weekdays: number[]) => {
   if (weekdays.length === 7) return '매일'
   if (
+    weekdays.length === 2 &&
+    [0, 6].every((weekday) => weekdays.includes(weekday))
+  ) return '주말'
+  if (
     weekdays.length === 5 &&
     [1, 2, 3, 4, 5].every((weekday) => weekdays.includes(weekday))
   ) return '평일'
