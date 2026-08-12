@@ -754,6 +754,7 @@ export default function App() {
               onUpdateProject={updateProject}
               onDeleteProject={deleteProject}
               onToggleSharedItemStatus={toggleSharedItemStatus}
+              onChangeRoom={changeStudyRoom}
             />
           }
         />

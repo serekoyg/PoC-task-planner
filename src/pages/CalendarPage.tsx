@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import ProjectSidebar, {
   type ProjectFilter,
 } from '../components/ProjectSidebar'
+import PlanEditorModal from '../components/PlanEditorModal'
 import SchedulePanel from '../components/SchedulePanel'
 import type {
   CalendarEvent,
@@ -10,7 +11,11 @@ import type {
 } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
 import type { PlannerProject, ProjectInput } from '../data/projects'
-import type { StudyRoom, StudySharedItemEntry } from '../data/studyRooms'
+import type {
+  StudyRoom,
+  StudySharedItemEntry,
+  StudySharedItemInput,
+} from '../data/studyRooms'
 import {
   formatSelectedDate,
   getCalendarDays,
@@ -58,6 +63,10 @@ type CalendarPageProps = {
   onUpdateProject: (projectId: string, input: ProjectInput) => void
   onDeleteProject: (projectId: string) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
+  onChangeRoom: (
+    roomId: string,
+    update: (current: StudyRoom) => StudyRoom,
+  ) => void
 }
 
 export default function CalendarPage({
@@ -79,10 +88,16 @@ export default function CalendarPage({
   onUpdateProject,
   onDeleteProject,
   onToggleSharedItemStatus,
+  onChangeRoom,
 }: CalendarPageProps) {
   const [selectedProjectId, setSelectedProjectId] =
     useState<ProjectFilter>('all')
   const [calendarView, setCalendarView] = useState<CalendarView>('month')
+  const [isEditorOpen, setIsEditorOpen] = useState(false)
+  const [editorDate, setEditorDate] = useState(selectedDate)
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent>()
+  const [editingSharedEvent, setEditingSharedEvent] =
+    useState<StudySharedItemEntry>()
   const selectedKey = toDateKey(selectedDate)
   const todayKey = toDateKey(today)
   const calendarDays = useMemo(
@@ -155,6 +170,62 @@ export default function CalendarPage({
     setCalendarView('day')
   }
 
+  const closeEditor = () => {
+    setIsEditorOpen(false)
+    setEditingEvent(undefined)
+    setEditingSharedEvent(undefined)
+  }
+
+  const openNewEvent = (date = selectedDate) => {
+    onSelectDate(date)
+    setEditorDate(date)
+    setEditingEvent(undefined)
+    setEditingSharedEvent(undefined)
+    setIsEditorOpen(true)
+  }
+
+  const openEditEvent = (event: CalendarEvent, occurrenceDate?: Date) => {
+    if (occurrenceDate) onSelectDate(occurrenceDate)
+    setEditorDate(occurrenceDate ?? new Date(`${event.date}T00:00:00`))
+    setEditingEvent(event)
+    setEditingSharedEvent(undefined)
+    setIsEditorOpen(true)
+  }
+
+  const openEditSharedEvent = (
+    entry: StudySharedItemEntry,
+    occurrenceDate?: Date,
+  ) => {
+    if (!entry.canManage) return
+    if (occurrenceDate) onSelectDate(occurrenceDate)
+    setEditorDate(occurrenceDate ?? new Date(`${entry.item.date}T00:00:00`))
+    setEditingEvent(undefined)
+    setEditingSharedEvent(entry)
+    setIsEditorOpen(true)
+  }
+
+  const updateSharedEvent = (input: StudySharedItemInput) => {
+    if (!editingSharedEvent) return
+    onChangeRoom(editingSharedEvent.roomId, (room) => ({
+      ...room,
+      sharedItems: room.sharedItems.map((item) =>
+        item.id === editingSharedEvent.item.id ? { ...item, ...input } : item,
+      ),
+    }))
+    closeEditor()
+  }
+
+  const removeSharedEvent = () => {
+    if (!editingSharedEvent) return
+    onChangeRoom(editingSharedEvent.roomId, (room) => ({
+      ...room,
+      sharedItems: room.sharedItems.filter(
+        (item) => item.id !== editingSharedEvent.item.id,
+      ),
+    }))
+    closeEditor()
+  }
+
   return (
     <main className="planner calendar-page">
       <div className="project-filter-layout">
@@ -189,6 +260,13 @@ export default function CalendarPage({
                   </button>
                 ))}
               </div>
+              <button
+                className="add-event-button calendar-toolbar-add"
+                type="button"
+                onClick={() => openNewEvent()}
+              >
+                <span aria-hidden="true">＋</span> 새 일정
+              </button>
               <div className="calendar-period-navigation">
                 <button
                   className="today-button"
@@ -224,14 +302,10 @@ export default function CalendarPage({
             <SchedulePanel
               selectedDate={selectedDate}
               events={filteredEvents}
-              projects={projects}
-              studyRooms={studyRooms}
               sharedItems={visibleSharedEvents}
-              defaultProjectName={selectedProject?.name}
-              onAddEvent={onAddEvent}
-              onAddTodo={onAddTodo}
-              onUpdateEvent={onUpdateEvent}
-              onRemoveEvent={onRemoveEvent}
+              onCreateEvent={() => openNewEvent()}
+              onEditEvent={openEditEvent}
+              onEditSharedEvent={openEditSharedEvent}
               onToggleSharedItemStatus={onToggleSharedItemStatus}
             />
           )}
@@ -275,8 +349,8 @@ export default function CalendarPage({
                             className={`week-event ${event.color}`}
                             type="button"
                             key={event.id}
-                            onClick={() => openDayView(date)}
-                            aria-label={`${event.title}, 일간 보기에서 열기`}
+                            onClick={() => openEditEvent(event, date)}
+                            aria-label={`${event.title} 편집`}
                           >
                             <time>{event.allDay ? '종일' : event.startTime}</time>
                             <strong>{event.title}</strong>
@@ -288,8 +362,16 @@ export default function CalendarPage({
                             className="week-event blue shared"
                             type="button"
                             key={`${entry.roomId}-${entry.item.id}`}
-                            onClick={() => openDayView(date)}
-                            aria-label={`${entry.item.title}, 공동 일정, 일간 보기에서 열기`}
+                            onClick={() =>
+                              entry.canManage
+                                ? openEditSharedEvent(entry, date)
+                                : openDayView(date)
+                            }
+                            aria-label={
+                              entry.canManage
+                                ? `${entry.item.title} 편집`
+                                : `${entry.item.title}, 일간 보기에서 열기`
+                            }
                           >
                             <time>{entry.item.time ?? '종일'}</time>
                             <strong>{entry.item.title}</strong>
@@ -332,42 +414,63 @@ export default function CalendarPage({
                     date.getMonth() === visibleMonth.getMonth()
 
                   return (
-                    <button
+                    <article
                       className={`calendar-day${isSelected ? ' selected' : ''}${
                         isToday ? ' today' : ''
                       }${isCurrentMonth ? '' : ' muted'}`}
-                      type="button"
                       key={dateKey}
-                      onClick={() => onSelectDate(date)}
-                      onDoubleClick={() => openDayView(date)}
-                      aria-label={`${formatSelectedDate(date)}${
-                        dateEventCount ? `, 일정 ${dateEventCount}개` : ''
-                      }`}
-                      aria-pressed={isSelected}
                     >
-                      <span className="day-number">{date.getDate()}</span>
-                      <span className="day-events" aria-hidden="true">
+                      <button
+                        className="calendar-day-select"
+                        type="button"
+                        onClick={() => onSelectDate(date)}
+                        onDoubleClick={() => openDayView(date)}
+                        aria-label={`${formatSelectedDate(date)}${
+                          dateEventCount ? `, 일정 ${dateEventCount}개` : ''
+                        }`}
+                        aria-pressed={isSelected}
+                      >
+                        <span className="day-number">{date.getDate()}</span>
+                      </button>
+                      <span className="day-events">
                         {dateEvents.slice(0, 2).map((item) => (
-                          <span className={`event-chip ${item.color}`} key={item.id}>
+                          <button
+                            className={`event-chip ${item.color}`}
+                            type="button"
+                            key={item.id}
+                            onClick={() => openEditEvent(item, date)}
+                            aria-label={`${item.title} 편집`}
+                          >
                             {item.allDay ? '종일' : item.startTime} {item.title}
-                          </span>
+                          </button>
                         ))}
                         {dateEvents.length < 2 &&
                           dateSharedEvents
                             .slice(0, 2 - dateEvents.length)
                             .map((entry) => (
-                              <span
+                              <button
                                 className="event-chip blue shared"
+                                type="button"
                                 key={`${entry.roomId}-${entry.item.id}`}
+                                onClick={() =>
+                                  entry.canManage
+                                    ? openEditSharedEvent(entry, date)
+                                    : openDayView(date)
+                                }
+                                aria-label={
+                                  entry.canManage
+                                    ? `${entry.item.title} 편집`
+                                    : `${entry.item.title}, 일간 보기에서 열기`
+                                }
                               >
                                 {entry.item.time ?? '종일'} {entry.item.title}
-                              </span>
+                              </button>
                             ))}
                         {dateEventCount > 2 && (
                           <span className="more-events">+{dateEventCount - 2}</span>
                         )}
                       </span>
-                    </button>
+                    </article>
                   )
                 })}
               </div>
@@ -375,6 +478,47 @@ export default function CalendarPage({
           )}
         </div>
       </div>
+
+      {isEditorOpen && (
+        <PlanEditorModal
+          initialType="event"
+          selectedDate={editorDate}
+          projects={projects}
+          studyRooms={studyRooms}
+          fixedRoom={
+            editingSharedEvent
+              ? studyRooms.find(
+                  (room) => room.id === editingSharedEvent.roomId,
+                )
+              : undefined
+          }
+          memberId={editingSharedEvent?.memberId}
+          item={editingSharedEvent?.item}
+          calendarEvent={editingEvent}
+          defaultProjectName={selectedProject?.name}
+          onClose={closeEditor}
+          onSaveTodo={(input, sharedRoomId) => {
+            onAddTodo(input, sharedRoomId)
+            closeEditor()
+          }}
+          onSaveEvent={(input, sharedRoomId) => {
+            if (editingEvent) onUpdateEvent(editingEvent.id, input)
+            else onAddEvent(input, sharedRoomId)
+            closeEditor()
+          }}
+          onSaveShared={updateSharedEvent}
+          onDelete={
+            editingSharedEvent
+              ? removeSharedEvent
+              : editingEvent
+                ? () => {
+                    onRemoveEvent(editingEvent.id)
+                    closeEditor()
+                  }
+                : undefined
+          }
+        />
+      )}
     </main>
   )
 }
