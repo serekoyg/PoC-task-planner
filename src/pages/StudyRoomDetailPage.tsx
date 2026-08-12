@@ -68,8 +68,6 @@ export default function StudyRoomDetailPage({
   const [activeActivityTitle, setActiveActivityTitle] = useState('')
   const [activeTab, setActiveTab] = useState<StudyRoomTab>('home')
   const [isPlanEditorOpen, setIsPlanEditorOpen] = useState(false)
-  const [editingSharedItem, setEditingSharedItem] = useState<StudySharedItem>()
-  const [deletingSharedItemId, setDeletingSharedItemId] = useState<string>()
   const rankedMembers = useMemo(
     () => [...(room?.members ?? [])].sort((a, b) => b.minutes - a.minutes),
     [room],
@@ -147,31 +145,18 @@ export default function StudyRoomDetailPage({
     if (!me) return
     onChangeRoom(room.id, (current) => ({
       ...current,
-      sharedItems: editingSharedItem
-        ? current.sharedItems.map((item) =>
-            item.id === editingSharedItem.id ? { ...item, ...input } : item,
-          )
-        : [
-            {
-              id: `shared-${crypto.randomUUID()}`,
-              ...input,
-              createdById: me.id,
-              completedMemberIds: [],
-              participantMemberIds: [],
-            },
-            ...current.sharedItems,
-          ],
+      sharedItems: [
+        {
+          id: `shared-${crypto.randomUUID()}`,
+          ...input,
+          createdById: me.id,
+          completedMemberIds: [],
+          participantMemberIds: [],
+        },
+        ...current.sharedItems,
+      ],
     }))
-    setEditingSharedItem(undefined)
     setIsPlanEditorOpen(false)
-  }
-
-  const deleteSharedItem = (itemId: string) => {
-    onChangeRoom(room.id, (current) => ({
-      ...current,
-      sharedItems: current.sharedItems.filter((item) => item.id !== itemId),
-    }))
-    setDeletingSharedItemId(undefined)
   }
 
   const sendChatMessage = (text: string) => {
@@ -324,7 +309,6 @@ export default function StudyRoomDetailPage({
               className="room-primary-button"
               type="button"
               onClick={() => {
-                setEditingSharedItem(undefined)
                 setIsPlanEditorOpen(true)
               }}
             >
@@ -344,9 +328,6 @@ export default function StudyRoomDetailPage({
                   ? item.participantMemberIds.includes(me.id)
                   : item.completedMemberIds.includes(me.id)),
             )
-            const canManage = Boolean(
-              me && (hasManagementRole || item.createdById === me.id),
-            )
             return (
               <article className={`study-shared-plan-card ${item.type}`} key={item.id}>
                 <div className="study-shared-plan-card-heading">
@@ -357,25 +338,6 @@ export default function StudyRoomDetailPage({
                     <time>{formatSharedDate(item)}</time>
                     <span>{getSharedRepeatLabel(item)}</span>
                   </div>
-                  {canManage && (
-                    <div className="study-shared-plan-actions">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingSharedItem(item)
-                          setIsPlanEditorOpen(true)
-                        }}
-                      >
-                        수정
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeletingSharedItemId(item.id)}
-                      >
-                        삭제
-                      </button>
-                    </div>
-                  )}
                 </div>
                 <h3>{item.title}</h3>
                 {item.location && <p className="shared-plan-location">⌖ {item.location}</p>}
@@ -399,13 +361,6 @@ export default function StudyRoomDetailPage({
                     </button>
                   )}
                 </div>
-                {deletingSharedItemId === item.id && (
-                  <div className="shared-plan-delete-confirm" role="alert">
-                    <span>모든 멤버에게서 이 계획이 사라져요.</span>
-                    <button type="button" onClick={() => setDeletingSharedItemId(undefined)}>취소</button>
-                    <button type="button" onClick={() => deleteSharedItem(item.id)}>삭제</button>
-                  </div>
-                )}
               </article>
             )
           })}
@@ -502,15 +457,11 @@ export default function StudyRoomDetailPage({
 
       {isPlanEditorOpen && me && (
         <PlanEditorModal
-          initialType={editingSharedItem?.type ?? 'todo'}
-          selectedDate={new Date(`${editingSharedItem?.date ?? '2026-08-14'}T00:00:00`)}
+          initialType="todo"
+          selectedDate={new Date('2026-08-14T00:00:00')}
           fixedRoom={room}
           memberId={me.id}
-          item={editingSharedItem}
-          onClose={() => {
-            setEditingSharedItem(undefined)
-            setIsPlanEditorOpen(false)
-          }}
+          onClose={() => setIsPlanEditorOpen(false)}
           onSaveShared={saveSharedItem}
         />
       )}

@@ -75,6 +75,8 @@ export default function StudyRoomManagementPage({
   const [activeTab, setActiveTab] = useState<ManagementTab>('shared')
   const [sharedFilter, setSharedFilter] = useState<SharedFilter>('all')
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false)
+  const [editingSharedItem, setEditingSharedItem] = useState<StudySharedItem>()
+  const [deletingSharedItemId, setDeletingSharedItemId] = useState<string>()
   const [delegateMemberId, setDelegateMemberId] = useState<string>()
   const [notice, setNotice] = useState('')
   const [roomNotifications, setRoomNotifications] = useState(true)
@@ -115,6 +117,7 @@ export default function StudyRoomManagementPage({
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       setIsPlanModalOpen(false)
+      setEditingSharedItem(undefined)
       setDelegateMemberId(undefined)
     }
     window.addEventListener('keydown', closeOnEscape)
@@ -157,21 +160,36 @@ export default function StudyRoomManagementPage({
     window.setTimeout(() => setNotice(''), 2400)
   }
 
-  const addSharedPlan = (input: StudySharedItemInput) => {
-    const item: StudySharedItem = {
-      id: `shared-${crypto.randomUUID()}`,
-      ...input,
-      createdById: me.id,
-      completedMemberIds: [],
-      participantMemberIds: [],
-    }
-
+  const saveSharedPlan = (input: StudySharedItemInput) => {
     onChangeRoom(room.id, (current) => ({
       ...current,
-      sharedItems: [item, ...current.sharedItems],
+      sharedItems: editingSharedItem
+        ? current.sharedItems.map((item) =>
+            item.id === editingSharedItem.id ? { ...item, ...input } : item,
+          )
+        : [
+            {
+              id: `shared-${crypto.randomUUID()}`,
+              ...input,
+              createdById: me.id,
+              completedMemberIds: [],
+              participantMemberIds: [],
+            },
+            ...current.sharedItems,
+          ],
     }))
     setIsPlanModalOpen(false)
-    showNotice('함께할 계획을 멤버들과 공유했어요.')
+    setEditingSharedItem(undefined)
+    showNotice(editingSharedItem ? '공유 계획을 수정했어요.' : '함께할 계획을 멤버들과 공유했어요.')
+  }
+
+  const deleteSharedPlan = (itemId: string) => {
+    onChangeRoom(room.id, (current) => ({
+      ...current,
+      sharedItems: current.sharedItems.filter((item) => item.id !== itemId),
+    }))
+    setDeletingSharedItemId(undefined)
+    showNotice('공유 계획을 삭제했어요.')
   }
 
   const toggleMyCompletion = (itemId: string) => {
@@ -287,7 +305,10 @@ export default function StudyRoomManagementPage({
                   <button
                     className="room-primary-button"
                     type="button"
-                    onClick={() => setIsPlanModalOpen(true)}
+                    onClick={() => {
+                      setEditingSharedItem(undefined)
+                      setIsPlanModalOpen(true)
+                    }}
                   >
                     <span aria-hidden="true">＋</span> 공유 계획 추가
                   </button>
@@ -324,6 +345,7 @@ export default function StudyRoomManagementPage({
                   )
                   const isCompleted = item.completedMemberIds.includes(me.id)
                   const isParticipating = item.participantMemberIds.includes(me.id)
+                  const canManagePlan = isOwner || isManager || item.createdById === me.id
 
                   return (
                     <article className={`shared-plan-card ${item.type}`} key={item.id}>
@@ -344,22 +366,40 @@ export default function StudyRoomManagementPage({
                           {item.repeat !== 'none' && ` · ${getSharedRepeatLabel(item)}`}
                         </small>
                       </div>
-                      {item.type !== 'event' ? (
-                        <button
-                          className={isCompleted ? 'completed' : ''}
-                          type="button"
-                          onClick={() => toggleMyCompletion(item.id)}
-                        >
-                          {isCompleted ? '✓ 완료함' : '내 완료 체크'}
-                        </button>
-                      ) : (
-                        <button
-                          className={isParticipating ? 'completed' : ''}
-                          type="button"
-                          onClick={() => toggleMyCompletion(item.id)}
-                        >
-                          {isParticipating ? '✓ 참여함' : '참여할게요'}
-                        </button>
+                      <div className="shared-plan-manage-actions">
+                        {canManagePlan && (
+                          <div>
+                            <button type="button" onClick={() => {
+                              setEditingSharedItem(item)
+                              setIsPlanModalOpen(true)
+                            }}>수정</button>
+                            <button type="button" onClick={() => setDeletingSharedItemId(item.id)}>삭제</button>
+                          </div>
+                        )}
+                        {item.type !== 'event' ? (
+                          <button
+                            className={isCompleted ? 'completed' : ''}
+                            type="button"
+                            onClick={() => toggleMyCompletion(item.id)}
+                          >
+                            {isCompleted ? '✓ 완료함' : '내 완료 체크'}
+                          </button>
+                        ) : (
+                          <button
+                            className={isParticipating ? 'completed' : ''}
+                            type="button"
+                            onClick={() => toggleMyCompletion(item.id)}
+                          >
+                            {isParticipating ? '✓ 참여함' : '참여할게요'}
+                          </button>
+                        )}
+                      </div>
+                      {deletingSharedItemId === item.id && (
+                        <div className="shared-plan-delete-confirm room-manage-delete-confirm" role="alert">
+                          <span>모든 멤버에게서 이 계획이 사라져요.</span>
+                          <button type="button" onClick={() => setDeletingSharedItemId(undefined)}>취소</button>
+                          <button type="button" onClick={() => deleteSharedPlan(item.id)}>삭제</button>
+                        </div>
                       )}
                     </article>
                   )
@@ -588,8 +628,12 @@ export default function StudyRoomManagementPage({
           selectedDate={new Date('2026-08-14T00:00:00')}
           fixedRoom={room}
           memberId={me.id}
-          onClose={() => setIsPlanModalOpen(false)}
-          onSaveShared={addSharedPlan}
+          item={editingSharedItem}
+          onClose={() => {
+            setEditingSharedItem(undefined)
+            setIsPlanModalOpen(false)
+          }}
+          onSaveShared={saveSharedPlan}
         />
       )}
 
