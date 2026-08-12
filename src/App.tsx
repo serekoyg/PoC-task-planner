@@ -34,6 +34,7 @@ import { formatHeaderDate } from './lib/date'
 import CalendarPage from './pages/CalendarPage'
 import FocusResultPage from './pages/FocusResultPage'
 import FocusSessionPage from './pages/FocusSessionPage'
+import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
 import StudyRoomDetailPage from './pages/StudyRoomDetailPage'
@@ -48,6 +49,7 @@ const STUDY_STORAGE_KEY = 'haru.study-rooms'
 const FOCUS_STORAGE_KEY = 'haru.focus-results'
 const PROJECT_STORAGE_KEY = 'haru.projects'
 const LEGACY_PROJECT_STORAGE_KEY = 'haru.project-categories'
+const AUTH_STORAGE_KEY = 'haru.demo-authenticated'
 
 const readStorage = <T,>(key: string, fallback: () => T): T => {
   try {
@@ -354,6 +356,9 @@ function FocusResultRoute({
 export default function App() {
   const location = useLocation()
   const today = useMemo(() => new Date(), [])
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    () => localStorage.getItem(AUTH_STORAGE_KEY) === 'true',
+  )
   const profileMenuRef = useRef<HTMLDivElement>(null)
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const [profileActionMessage, setProfileActionMessage] = useState(
@@ -376,6 +381,18 @@ export default function App() {
     () => studyRooms.filter((room) => room.joined),
     [studyRooms],
   )
+
+  const login = () => {
+    localStorage.setItem(AUTH_STORAGE_KEY, 'true')
+    setIsAuthenticated(true)
+  }
+
+  const logout = () => {
+    localStorage.removeItem(AUTH_STORAGE_KEY)
+    setIsProfileMenuOpen(false)
+    setIsAuthenticated(false)
+  }
+
   const sharedItemEntries = useMemo<StudySharedItemEntry[]>(
     () =>
       joinedStudyRooms.flatMap((room) => {
@@ -773,6 +790,10 @@ export default function App() {
     return roomId
   }
 
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={login} />
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -855,9 +876,7 @@ export default function App() {
                   className="profile-menu-logout"
                   role="menuitem"
                   type="button"
-                  onClick={() =>
-                    setProfileActionMessage('데모에서는 실제로 로그아웃하지 않아요')
-                  }
+                  onClick={logout}
                 >
                   <span aria-hidden="true">↪</span>
                   로그아웃
