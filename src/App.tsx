@@ -15,11 +15,9 @@ import {
   createInitialTodos,
   type Todo,
   type TodoInput,
-  toDateKey,
 } from './data/initialData'
 import {
   createInitialProjects,
-  normalizeProjects,
   type PlannerProject,
   type ProjectInput,
 } from './data/projects'
@@ -42,12 +40,11 @@ import StudyRoomsPage from './pages/StudyRoomsPage'
 import TaskDetailPage from './pages/TaskDetailPage'
 import TodosPage from './pages/TodosPage'
 
-const TODO_STORAGE_KEY = 'haru.todos'
-const EVENT_STORAGE_KEY = 'haru.events'
-const STUDY_STORAGE_KEY = 'haru.study-rooms'
-const FOCUS_STORAGE_KEY = 'haru.focus-results'
-const PROJECT_STORAGE_KEY = 'haru.projects'
-const LEGACY_PROJECT_STORAGE_KEY = 'haru.project-categories'
+const TODO_STORAGE_KEY = 'haru.v2.todos'
+const EVENT_STORAGE_KEY = 'haru.v2.events'
+const STUDY_STORAGE_KEY = 'haru.v2.study-rooms'
+const FOCUS_STORAGE_KEY = 'haru.v2.focus-results'
+const PROJECT_STORAGE_KEY = 'haru.v2.projects'
 
 const readStorage = <T,>(key: string, fallback: () => T): T => {
   try {
@@ -58,180 +55,17 @@ const readStorage = <T,>(key: string, fallback: () => T): T => {
   }
 }
 
-const readProjects = (): PlannerProject[] => {
-  try {
-    const saved =
-      localStorage.getItem(PROJECT_STORAGE_KEY) ??
-      localStorage.getItem(LEGACY_PROJECT_STORAGE_KEY)
-    return saved ? normalizeProjects(JSON.parse(saved)) : createInitialProjects()
-  } catch {
-    return createInitialProjects()
-  }
-}
-
-const getDefaultEndTime = (startTime: string) => {
-  const [hours, minutes] = startTime.split(':').map(Number)
-  const endMinutes = Math.min(hours * 60 + minutes + 60, 23 * 60 + 59)
-  return `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(
-    endMinutes % 60,
-  ).padStart(2, '0')}`
-}
-
-const eventProjects: Record<string, string> = {
-  '주간 계획 회의': '주간 계획',
-  '화면 프로토타입 리뷰': '하루 리뉴얼',
-  '다음 스프린트 정리': '팀 운영',
-  '아이디어 공유': '하루 리뉴얼',
-}
-
-const todoProjects: Record<string, string> = {
-  '이번 주 우선순위 정리하기': '주간 계획',
-  '캘린더 화면 피드백 남기기': '하루 리뉴얼',
-  '오후 회의 자료 훑어보기': '팀 운영',
-  '프로토타입 검토 결과 공유하기': '하루 리뉴얼',
-}
+const readProjects = () =>
+  readStorage<PlannerProject[]>(PROJECT_STORAGE_KEY, createInitialProjects)
 
 const readEvents = () =>
-  readStorage<CalendarEvent[]>(EVENT_STORAGE_KEY, createInitialEvents).map(
-    (event) => {
-      const startTime = event.startTime ?? event.time ?? '09:00'
-      return {
-        ...event,
-        startTime,
-        endTime: event.endTime ?? getDefaultEndTime(startTime),
-        allDay: event.allDay ?? false,
-        category: event.category ?? '개인',
-        location: event.location ?? '',
-        note: event.note ?? '',
-        repeat: event.repeat ?? 'none',
-        repeatMonthlyWeek:
-          event.repeatMonthlyWeek ??
-          (event.repeat === 'monthlyWeekday' ? 'first' : undefined),
-        repeatMonthlyWeekday:
-          event.repeatMonthlyWeekday ??
-          (event.repeat === 'monthlyWeekday'
-            ? new Date(`${event.date}T00:00:00`).getDay()
-            : undefined),
-        repeatWeekdays: event.repeatWeekdays,
-        repeatIntervalWeeks: event.repeatIntervalWeeks ?? 1,
-        repeatMonthDay:
-          event.repeatMonthDay ??
-          (event.repeat === 'monthly'
-            ? new Date(`${event.date}T00:00:00`).getDate()
-            : undefined),
-        reminder: event.reminder ?? 'none',
-        project: event.project ?? eventProjects[event.title] ?? '받은 편지함',
-      }
-    },
-  )
+  readStorage<CalendarEvent[]>(EVENT_STORAGE_KEY, createInitialEvents)
 
-type LegacyTodo = Omit<Partial<Todo>, 'priority'> &
-  Pick<Todo, 'id' | 'text' | 'done'> & {
-    priority?: Todo['priority'] | '높음' | '보통' | '낮음'
-  }
+const readTodos = () =>
+  readStorage<Todo[]>(TODO_STORAGE_KEY, createInitialTodos)
 
-const normalizePriority = (priority: LegacyTodo['priority']): Todo['priority'] => {
-  if (priority === '높음') return 'high'
-  if (priority === '낮음') return 'low'
-  if (priority === '보통') return 'medium'
-  return priority ?? 'medium'
-}
-
-const normalizeTodo = (todo: LegacyTodo, date: string): Todo => ({
-  id: todo.id,
-  date: todo.date ?? date,
-  text: todo.text,
-  done: todo.done,
-  priority: normalizePriority(todo.priority),
-  category: todo.category ?? '개인',
-  dueTime: todo.dueTime ?? '',
-  reminder: todo.reminder ?? 'none',
-  color: todo.color ?? 'blue',
-  note: todo.note ?? todo.memo ?? '',
-  project: todo.project ?? todoProjects[todo.text] ?? '받은 편지함',
-  estimatedMinutes: todo.estimatedMinutes ?? 30,
-  memo: todo.memo,
-  repeat: todo.repeat ?? 'none',
-  repeatWeekdays: todo.repeatWeekdays,
-  repeatIntervalWeeks: todo.repeatIntervalWeeks ?? 1,
-  repeatMonthDay: todo.repeatMonthDay,
-  repeatMonthlyWeek: todo.repeatMonthlyWeek,
-  repeatMonthlyWeekday: todo.repeatMonthlyWeekday,
-})
-
-const readTodos = () => {
-  const stored = readStorage<Todo[] | Record<string, LegacyTodo[]>>(
-    TODO_STORAGE_KEY,
-    createInitialTodos,
-  )
-
-  if (Array.isArray(stored)) {
-    const fallbackDate = toDateKey(new Date())
-    return stored.map((todo) => normalizeTodo(todo, fallbackDate))
-  }
-
-  return Object.entries(stored).flatMap(([date, items]) =>
-    items.map((todo) => normalizeTodo(todo, date)),
-  )
-}
-
-const readStudyRooms = () => {
-  const defaults = new Map(
-    createInitialStudyRooms().map((room) => [room.id, room]),
-  )
-
-  return readStorage(STUDY_STORAGE_KEY, createInitialStudyRooms).map((room) => {
-    const initialRoom = defaults.get(room.id)
-    return {
-      ...room,
-      description:
-        room.description ===
-        '출근 전 조용히 모여 각자 준비하는 아침 집중 스터디예요.'
-          ? '출근 전 조용히 모여 각자 준비하는 아침 집중 모임이에요.'
-          : room.description,
-      ownerId:
-        room.ownerId ?? initialRoom?.ownerId ?? room.members[0]?.id ?? 'me',
-      managerIds: room.managerIds ?? initialRoom?.managerIds ?? [],
-      allowMemberSharing:
-        room.allowMemberSharing ?? initialRoom?.allowMemberSharing ?? true,
-      sharedItems: (room.sharedItems ?? initialRoom?.sharedItems ?? []).map(
-        (item) => {
-          const legacyItem = item as Omit<StudySharedItem, 'type'> & {
-            type: StudySharedItem['type'] | 'routine'
-            repeatWeekday?: number
-          }
-          return {
-            ...item,
-            type: legacyItem.type === 'routine' ? 'todo' as const : legacyItem.type,
-            repeat: item.repeat ?? 'none',
-            repeatWeekdays:
-              item.repeatWeekdays ??
-              (legacyItem.repeatWeekday === undefined
-                ? undefined
-                : [legacyItem.repeatWeekday]),
-            repeatIntervalWeeks: item.repeatIntervalWeeks ?? 1,
-            repeatMonthDay:
-              item.repeatMonthDay ??
-              (item.repeat === 'monthly'
-                ? new Date(`${item.date}T00:00:00`).getDate()
-                : undefined),
-            repeatMonthlyWeek:
-              item.repeatMonthlyWeek ??
-              (item.repeat === 'monthlyWeekday' ? 'first' : undefined),
-            repeatMonthlyWeekday:
-              item.repeatMonthlyWeekday ??
-              (item.repeat === 'monthlyWeekday'
-                ? new Date(`${item.date}T00:00:00`).getDay()
-                : undefined),
-            completedMemberIds: item.completedMemberIds ?? [],
-            participantMemberIds: item.participantMemberIds ?? [],
-          }
-        },
-      ),
-      chatMessages: room.chatMessages ?? initialRoom?.chatMessages ?? [],
-    }
-  })
-}
+const readStudyRooms = () =>
+  readStorage<StudyRoom[]>(STUDY_STORAGE_KEY, createInitialStudyRooms)
 
 type StudyRoomRouteProps = {
   rooms: StudyRoom[]

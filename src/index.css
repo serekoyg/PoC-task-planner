@@ -3436,6 +3436,14 @@ fieldset {
   background: var(--accent-soft);
 }
 
+.shared-plan-type-options label:has(input:disabled) {
+  cursor: default;
+}
+
+.shared-plan-type-options label:not(.active):has(input:disabled) {
+  opacity: 0.45;
+}
+
 .shared-plan-type-options input {
   position: absolute;
   inset: 0;
@@ -3684,6 +3692,16 @@ fieldset {
 .fixed-plan-storage small {
   color: var(--muted);
   font-size: 0.65rem;
+}
+
+.unified-plan-actions > div:last-child {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+.unified-plan-actions > div:first-child:empty {
+  display: none;
 }
 
 .personal-plan-fields {
@@ -5232,6 +5250,14 @@ footer a {
   .study-form-actions button,
   .project-modal-actions button {
     flex: 1;
+  }
+
+  .unified-plan-actions > div {
+    width: 100%;
+  }
+
+  .unified-plan-actions > div:last-child {
+    margin-left: 0;
   }
 
   .study-hero {
