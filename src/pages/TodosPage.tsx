@@ -4,7 +4,6 @@ import ProjectSidebar, {
 } from '../components/ProjectSidebar'
 import PlanEditorModal from '../components/PlanEditorModal'
 import TodoDateListView from '../components/TodoDateListView'
-import TodoEditorModal from '../components/TodoEditorModal'
 import TodoKanbanView from '../components/TodoKanbanView'
 import TodoProjectListView from '../components/TodoProjectListView'
 import type { CalendarEventInput, Todo, TodoInput } from '../data/initialData'
@@ -185,41 +184,32 @@ export default function TodosPage({
         </div>
       </div>
 
-      {isCreating && (
+      {(isCreating || editingTodo) && (
         <PlanEditorModal
           initialType="todo"
           selectedDate={selectedDate}
           projects={projects}
           studyRooms={studyRooms}
+          todo={editingTodo}
           defaultProjectName={selectedProject?.name}
           onClose={closeEditor}
           onSaveTodo={(input, sharedRoomId) => {
-            onAddTodo(input, sharedRoomId)
+            if (editingTodo) onUpdateTodo(editingTodo.id, input)
+            else onAddTodo(input, sharedRoomId)
             closeEditor()
           }}
           onSaveEvent={(input, sharedRoomId) => {
             onAddEvent(input, sharedRoomId)
             closeEditor()
           }}
-        />
-      )}
-
-      {editingTodo && (
-        <TodoEditorModal
-          selectedDate={selectedDate}
-          projects={projects}
-          studyRooms={studyRooms}
-          defaultProjectName={selectedProject?.name}
-          todo={editingTodo}
-          onClose={closeEditor}
-          onSave={(input) => {
-            onUpdateTodo(editingTodo.id, input)
-            closeEditor()
-          }}
-          onDelete={() => {
-            onRemoveTodo(editingTodo.id)
-            closeEditor()
-          }}
+          onDelete={
+            editingTodo
+              ? () => {
+                  onRemoveTodo(editingTodo.id)
+                  closeEditor()
+                }
+              : undefined
+          }
         />
       )}
     </main>

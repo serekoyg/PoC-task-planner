@@ -1,6 +1,8 @@
 import { FormEvent, useEffect, useState } from 'react'
 import type {
+  CalendarEvent,
   CalendarEventInput,
+  Todo,
   TodoInput,
 } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
@@ -24,11 +26,14 @@ type PlanEditorModalProps = {
   fixedRoom?: StudyRoom
   memberId?: string
   item?: StudySharedItem
+  todo?: Todo
+  calendarEvent?: CalendarEvent
   defaultProjectName?: string
   onClose: () => void
   onSaveTodo?: (input: TodoInput, sharedRoomId?: string) => void
   onSaveEvent?: (input: CalendarEventInput, sharedRoomId?: string) => void
   onSaveShared?: (input: StudySharedItemInput) => void
+  onDelete?: () => void
 }
 
 export default function PlanEditorModal({
@@ -39,37 +44,58 @@ export default function PlanEditorModal({
   fixedRoom,
   memberId,
   item,
+  todo,
+  calendarEvent,
   defaultProjectName,
   onClose,
   onSaveTodo,
   onSaveEvent,
   onSaveShared,
+  onDelete,
 }: PlanEditorModalProps) {
-  const initialDate = item?.date ?? toDateKey(selectedDate)
-  const [type, setType] = useState<PlanType>(item?.type ?? initialType)
+  const personalItem = todo ?? calendarEvent
+  const isEditing = Boolean(item || personalItem)
+  const isPersonalEditing = Boolean(personalItem)
+  const initialDate = item?.date ?? personalItem?.date ?? toDateKey(selectedDate)
+  const initialPlanType: PlanType = item?.type ?? (todo ? 'todo' : calendarEvent ? 'event' : initialType)
+  const initialRepeat = item?.repeat ?? personalItem?.repeat ?? 'none'
+  const [type, setType] = useState<PlanType>(initialPlanType)
   const [destination, setDestination] = useState(fixedRoom?.id ?? 'personal')
-  const [title, setTitle] = useState(item?.title ?? '')
+  const [title, setTitle] = useState(item?.title ?? todo?.text ?? calendarEvent?.title ?? '')
   const [date, setDate] = useState(initialDate)
-  const [time, setTime] = useState(item?.time ?? (type === 'todo' ? '18:00' : '09:00'))
-  const [endTime, setEndTime] = useState(item?.endTime ?? '10:00')
-  const [location, setLocation] = useState(item?.location ?? '')
-  const [note, setNote] = useState(item?.note ?? '')
-  const [repeat, setRepeat] = useState<StudySharedRepeat>(item?.repeat ?? 'none')
+  const [time, setTime] = useState(
+    item?.time ?? todo?.dueTime ?? calendarEvent?.startTime ?? (initialPlanType === 'todo' ? '18:00' : '09:00'),
+  )
+  const [endTime, setEndTime] = useState(item?.endTime ?? calendarEvent?.endTime ?? '10:00')
+  const [location, setLocation] = useState(item?.location ?? calendarEvent?.location ?? '')
+  const [note, setNote] = useState(item?.note ?? personalItem?.note ?? '')
+  const [repeat, setRepeat] = useState<StudySharedRepeat>(initialRepeat)
   const [repeatWeekdays, setRepeatWeekdays] = useState<number[]>([
-    ...(item?.repeatWeekdays?.length ? item.repeatWeekdays : [selectedDate.getDay()]),
+    ...(item?.repeatWeekdays?.length
+      ? item.repeatWeekdays
+      : personalItem?.repeatWeekdays?.length
+        ? personalItem.repeatWeekdays
+        : [new Date(`${initialDate}T00:00:00`).getDay()]),
   ])
-  const itemRepeatInterval = item?.repeatIntervalWeeks ?? 1
+  const itemRepeatInterval = item?.repeatIntervalWeeks ?? personalItem?.repeatIntervalWeeks ?? 1
   const [repeatIntervalMode, setRepeatIntervalMode] = useState<'one' | 'two' | 'custom'>(itemRepeatInterval === 1 ? 'one' : itemRepeatInterval === 2 ? 'two' : 'custom')
   const [customRepeatInterval, setCustomRepeatInterval] = useState(itemRepeatInterval > 2 ? itemRepeatInterval : 3)
-  const [repeatMonthDay, setRepeatMonthDay] = useState(item?.repeatMonthDay ?? selectedDate.getDate())
-  const [repeatMonthlyWeek, setRepeatMonthlyWeek] = useState<StudySharedMonthWeek>(item?.repeatMonthlyWeek ?? 'first')
-  const [repeatMonthlyWeekday, setRepeatMonthlyWeekday] = useState(item?.repeatMonthlyWeekday ?? selectedDate.getDay())
-  const [project, setProject] = useState(defaultProjectName ?? '받은 편지함')
-  const [priority, setPriority] = useState<TodoInput['priority']>('medium')
-  const [reminder, setReminder] = useState<TodoInput['reminder']>('30m')
+  const [repeatMonthDay, setRepeatMonthDay] = useState(
+    item?.repeatMonthDay ?? personalItem?.repeatMonthDay ?? new Date(`${initialDate}T00:00:00`).getDate(),
+  )
+  const [repeatMonthlyWeek, setRepeatMonthlyWeek] = useState<StudySharedMonthWeek>(
+    item?.repeatMonthlyWeek ?? personalItem?.repeatMonthlyWeek ?? 'first',
+  )
+  const [repeatMonthlyWeekday, setRepeatMonthlyWeekday] = useState(
+    item?.repeatMonthlyWeekday ?? personalItem?.repeatMonthlyWeekday ?? new Date(`${initialDate}T00:00:00`).getDay(),
+  )
+  const [project, setProject] = useState(personalItem?.project ?? defaultProjectName ?? '받은 편지함')
+  const [priority, setPriority] = useState<TodoInput['priority']>(todo?.priority ?? 'medium')
+  const [reminder, setReminder] = useState<TodoInput['reminder']>(personalItem?.reminder ?? '30m')
   const [error, setError] = useState('')
+  const [isDeleteConfirming, setIsDeleteConfirming] = useState(false)
   const selectedRoom = fixedRoom ?? studyRooms.find((room) => room.id === destination)
-  const isPersonal = !fixedRoom && destination === 'personal'
+  const isPersonal = isPersonalEditing || (!fixedRoom && destination === 'personal')
   const member = fixedRoom?.members.find((candidate) => candidate.id === memberId)
 
   useEffect(() => {
@@ -135,20 +161,20 @@ export default function PlanEditorModal({
       return
     }
 
-    const sharedRoomId = isPersonal ? undefined : destination
+    const sharedRoomId = isPersonal || isPersonalEditing ? undefined : destination
     if (type === 'todo') {
       onSaveTodo?.(
         {
           date,
           text: title.trim(),
           priority,
-          category: '개인',
+          category: todo?.category ?? '개인',
           dueTime: time,
           reminder,
-          color: 'blue',
+          color: todo?.color ?? 'blue',
           note: note.trim(),
           project: isPersonal ? project : '받은 편지함',
-          estimatedMinutes: 30,
+          estimatedMinutes: todo?.estimatedMinutes ?? 30,
           ...repeatFields,
         },
         sharedRoomId,
@@ -161,9 +187,9 @@ export default function PlanEditorModal({
           startTime: time,
           endTime,
           allDay: false,
-          color: 'blue',
+          color: calendarEvent?.color ?? 'blue',
           project: isPersonal ? project : '받은 편지함',
-          category: '개인',
+          category: calendarEvent?.category ?? '개인',
           location: location.trim(),
           note: note.trim(),
           reminder,
@@ -190,11 +216,17 @@ export default function PlanEditorModal({
       >
         <div className="study-modal-heading">
           <div>
-            <p className="eyebrow">{fixedRoom ? `${fixedRoom.name}에 공유` : '새로운 계획'}</p>
-            <h2 id="unified-plan-editor-title">{item ? '계획 편집' : '계획 만들기'}</h2>
-            <p>{fixedRoom ? '저장하면 모든 멤버에게 하나의 공동 계획으로 표시돼요.' : '할 일과 일정을 같은 흐름에서 만들고 저장 위치를 선택하세요.'}</p>
+            <p className="eyebrow">{fixedRoom ? `${fixedRoom.name}에 공유` : isEditing ? '계획 관리' : '새로운 계획'}</p>
+            <h2 id="unified-plan-editor-title">{isEditing ? '계획 편집' : '계획 만들기'}</h2>
+            <p>{fixedRoom ? '저장하면 모든 멤버에게 하나의 공동 계획으로 표시돼요.' : isEditing ? '등록할 때 사용한 항목을 같은 화면에서 수정하세요.' : '할 일과 일정을 같은 흐름에서 만들고 저장 위치를 선택하세요.'}</p>
           </div>
-          <button type="button" aria-label="계획 만들기 창 닫기" onClick={onClose}>×</button>
+          <button
+            type="button"
+            aria-label={`${isEditing ? '계획 편집' : '계획 만들기'} 창 닫기`}
+            onClick={onClose}
+          >
+            ×
+          </button>
         </div>
 
         <form className="study-create-form" onSubmit={savePlan}>
@@ -209,6 +241,7 @@ export default function PlanEditorModal({
                   type="radio"
                   name="plan-type"
                   checked={type === value}
+                  disabled={isEditing}
                   onChange={() => {
                     setType(value)
                     setTime(value === 'todo' ? '18:00' : '09:00')
@@ -226,6 +259,8 @@ export default function PlanEditorModal({
             <span>저장 위치</span>
             {fixedRoom ? (
               <div className="fixed-plan-storage"><span aria-hidden="true">◉</span><strong>{fixedRoom.name}</strong><small>현재 모임으로 고정</small></div>
+            ) : isPersonalEditing ? (
+              <div className="fixed-plan-storage"><span aria-hidden="true">●</span><strong>나의 계획</strong><small>편집 중에는 저장 위치 고정</small></div>
             ) : (
               <select value={destination} onChange={(event) => setDestination(event.target.value)}>
                 <option value="personal">나의 계획</option>
@@ -364,9 +399,23 @@ export default function PlanEditorModal({
 
           <label><span>메모</span><textarea maxLength={180} value={note} placeholder="필요한 내용이나 준비 사항을 적어주세요." onChange={(event) => setNote(event.target.value)} /></label>
           {error && <p className="event-form-error" role="alert">{error}</p>}
-          <div className="study-form-actions">
-            <button type="button" onClick={onClose}>취소</button>
-            <button className="study-submit-button" type="submit">{item ? '변경 저장' : fixedRoom ? '모임에 공유' : '계획 저장'}</button>
+          <div className="study-form-actions unified-plan-actions">
+            <div>
+              {isPersonalEditing && onDelete && !isDeleteConfirming && (
+                <button className="event-delete-button" type="button" onClick={() => setIsDeleteConfirming(true)}>계획 삭제</button>
+              )}
+              {isPersonalEditing && onDelete && isDeleteConfirming && (
+                <div className="event-delete-confirm" role="alert">
+                  <span>정말 삭제할까요?</span>
+                  <button type="button" onClick={() => setIsDeleteConfirming(false)}>아니요</button>
+                  <button type="button" onClick={onDelete}>삭제</button>
+                </div>
+              )}
+            </div>
+            <div>
+              <button type="button" onClick={onClose}>취소</button>
+              <button className="study-submit-button" type="submit">{isEditing ? '변경 저장' : fixedRoom ? '모임에 공유' : '계획 저장'}</button>
+            </div>
           </div>
         </form>
       </section>

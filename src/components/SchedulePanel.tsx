@@ -10,7 +10,6 @@ import type { PlannerProject } from '../data/projects'
 import type { StudyRoom, StudySharedItemEntry } from '../data/studyRooms'
 import { formatSelectedDate, isCalendarEventOnDate } from '../lib/date'
 import { getSharedRepeatLabel, isSharedItemOnDate } from '../lib/studyShared'
-import EventEditorModal from './EventEditorModal'
 import PlanEditorModal from './PlanEditorModal'
 
 type SchedulePanelProps = {
@@ -114,12 +113,6 @@ export default function SchedulePanel({
   const closeEditor = () => {
     setIsEditorOpen(false)
     setEditingEvent(undefined)
-  }
-
-  const saveEvent = (event: CalendarEventInput, sharedRoomId?: string) => {
-    if (editingEvent) onUpdateEvent(editingEvent.id, event)
-    else onAddEvent(event, sharedRoomId)
-    closeEditor()
   }
 
   return (
@@ -253,12 +246,13 @@ export default function SchedulePanel({
         </div>
       </div>
 
-      {isEditorOpen && !editingEvent && (
+      {isEditorOpen && (
         <PlanEditorModal
           initialType="event"
           selectedDate={selectedDate}
           projects={projects}
           studyRooms={studyRooms}
+          calendarEvent={editingEvent}
           defaultProjectName={defaultProjectName}
           onClose={closeEditor}
           onSaveTodo={(input, sharedRoomId) => {
@@ -266,21 +260,10 @@ export default function SchedulePanel({
             closeEditor()
           }}
           onSaveEvent={(input, sharedRoomId) => {
-            onAddEvent(input, sharedRoomId)
+            if (editingEvent) onUpdateEvent(editingEvent.id, input)
+            else onAddEvent(input, sharedRoomId)
             closeEditor()
           }}
-        />
-      )}
-
-      {isEditorOpen && editingEvent && (
-        <EventEditorModal
-          selectedDate={selectedDate}
-          projects={projects}
-          studyRooms={studyRooms}
-          defaultProjectName={defaultProjectName}
-          event={editingEvent}
-          onClose={closeEditor}
-          onSave={(input) => saveEvent(input)}
           onDelete={
             editingEvent
               ? () => {
