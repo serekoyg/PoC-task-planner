@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import ProjectSidebar, {
+  type PlanCollection,
   type ProjectFilter,
 } from '../components/ProjectSidebar'
 import PlanEditorModal from '../components/PlanEditorModal'
@@ -8,6 +10,7 @@ import TodoKanbanView from '../components/TodoKanbanView'
 import TodoProjectListView from '../components/TodoProjectListView'
 import type { CalendarEventInput, Todo, TodoInput } from '../data/initialData'
 import type { PlannerProject, ProjectInput } from '../data/projects'
+import { BACKLOG_PROJECT_NAME, isBacklogProject } from '../data/projects'
 import type { StudyRoom, StudySharedItemEntry } from '../data/studyRooms'
 
 type TodoView = 'dates' | 'kanban' | 'projects'
@@ -37,6 +40,7 @@ type TodosPageProps = {
   projects: PlannerProject[]
   studyRooms: StudyRoom[]
   sharedItems: StudySharedItemEntry[]
+  collectionCounts: Record<PlanCollection, number>
   onAddTodo: (todo: TodoInput, sharedRoomId?: string) => void
   onAddEvent: (event: CalendarEventInput, sharedRoomId?: string) => void
   onUpdateTodo: (todoId: string, todo: TodoInput) => void
@@ -55,6 +59,7 @@ export default function TodosPage({
   projects,
   studyRooms,
   sharedItems,
+  collectionCounts,
   onAddTodo,
   onAddEvent,
   onUpdateTodo,
@@ -65,16 +70,17 @@ export default function TodosPage({
   onDeleteProject,
   onToggleSharedItemStatus,
 }: TodosPageProps) {
-  const [selectedProjectId, setSelectedProjectId] =
-    useState<ProjectFilter>('all')
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const selectedProjectId = (searchParams.get('project') ??
+    'all') as ProjectFilter
   const [todoView, setTodoView] = useState<TodoView>('dates')
   const [isCreating, setIsCreating] = useState(false)
   const [editingTodo, setEditingTodo] = useState<Todo>()
   const selectedProject = projects.find(
     (project) => project.id === selectedProjectId,
   )
-  const isInboxTodo = (todo: Todo) =>
-    !todo.project || todo.project === '받은 편지함'
+  const isBacklogTodo = (todo: Todo) => isBacklogProject(todo.project)
   const projectCounts = useMemo(() => {
     const openTodos = todos.filter((todo) => !todo.done)
     const openSharedPlans = sharedItems.filter(({ item, memberId }) =>
@@ -84,7 +90,7 @@ export default function TodosPage({
     )
     const counts: Record<string, number> = {
       all: openTodos.length + openSharedPlans.length,
-      inbox: openTodos.filter(isInboxTodo).length,
+      backlog: openTodos.filter(isBacklogTodo).length,
     }
     projects.forEach((project) => {
       counts[project.id] = openTodos.filter(
@@ -95,11 +101,18 @@ export default function TodosPage({
   }, [projects, sharedItems, todos])
   const selectedProjectName =
     selectedProject?.name ??
-    (selectedProjectId === 'inbox' ? '받은 편지함' : '모든 프로젝트')
+    (selectedProjectId === 'backlog'
+      ? BACKLOG_PROJECT_NAME
+      : '모든 프로젝트')
 
   const closeEditor = () => {
     setIsCreating(false)
     setEditingTodo(undefined)
+  }
+
+  const selectProject = (projectId: ProjectFilter) => {
+    if (projectId === 'all') setSearchParams({})
+    else setSearchParams({ project: projectId })
   }
 
   return (
@@ -110,10 +123,14 @@ export default function TodosPage({
           selectedProjectId={selectedProjectId}
           itemCounts={projectCounts}
           itemLabel="미완료 할 일"
-          onSelectProject={setSelectedProjectId}
+          collectionCounts={collectionCounts}
+          onSelectProject={selectProject}
           onCreateProject={onCreateProject}
           onUpdateProject={onUpdateProject}
           onDeleteProject={onDeleteProject}
+          onSelectCollection={(collection) =>
+            navigate(`/collections/${collection}`)
+          }
         />
 
         <div className="project-filter-content todo-view-content">

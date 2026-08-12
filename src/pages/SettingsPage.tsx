@@ -112,7 +112,7 @@ const initialValues: Record<string, SettingValue> = {
   sidebarTodos: true,
   sidebarStudies: true,
   sidebarProjects: true,
-  defaultProject: '받은 편지함',
+  defaultProject: '백로그',
   defaultPriority: '보통',
   defaultDuration: '30분',
   dailyTodoGoal: '3개',
@@ -331,7 +331,7 @@ export default function SettingsPage() {
           <section className="settings-card">
             <SettingRow title="기본 프로젝트" description="새 일정과 할 일을 먼저 담아둘 프로젝트예요.">
               <select aria-label="기본 프로젝트" value={String(values.defaultProject)} onChange={(event) => setValue('defaultProject', event.target.value)}>
-                <option>받은 편지함</option><option>하루 리뉴얼</option><option>팀 운영</option><option>주간 계획</option>
+                <option>백로그</option><option>하루 리뉴얼</option><option>팀 운영</option><option>주간 계획</option>
               </select>
             </SettingRow>
             <SettingRow title="기본 우선순위" description="새 할 일에 자동으로 적용할 우선순위예요.">

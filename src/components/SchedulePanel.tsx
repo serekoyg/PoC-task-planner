@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import type { CalendarEvent } from '../data/initialData'
+import { BACKLOG_PROJECT_NAME } from '../data/projects'
 import { toDateKey } from '../data/initialData'
 import type { StudySharedItemEntry } from '../data/studyRooms'
 import { formatSelectedDate, isCalendarEventOnDate } from '../lib/date'
@@ -120,7 +121,7 @@ export default function SchedulePanel({
               <div className="schedule-item-copy">
                 <div className="schedule-item-title">
                   <h3>{item.title}</h3>
-                  <span>{item.project ?? '받은 편지함'}</span>
+                  <span>{item.project ?? BACKLOG_PROJECT_NAME}</span>
                   {item.repeat !== 'none' && <span>{repeatLabels[item.repeat]}</span>}
                 </div>
                 <div className="schedule-item-meta">

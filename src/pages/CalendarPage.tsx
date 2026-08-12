@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import ProjectSidebar, {
+  type PlanCollection,
   type ProjectFilter,
 } from '../components/ProjectSidebar'
 import PlanEditorModal from '../components/PlanEditorModal'
@@ -10,7 +12,12 @@ import type {
   TodoInput,
 } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
-import type { PlannerProject, ProjectInput } from '../data/projects'
+import {
+  BACKLOG_PROJECT_NAME,
+  isBacklogProject,
+  type PlannerProject,
+  type ProjectInput,
+} from '../data/projects'
 import type {
   StudyRoom,
   StudySharedItemEntry,
@@ -52,6 +59,7 @@ type CalendarPageProps = {
   projects: PlannerProject[]
   studyRooms: StudyRoom[]
   sharedItems: StudySharedItemEntry[]
+  collectionCounts: Record<PlanCollection, number>
   onSelectDate: (date: Date) => void
   onMoveMonth: (amount: number) => void
   onSelectToday: () => void
@@ -77,6 +85,7 @@ export default function CalendarPage({
   projects,
   studyRooms,
   sharedItems,
+  collectionCounts,
   onSelectDate,
   onMoveMonth,
   onSelectToday,
@@ -90,6 +99,7 @@ export default function CalendarPage({
   onToggleSharedItemStatus,
   onChangeRoom,
 }: CalendarPageProps) {
+  const navigate = useNavigate()
   const [selectedProjectId, setSelectedProjectId] =
     useState<ProjectFilter>('all')
   const [calendarView, setCalendarView] = useState<CalendarView>('month')
@@ -108,11 +118,11 @@ export default function CalendarPage({
   const selectedProject = projects.find(
     (project) => project.id === selectedProjectId,
   )
-  const isInboxEvent = (event: CalendarEvent) =>
-    !event.project || event.project === '받은 편지함'
+  const isBacklogEvent = (event: CalendarEvent) =>
+    isBacklogProject(event.project)
   const filteredEvents = useMemo(() => {
     if (selectedProjectId === 'all') return events
-    if (selectedProjectId === 'inbox') return events.filter(isInboxEvent)
+    if (selectedProjectId === 'backlog') return events.filter(isBacklogEvent)
     const project = projects.find((item) => item.id === selectedProjectId)
     return project
       ? events.filter((event) => event.project === project.name)
@@ -130,7 +140,7 @@ export default function CalendarPage({
       all:
         events.length +
         sharedItems.filter((entry) => entry.item.type === 'event').length,
-      inbox: events.filter(isInboxEvent).length,
+      backlog: events.filter(isBacklogEvent).length,
     }
     projects.forEach((project) => {
       counts[project.id] = events.filter(
@@ -141,7 +151,9 @@ export default function CalendarPage({
   }, [events, projects, sharedItems])
   const selectedProjectName =
     selectedProject?.name ??
-    (selectedProjectId === 'inbox' ? '받은 편지함' : '모든 프로젝트')
+    (selectedProjectId === 'backlog'
+      ? BACKLOG_PROJECT_NAME
+      : '모든 프로젝트')
   const periodTitle =
     calendarView === 'day'
       ? formatSelectedDate(selectedDate)
@@ -234,10 +246,14 @@ export default function CalendarPage({
           selectedProjectId={selectedProjectId}
           itemCounts={projectCounts}
           itemLabel="일정"
+          collectionCounts={collectionCounts}
           onSelectProject={setSelectedProjectId}
           onCreateProject={onCreateProject}
           onUpdateProject={onUpdateProject}
           onDeleteProject={onDeleteProject}
+          onSelectCollection={(collection) =>
+            navigate(`/collections/${collection}`)
+          }
         />
 
         <div className="project-filter-content calendar-view-content">
@@ -354,7 +370,7 @@ export default function CalendarPage({
                           >
                             <time>{event.allDay ? '종일' : event.startTime}</time>
                             <strong>{event.title}</strong>
-                            <small>{event.project ?? '받은 편지함'}</small>
+                            <small>{event.project ?? BACKLOG_PROJECT_NAME}</small>
                           </button>
                         ))}
                         {dateSharedEvents.map((entry) => (

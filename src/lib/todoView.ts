@@ -1,5 +1,6 @@
 import type { Todo } from '../data/initialData'
 import type { PlannerProject, ProjectAccent } from '../data/projects'
+import { BACKLOG_PROJECT_NAME, isBacklogProject } from '../data/projects'
 import type { ProjectFilter } from '../components/ProjectSidebar'
 
 export type TodoProjectBucket = {
@@ -8,9 +9,9 @@ export type TodoProjectBucket = {
   accent: ProjectAccent | 'neutral'
 }
 
-const inboxBucket: TodoProjectBucket = {
-  id: 'inbox',
-  name: '받은 편지함',
+const backlogBucket: TodoProjectBucket = {
+  id: 'backlog',
+  name: BACKLOG_PROJECT_NAME,
   accent: 'neutral',
 }
 
@@ -18,7 +19,7 @@ export const getTodoProjectBuckets = (
   projects: PlannerProject[],
   selectedProjectId: ProjectFilter,
 ): TodoProjectBucket[] => {
-  if (selectedProjectId === 'inbox') return [inboxBucket]
+  if (selectedProjectId === 'backlog') return [backlogBucket]
 
   if (selectedProjectId !== 'all') {
     const selectedProject = projects.find(
@@ -27,7 +28,7 @@ export const getTodoProjectBuckets = (
     return selectedProject ? [selectedProject] : []
   }
 
-  return [inboxBucket, ...projects]
+  return [backlogBucket, ...projects]
 }
 
 export const getBucketTodos = (
@@ -36,8 +37,8 @@ export const getBucketTodos = (
 ) =>
   todos
     .filter((todo) =>
-      bucket.id === 'inbox'
-        ? !todo.project || todo.project === '받은 편지함'
+      bucket.id === 'backlog'
+        ? isBacklogProject(todo.project)
         : todo.project === bucket.name,
     )
     .sort((first, second) => {
