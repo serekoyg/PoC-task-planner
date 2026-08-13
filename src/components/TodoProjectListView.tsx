@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 import type { Todo } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
 import { formatTaskDate, getTaskPriority } from '../lib/task'
@@ -53,15 +53,19 @@ export default function TodoProjectListView({
   }, [buckets.length, hasMore, visibleProjectCount])
 
   return (
-    <section className="todo-project-list" aria-label="프로젝트별 전체 할 일">
+    <section className="todo-project-list" aria-label="목록별 전체 할 일">
       {buckets.slice(0, visibleProjectCount).map((bucket) => {
         const bucketTodos = getBucketTodos(todos, bucket)
 
         return (
-          <section className="todo-project-section" key={bucket.id}>
+          <section
+            className="todo-project-section project-color-surface"
+            style={{ '--project-color': bucket.color } as CSSProperties}
+            key={bucket.id}
+          >
             <header>
               <div>
-                <span className={`todo-project-dot ${bucket.accent}`} aria-hidden="true" />
+                <span className="todo-project-dot" style={{ backgroundColor: bucket.color }} aria-hidden="true" />
                 <h2>{bucket.name}</h2>
               </div>
               <span>{bucketTodos.length}개</span>
@@ -114,7 +118,7 @@ export default function TodoProjectListView({
       })}
 
       <div className="todo-list-loader" ref={loadMoreRef} aria-live="polite">
-        {hasMore ? '다음 프로젝트의 할 일을 불러오는 중…' : '모든 할 일을 불러왔어요.'}
+        {hasMore ? '다음 목록의 할 일을 불러오는 중…' : '모든 할 일을 불러왔어요.'}
       </div>
     </section>
   )

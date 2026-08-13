@@ -9,7 +9,7 @@ import TodoDateListView from '../components/TodoDateListView'
 import TodoKanbanView from '../components/TodoKanbanView'
 import TodoProjectListView from '../components/TodoProjectListView'
 import type { CalendarEventInput, Todo, TodoInput } from '../data/initialData'
-import type { PlannerProject, ProjectInput } from '../data/projects'
+import type { PlannerProject } from '../data/projects'
 import { BACKLOG_PROJECT_NAME, isBacklogProject } from '../data/projects'
 import type { StudyRoom, StudySharedItemEntry } from '../data/studyRooms'
 
@@ -18,19 +18,19 @@ type TodoView = 'dates' | 'kanban' | 'projects'
 const viewLabels: Record<TodoView, string> = {
   dates: '날짜별',
   kanban: '칸반',
-  projects: '프로젝트 목록',
+  projects: '목록별',
 }
 
 const viewTitles: Record<TodoView, string> = {
   dates: '날짜별 할 일',
-  kanban: '프로젝트 칸반',
-  projects: '프로젝트 목록',
+  kanban: '목록 칸반',
+  projects: '목록별 보기',
 }
 
 const viewDescriptions: Record<TodoView, string> = {
   dates: '모든 할 일을 날짜 순서대로 계속 내려가며 확인하세요.',
-  kanban: '모든 날짜의 할 일을 프로젝트 열로 나누어 한눈에 확인하세요.',
-  projects: '프로젝트별 할 일을 날짜와 함께 세로로 계속 탐색하세요.',
+  kanban: '모든 날짜의 할 일을 목록별 열로 나누어 한눈에 확인하세요.',
+  projects: '목록별 할 일을 날짜와 함께 세로로 계속 탐색하세요.',
 }
 
 type TodosPageProps = {
@@ -46,9 +46,6 @@ type TodosPageProps = {
   onUpdateTodo: (todoId: string, todo: TodoInput) => void
   onToggleTodo: (todoId: string) => void
   onRemoveTodo: (todoId: string) => void
-  onCreateProject: (input: ProjectInput) => string
-  onUpdateProject: (projectId: string, input: ProjectInput) => void
-  onDeleteProject: (projectId: string) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
 }
 
@@ -65,9 +62,6 @@ export default function TodosPage({
   onUpdateTodo,
   onToggleTodo,
   onRemoveTodo,
-  onCreateProject,
-  onUpdateProject,
-  onDeleteProject,
   onToggleSharedItemStatus,
 }: TodosPageProps) {
   const navigate = useNavigate()
@@ -103,7 +97,7 @@ export default function TodosPage({
     selectedProject?.name ??
     (selectedProjectId === 'backlog'
       ? BACKLOG_PROJECT_NAME
-      : '모든 프로젝트')
+      : '모든 목록')
 
   const closeEditor = () => {
     setIsCreating(false)
@@ -125,9 +119,6 @@ export default function TodosPage({
           itemLabel="미완료 할 일"
           collectionCounts={collectionCounts}
           onSelectProject={selectProject}
-          onCreateProject={onCreateProject}
-          onUpdateProject={onUpdateProject}
-          onDeleteProject={onDeleteProject}
           onSelectCollection={(collection) =>
             navigate(`/collections/${collection}`)
           }

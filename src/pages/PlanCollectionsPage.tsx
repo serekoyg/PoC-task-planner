@@ -6,9 +6,9 @@ import ProjectSidebar, {
 } from '../components/ProjectSidebar'
 import type { CalendarEvent, Todo } from '../data/initialData'
 import {
+  BACKLOG_PROJECT_NAME,
   isBacklogProject,
   type PlannerProject,
-  type ProjectInput,
 } from '../data/projects'
 import type { TrashedPlan } from '../data/trash'
 import { formatTaskDate, getTaskProject } from '../lib/task'
@@ -27,9 +27,6 @@ type PlanCollectionsPageProps = {
   onRestoreTrash: (trashId: string) => void
   onDeleteTrash: (trashId: string) => void
   onEmptyTrash: () => void
-  onCreateProject: (input: ProjectInput) => string
-  onUpdateProject: (projectId: string, input: ProjectInput) => void
-  onDeleteProject: (projectId: string) => void
 }
 
 const formatDeletedAt = (deletedAt: string) =>
@@ -52,9 +49,6 @@ export default function PlanCollectionsPage({
   onRestoreTrash,
   onDeleteTrash,
   onEmptyTrash,
-  onCreateProject,
-  onUpdateProject,
-  onDeleteProject,
 }: PlanCollectionsPageProps) {
   const navigate = useNavigate()
   const [trashFilter, setTrashFilter] = useState<TrashFilter>('all')
@@ -105,13 +99,6 @@ export default function PlanCollectionsPage({
           onSelectCollection={(nextCollection) =>
             navigate(`/collections/${nextCollection}`)
           }
-          onCreateProject={(input) => {
-            const id = onCreateProject(input)
-            navigate(`/todos?project=${id}`)
-            return id
-          }}
-          onUpdateProject={onUpdateProject}
-          onDeleteProject={onDeleteProject}
         />
 
         <div className="project-filter-content plan-collection-content">
@@ -159,7 +146,7 @@ export default function PlanCollectionsPage({
                       <div>
                         <Link to={`/todos/${todo.id}`}>{todo.text}</Link>
                         <span>
-                          {getTaskProject(todo)} · {formatTaskDate(todo.date)}
+                          {getTaskProject(todo)} · 나의 계획 · {formatTaskDate(todo.date)}
                           {todo.dueTime ? ` · ${todo.dueTime}` : ''}
                         </span>
                       </div>
@@ -258,7 +245,7 @@ export default function PlanCollectionsPage({
                           <strong>{title}</strong>
                           <span>
                             {entry.type === 'todo' ? '할 일' : '일정'} ·{' '}
-                            {entry.item.project ?? '백로그'} ·{' '}
+                            {entry.item.project ?? BACKLOG_PROJECT_NAME} · 나의 계획 ·{' '}
                             {formatTaskDate(entry.item.date)}
                             {time ? ` · ${time}` : ''}
                           </span>

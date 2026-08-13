@@ -23,7 +23,9 @@ import {
 import {
   BACKLOG_PROJECT_NAME,
   createInitialProjects,
+  isBacklogProject,
   normalizeBacklogProject,
+  normalizeProjects,
   type PlannerProject,
   type ProjectInput,
 } from './data/projects'
@@ -87,7 +89,9 @@ const readStorage = <T,>(key: string, fallback: () => T): T => {
 }
 
 const readProjects = () =>
-  readStorage<PlannerProject[]>(PROJECT_STORAGE_KEY, createInitialProjects)
+  normalizeProjects(
+    readStorage<PlannerProject[]>(PROJECT_STORAGE_KEY, createInitialProjects),
+  )
 
 const readEvents = () =>
   readStorage<CalendarEvent[]>(EVENT_STORAGE_KEY, createInitialEvents).map(
@@ -350,6 +354,20 @@ export default function App() {
     }),
     [todos, trash.length],
   )
+  const projectPlanCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: todos.length + events.length,
+      backlog:
+        todos.filter((todo) => isBacklogProject(todo.project)).length +
+        events.filter((event) => isBacklogProject(event.project)).length,
+    }
+    projects.forEach((project) => {
+      counts[project.id] =
+        todos.filter((todo) => todo.project === project.name).length +
+        events.filter((event) => event.project === project.name).length
+    })
+    return counts
+  }, [events, projects, todos])
 
   const login = (method: AuthMethod) => {
     localStorage.setItem(AUTH_STORAGE_KEY, 'true')
@@ -610,7 +628,14 @@ export default function App() {
   const updateEvent = (eventId: string, event: CalendarEventInput) => {
     setEvents((current) =>
       current.map((item) =>
-        item.id === eventId ? { ...item, ...event, id: eventId } : item,
+        item.id === eventId
+          ? {
+              ...item,
+              ...event,
+              id: eventId,
+              project: event.project ?? BACKLOG_PROJECT_NAME,
+            }
+          : item,
       ),
     )
   }
@@ -659,6 +684,7 @@ export default function App() {
       id: crypto.randomUUID(),
       done: false,
       ...input,
+      project: input.project ?? BACKLOG_PROJECT_NAME,
     }
 
     setTodos((current) => [...current, newTodo])
@@ -667,7 +693,13 @@ export default function App() {
   const updateTodo = (todoId: string, input: TodoInput) => {
     setTodos((current) =>
       current.map((todo) =>
-        todo.id === todoId ? { ...todo, ...input } : todo,
+        todo.id === todoId
+          ? {
+              ...todo,
+              ...input,
+              project: input.project ?? BACKLOG_PROJECT_NAME,
+            }
+          : todo,
       ),
     )
   }
@@ -675,7 +707,10 @@ export default function App() {
   const createProject = (input: ProjectInput) => {
     const projectId = `project-${crypto.randomUUID()}`
 
-    setProjects((current) => [...current, { id: projectId, ...input }])
+    setProjects((current) => [
+      ...current,
+      { id: projectId, ...input, createdAt: new Date().toISOString() },
+    ])
 
     return projectId
   }
@@ -705,6 +740,15 @@ export default function App() {
             : event,
         ),
       )
+      setTrash((current) =>
+        current.map((entry) => {
+          if (entry.item.project !== previousProject.name) return entry
+          if (entry.type === 'todo') {
+            return { ...entry, item: { ...entry.item, project: input.name } }
+          }
+          return { ...entry, item: { ...entry.item, project: input.name } }
+        }),
+      )
     }
   }
 
@@ -727,6 +771,32 @@ export default function App() {
           : event,
       ),
     )
+    setTrash((current) =>
+      current.map((entry) => {
+        if (entry.item.project !== project.name) return entry
+        if (entry.type === 'todo') {
+          return {
+            ...entry,
+            item: { ...entry.item, project: BACKLOG_PROJECT_NAME },
+          }
+        }
+        return {
+          ...entry,
+          item: { ...entry.item, project: BACKLOG_PROJECT_NAME },
+        }
+      }),
+    )
+  }
+
+  const reorderProjects = (orderedProjectIds: string[]) => {
+    setProjects((current) => {
+      const projectById = new Map(current.map((project) => [project.id, project]))
+      const ordered = orderedProjectIds
+        .map((projectId) => projectById.get(projectId))
+        .filter((project): project is PlannerProject => Boolean(project))
+      const orderedIds = new Set(orderedProjectIds)
+      return [...ordered, ...current.filter((project) => !orderedIds.has(project.id))]
+    })
   }
 
   const toggleTodo = (todoId: string) => {
@@ -1239,9 +1309,6 @@ export default function App() {
               onAddTodo={addTodo}
               onUpdateEvent={updateEvent}
               onRemoveEvent={removeEvent}
-              onCreateProject={createProject}
-              onUpdateProject={updateProject}
-              onDeleteProject={deleteProject}
               onToggleSharedItemStatus={toggleSharedItemStatus}
               onChangeRoom={changeStudyRoom}
             />
@@ -1263,9 +1330,6 @@ export default function App() {
               onUpdateTodo={updateTodo}
               onToggleTodo={toggleTodo}
               onRemoveTodo={removeTodo}
-              onCreateProject={createProject}
-              onUpdateProject={updateProject}
-              onDeleteProject={deleteProject}
               onToggleSharedItemStatus={toggleSharedItemStatus}
             />
           }
@@ -1289,9 +1353,6 @@ export default function App() {
               onRestoreTrash={restoreTrash}
               onDeleteTrash={deleteTrash}
               onEmptyTrash={() => setTrash([])}
-              onCreateProject={createProject}
-              onUpdateProject={updateProject}
-              onDeleteProject={deleteProject}
             />
           }
         />
@@ -1310,9 +1371,6 @@ export default function App() {
               onRestoreTrash={restoreTrash}
               onDeleteTrash={deleteTrash}
               onEmptyTrash={() => setTrash([])}
-              onCreateProject={createProject}
-              onUpdateProject={updateProject}
-              onDeleteProject={deleteProject}
             />
           }
         />
@@ -1383,7 +1441,19 @@ export default function App() {
           path="/profile"
           element={<ProfilePage todos={todos} rooms={studyRooms} />}
         />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route
+          path="/settings"
+          element={
+            <SettingsPage
+              projects={projects}
+              itemCounts={projectPlanCounts}
+              onCreateProject={createProject}
+              onUpdateProject={updateProject}
+              onDeleteProject={deleteProject}
+              onReorderProjects={reorderProjects}
+            />
+          }
+        />
         <Route path="*" element={<Navigate to="/calendar" replace />} />
       </Routes>
 

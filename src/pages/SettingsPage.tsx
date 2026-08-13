@@ -1,10 +1,15 @@
 import { useMemo, useState, type ReactNode } from 'react'
+import ProjectManagementModal, {
+  UnsavedChangesDialog,
+} from '../components/ProjectManagementModal'
+import type { PlannerProject, ProjectInput } from '../data/projects'
 
 type SettingsSection =
   | 'account'
   | 'general'
   | 'theme'
   | 'sidebar'
+  | 'lists'
   | 'quick-add'
   | 'productivity'
   | 'reminders'
@@ -48,14 +53,21 @@ const sections: Array<{
     icon: '▣',
     title: '사이드바',
     description: '주요 메뉴에 표시할 항목을 정해요.',
-    keywords: '메뉴 캘린더 할 일 모임 프로젝트',
+    keywords: '메뉴 캘린더 할 일 모임 목록',
+  },
+  {
+    id: 'lists',
+    icon: '≡',
+    title: '목록 관리',
+    description: '목록의 순서와 색상, 포함된 계획을 관리해요.',
+    keywords: '목록 생성 정렬 순서 색상 편집 삭제',
   },
   {
     id: 'quick-add',
     icon: '⊕',
     title: '빠른 추가',
     description: '새 항목에 사용할 기본값을 정해요.',
-    keywords: '프로젝트 우선순위 시간 할 일 일정',
+    keywords: '목록 우선순위 시간 할 일 일정',
   },
   {
     id: 'productivity',
@@ -112,7 +124,7 @@ const initialValues: Record<string, SettingValue> = {
   sidebarTodos: true,
   sidebarStudies: true,
   sidebarProjects: true,
-  defaultProject: '백로그',
+  defaultProject: '미분류',
   defaultPriority: '보통',
   defaultDuration: '30분',
   dailyTodoGoal: '3개',
@@ -196,13 +208,31 @@ function Choice({ label, options, value, onChange }: ChoiceProps) {
   )
 }
 
-export default function SettingsPage() {
+type SettingsPageProps = {
+  projects: PlannerProject[]
+  itemCounts: Record<string, number>
+  onCreateProject: (input: ProjectInput) => string
+  onUpdateProject: (projectId: string, input: ProjectInput) => void
+  onDeleteProject: (projectId: string) => void
+  onReorderProjects: (orderedProjectIds: string[]) => void
+}
+
+export default function SettingsPage({
+  projects,
+  itemCounts,
+  onCreateProject,
+  onUpdateProject,
+  onDeleteProject,
+  onReorderProjects,
+}: SettingsPageProps) {
   const [selectedSection, setSelectedSection] =
     useState<SettingsSection>('account')
   const [query, setQuery] = useState('')
   const [values, setValues] = useState(initialValues)
   const [notice, setNotice] = useState('모든 변경 사항은 데모에 자동 저장돼요.')
   const [connectedServices, setConnectedServices] = useState<string[]>([])
+  const [isListManagementDirty, setIsListManagementDirty] = useState(false)
+  const [pendingSection, setPendingSection] = useState<SettingsSection>()
 
   const selected = sections.find((section) => section.id === selectedSection)!
   const filteredSections = useMemo(() => {
@@ -287,7 +317,7 @@ export default function SettingsPage() {
               </select>
             </SettingRow>
             <SettingRow title="할 일 기본 보기" description="할 일 화면에서 처음 사용할 보기예요.">
-              <Choice label="할 일 기본 보기" options={['날짜별', '칸반', '프로젝트 목록']} value={String(values.defaultTodoView)} onChange={(value) => setValue('defaultTodoView', value)} />
+              <Choice label="할 일 기본 보기" options={['날짜별', '칸반', '목록별']} value={String(values.defaultTodoView)} onChange={(value) => setValue('defaultTodoView', value)} />
             </SettingRow>
           </section>
         )
@@ -316,9 +346,9 @@ export default function SettingsPage() {
           <section className="settings-card">
             {[
               ['sidebarCalendar', '캘린더', '일간·주간·월간 일정을 확인해요.'],
-              ['sidebarTodos', '할 일', '오늘·칸반·프로젝트 목록을 확인해요.'],
+              ['sidebarTodos', '할 일', '날짜별·칸반·목록별 보기를 확인해요.'],
               ['sidebarStudies', '모임', '함께 집중하는 모임을 확인해요.'],
-              ['sidebarProjects', '프로젝트', '일정과 할 일의 공통 카테고리를 표시해요.'],
+              ['sidebarProjects', '목록', '개인 일정과 할 일을 같은 기준으로 정리해요.'],
             ].map(([key, title, description]) => (
               <SettingRow key={key} title={title} description={description}>
                 <Toggle checked={Boolean(values[key])} label={`${title} 표시`} onChange={() => toggle(key)} />
@@ -326,12 +356,26 @@ export default function SettingsPage() {
             ))}
           </section>
         )
+      case 'lists':
+        return (
+          <ProjectManagementModal
+            embedded
+            projects={projects}
+            itemCounts={itemCounts}
+            onCreateProject={onCreateProject}
+            onUpdateProject={onUpdateProject}
+            onDeleteProject={onDeleteProject}
+            onReorderProjects={onReorderProjects}
+            onDirtyChange={setIsListManagementDirty}
+          />
+        )
       case 'quick-add':
         return (
           <section className="settings-card">
-            <SettingRow title="기본 프로젝트" description="새 일정과 할 일을 먼저 담아둘 프로젝트예요.">
-              <select aria-label="기본 프로젝트" value={String(values.defaultProject)} onChange={(event) => setValue('defaultProject', event.target.value)}>
-                <option>백로그</option><option>하루 리뉴얼</option><option>팀 운영</option><option>주간 계획</option>
+            <SettingRow title="기본 목록" description="새 일정과 할 일을 먼저 담아둘 목록이에요.">
+              <select aria-label="기본 목록" value={String(values.defaultProject)} onChange={(event) => setValue('defaultProject', event.target.value)}>
+                <option>미분류</option>
+                {projects.map((project) => <option key={project.id}>{project.name}</option>)}
               </select>
             </SettingRow>
             <SettingRow title="기본 우선순위" description="새 할 일에 자동으로 적용할 우선순위예요.">
@@ -407,7 +451,7 @@ export default function SettingsPage() {
               <SettingRow title="자동 동기화" description="변경 사항을 기기 사이에 자동으로 맞춰요.">
                 <Toggle checked={Boolean(values.autoSync)} label="자동 동기화" onChange={() => toggle('autoSync')} />
               </SettingRow>
-              <SettingRow title="데이터 내보내기" description="일정, 할 일과 프로젝트를 파일로 보관해요.">
+              <SettingRow title="데이터 내보내기" description="일정, 할 일과 목록을 파일로 보관해요.">
                 <button type="button" onClick={() => setNotice('데이터 내보내기 버튼을 눌렀어요.')}>내보내기</button>
               </SettingRow>
               <SettingRow title="백업 가져오기" description="이전에 저장한 하루 데이터를 불러와요.">
@@ -466,7 +510,23 @@ export default function SettingsPage() {
           </label>
           <nav>
             {filteredSections.map((section) => (
-              <button key={section.id} type="button" className={selectedSection === section.id ? 'active' : ''} aria-current={selectedSection === section.id ? 'page' : undefined} onClick={() => setSelectedSection(section.id)}>
+              <button
+                key={section.id}
+                type="button"
+                className={selectedSection === section.id ? 'active' : ''}
+                aria-current={selectedSection === section.id ? 'page' : undefined}
+                onClick={() => {
+                  if (
+                    selectedSection === 'lists' &&
+                    section.id !== 'lists' &&
+                    isListManagementDirty
+                  ) {
+                    setPendingSection(section.id)
+                    return
+                  }
+                  setSelectedSection(section.id)
+                }}
+              >
                 <span aria-hidden="true">{section.icon}</span>
                 {section.title}
               </button>
@@ -484,11 +544,30 @@ export default function SettingsPage() {
               <h1 id="settings-title">{selected.title}</h1>
               <p>{selected.description}</p>
             </div>
-            <span className="settings-saved-state" aria-live="polite">✓ {notice}</span>
+            <span
+              className={`settings-saved-state${selectedSection === 'lists' && isListManagementDirty ? ' dirty' : ''}`}
+              aria-live="polite"
+            >
+              {selectedSection === 'lists'
+                ? isListManagementDirty
+                  ? '● 저장이 필요한 변경사항이 있어요.'
+                  : '✓ 목록 변경사항이 저장되어 있어요.'
+                : `✓ ${notice}`}
+            </span>
           </header>
           {renderSettings()}
         </section>
       </div>
+      {pendingSection && (
+        <UnsavedChangesDialog
+          onContinue={() => setPendingSection(undefined)}
+          onLeave={() => {
+            setSelectedSection(pendingSection)
+            setPendingSection(undefined)
+            setIsListManagementDirty(false)
+          }}
+        />
+      )}
     </main>
   )
 }

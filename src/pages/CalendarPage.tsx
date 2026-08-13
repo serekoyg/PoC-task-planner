@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { type CSSProperties, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ProjectSidebar, {
   type PlanCollection,
@@ -14,9 +14,9 @@ import type {
 import { toDateKey } from '../data/initialData'
 import {
   BACKLOG_PROJECT_NAME,
+  getProjectColorByName,
   isBacklogProject,
   type PlannerProject,
-  type ProjectInput,
 } from '../data/projects'
 import type {
   StudyRoom,
@@ -67,9 +67,6 @@ type CalendarPageProps = {
   onAddTodo: (todo: TodoInput, sharedRoomId?: string) => void
   onUpdateEvent: (eventId: string, event: CalendarEventInput) => void
   onRemoveEvent: (eventId: string) => void
-  onCreateProject: (input: ProjectInput) => string
-  onUpdateProject: (projectId: string, input: ProjectInput) => void
-  onDeleteProject: (projectId: string) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
   onChangeRoom: (
     roomId: string,
@@ -93,9 +90,6 @@ export default function CalendarPage({
   onAddTodo,
   onUpdateEvent,
   onRemoveEvent,
-  onCreateProject,
-  onUpdateProject,
-  onDeleteProject,
   onToggleSharedItemStatus,
   onChangeRoom,
 }: CalendarPageProps) {
@@ -153,7 +147,11 @@ export default function CalendarPage({
     selectedProject?.name ??
     (selectedProjectId === 'backlog'
       ? BACKLOG_PROJECT_NAME
-      : '모든 프로젝트')
+      : '모든 목록')
+  const getEventProjectStyle = (projectName?: string) =>
+    ({
+      '--project-color': getProjectColorByName(projects, projectName),
+    }) as CSSProperties
   const periodTitle =
     calendarView === 'day'
       ? formatSelectedDate(selectedDate)
@@ -248,9 +246,6 @@ export default function CalendarPage({
           itemLabel="일정"
           collectionCounts={collectionCounts}
           onSelectProject={setSelectedProjectId}
-          onCreateProject={onCreateProject}
-          onUpdateProject={onUpdateProject}
-          onDeleteProject={onDeleteProject}
           onSelectCollection={(collection) =>
             navigate(`/collections/${collection}`)
           }
@@ -318,6 +313,7 @@ export default function CalendarPage({
             <SchedulePanel
               selectedDate={selectedDate}
               events={filteredEvents}
+              projects={projects}
               sharedItems={visibleSharedEvents}
               onCreateEvent={() => openNewEvent()}
               onEditEvent={openEditEvent}
@@ -362,7 +358,8 @@ export default function CalendarPage({
                       <div className="week-day-events">
                         {dateEvents.map((event) => (
                           <button
-                            className={`week-event ${event.color}`}
+                            className="week-event project-color-surface"
+                            style={getEventProjectStyle(event.project)}
                             type="button"
                             key={event.id}
                             onClick={() => openEditEvent(event, date)}
@@ -370,7 +367,7 @@ export default function CalendarPage({
                           >
                             <time>{event.allDay ? '종일' : event.startTime}</time>
                             <strong>{event.title}</strong>
-                            <small>{event.project ?? BACKLOG_PROJECT_NAME}</small>
+                            <small>{event.project ?? BACKLOG_PROJECT_NAME} · 나의 계획</small>
                           </button>
                         ))}
                         {dateSharedEvents.map((entry) => (
@@ -391,7 +388,7 @@ export default function CalendarPage({
                           >
                             <time>{entry.item.time ?? '종일'}</time>
                             <strong>{entry.item.title}</strong>
-                            <small>{entry.roomName} · 공동 일정</small>
+                            <small>{entry.roomName} · 모임</small>
                           </button>
                         ))}
                         {!dateEvents.length && !dateSharedEvents.length && (
@@ -451,7 +448,8 @@ export default function CalendarPage({
                       <span className="day-events">
                         {dateEvents.slice(0, 2).map((item) => (
                           <button
-                            className={`event-chip ${item.color}`}
+                            className="event-chip project-color-surface"
+                            style={getEventProjectStyle(item.project)}
                             type="button"
                             key={item.id}
                             onClick={() => openEditEvent(item, date)}

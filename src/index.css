@@ -1796,15 +1796,46 @@ fieldset {
   border-bottom: 1px solid var(--line);
 }
 
+.shared-project-heading > div:first-child {
+  min-width: 0;
+}
+
 .shared-project-heading h2 {
   margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
   font-size: 1.1rem;
 }
 
+.shared-project-heading h2 span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shared-project-heading h2 small {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
 .shared-project-heading button {
-  min-width: 34px;
-  min-height: 34px;
-  padding: 0;
+  min-height: 32px;
+  padding: 0 9px;
+  font-size: 0.7rem;
+}
+
+.shared-project-heading-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.shared-project-heading-actions button {
+  white-space: nowrap;
 }
 
 .shared-project-description {
@@ -1819,8 +1850,7 @@ fieldset {
   gap: 3px;
 }
 
-.shared-project-list > button,
-.shared-project-row > button:first-child {
+.shared-project-list > button {
   width: 100%;
   min-height: 36px;
   padding: 0 8px;
@@ -1842,21 +1872,6 @@ fieldset {
 
 .shared-project-list small {
   color: var(--muted);
-}
-
-.shared-project-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-}
-
-.shared-project-edit {
-  min-width: 28px;
-  min-height: 30px;
-  padding: 0;
-  border: 0;
-  color: var(--muted);
-  background: transparent;
 }
 
 .project-filter-icon {
@@ -1891,15 +1906,6 @@ fieldset {
 
 .project-filter-icon.violet {
   background: #7c3aed;
-}
-
-.shared-project-add {
-  width: 100%;
-  min-height: 36px;
-  margin-top: 10px;
-  border-style: dashed;
-  color: var(--muted);
-  background: transparent;
 }
 
 .plan-collection-list {
@@ -2054,6 +2060,20 @@ fieldset {
   gap: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+.schedule-item.project-color-surface {
+  border-color: color-mix(in srgb, var(--project-color) 28%, var(--line));
+  color: color-mix(in srgb, var(--project-color) 72%, #171714);
+  background: color-mix(in srgb, var(--project-color) 8%, var(--surface));
+}
+
+.schedule-item.project-color-surface .schedule-dot {
+  background: var(--project-color);
+}
+
+.schedule-item.project-color-surface .schedule-item-title h3 {
+  color: color-mix(in srgb, var(--project-color) 78%, #171714);
 }
 
 .schedule-time-block strong,
@@ -2275,6 +2295,17 @@ fieldset {
   text-align: left;
 }
 
+.week-event.project-color-surface {
+  border-left-color: var(--project-color);
+  color: color-mix(in srgb, var(--project-color) 78%, #171714);
+  background: color-mix(in srgb, var(--project-color) 12%, white);
+}
+
+.week-event.project-color-surface time,
+.week-event.project-color-surface small {
+  color: color-mix(in srgb, var(--project-color) 65%, #62635f);
+}
+
 .week-event.coral {
   border-left-color: #d65c4a;
   background: #fff1ee;
@@ -2457,6 +2488,11 @@ button.event-chip:hover {
 .event-chip.green {
   color: #236648;
   background: #edf8f2;
+}
+
+.event-chip.project-color-surface {
+  color: color-mix(in srgb, var(--project-color) 82%, #171714);
+  background: color-mix(in srgb, var(--project-color) 14%, white);
 }
 
 /* Todos */
@@ -3102,6 +3138,19 @@ button.event-chip:hover {
   content: '';
 }
 
+.todo-date-row.project-color-surface {
+  background: color-mix(in srgb, var(--project-color) 6%, var(--surface));
+}
+
+.todo-date-row.project-color-surface::before {
+  background: var(--project-color);
+}
+
+.todo-date-row.project-color-surface .todo-item-title-button,
+.todo-date-row.project-color-surface .todo-date-copy > div > span {
+  color: color-mix(in srgb, var(--project-color) 78%, #171714);
+}
+
 .todo-date-row.color-blue::before { background: var(--accent); }
 .todo-date-row.color-coral::before { background: #d65c4a; }
 .todo-date-row.color-green::before { background: var(--success); }
@@ -3328,6 +3377,25 @@ button.event-chip:hover {
   background: var(--surface-subtle);
 }
 
+.todo-kanban-column.project-color-surface {
+  border-color: color-mix(in srgb, var(--project-color) 26%, var(--line));
+  background: color-mix(in srgb, var(--project-color) 6%, var(--surface-subtle));
+}
+
+.todo-kanban-column.project-color-surface > header {
+  color: color-mix(in srgb, var(--project-color) 76%, #171714);
+  background: color-mix(in srgb, var(--project-color) 10%, white);
+}
+
+.todo-kanban-column.project-color-surface .todo-kanban-card {
+  border-color: color-mix(in srgb, var(--project-color) 22%, var(--line));
+  background: color-mix(in srgb, var(--project-color) 5%, white);
+}
+
+.todo-kanban-column.project-color-surface .todo-kanban-card > .todo-item-title-button {
+  color: color-mix(in srgb, var(--project-color) 78%, #171714);
+}
+
 .todo-kanban-column > header {
   min-height: 48px;
   padding: 0 12px;
@@ -3448,6 +3516,23 @@ button.event-chip:hover {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
+}
+
+.todo-project-section.project-color-surface {
+  border-color: color-mix(in srgb, var(--project-color) 25%, var(--line));
+}
+
+.todo-project-section.project-color-surface > header {
+  color: color-mix(in srgb, var(--project-color) 76%, #171714);
+  background: color-mix(in srgb, var(--project-color) 10%, white);
+}
+
+.todo-project-section.project-color-surface .todo-project-row {
+  background: color-mix(in srgb, var(--project-color) 4%, white);
+}
+
+.todo-project-section.project-color-surface .todo-project-row .todo-item-title-button {
+  color: color-mix(in srgb, var(--project-color) 78%, #171714);
 }
 
 .todo-project-section > header {
@@ -3573,6 +3658,10 @@ button.event-chip:hover {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
+}
+
+.project-create-modal.project-management-modal {
+  width: min(780px, 100%);
 }
 
 .study-create-modal,
@@ -3745,6 +3834,422 @@ button.event-chip:hover {
 
 .project-modal-actions > div:first-child:empty {
   display: none;
+}
+
+.project-management-toolbar {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-list-management-panel {
+  padding: 20px;
+}
+
+.project-management-toolbar label {
+  width: min(280px, 100%);
+}
+
+.project-management-toolbar > button,
+.project-inline-actions button:last-child {
+  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.project-management-list {
+  display: grid;
+  gap: 7px;
+}
+
+.project-management-savebar {
+  margin-top: 14px;
+  padding: 13px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-subtle);
+}
+
+.project-management-savebar.dirty {
+  border-color: color-mix(in srgb, var(--accent) 32%, var(--line));
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+}
+
+.project-management-savebar > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.project-management-savebar strong,
+.project-management-savebar span {
+  display: block;
+}
+
+.project-management-savebar strong {
+  font-size: 0.78rem;
+}
+
+.project-management-savebar span {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.project-management-savebar > div:last-child,
+.unsaved-changes-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.project-management-savebar > div:last-child button:last-child {
+  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.project-management-savebar > div:last-child button:disabled {
+  color: var(--muted);
+  border-color: var(--line);
+  background: var(--surface-subtle);
+}
+
+.unsaved-changes-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  padding: 20px;
+  display: grid;
+  place-items: center;
+  background: rgba(24, 24, 22, 0.48);
+}
+
+.unsaved-changes-dialog {
+  width: min(430px, 100%);
+  padding: 22px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 15px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 20px 55px rgba(24, 24, 22, 0.2);
+}
+
+.unsaved-changes-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #a8452f;
+  background: #fbe9e3;
+  font-weight: 800;
+}
+
+.unsaved-changes-dialog h2 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+}
+
+.unsaved-changes-dialog p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.unsaved-changes-actions {
+  grid-column: 1 / -1;
+  padding-top: 4px;
+}
+
+.unsaved-changes-actions button:last-child {
+  color: #fff;
+  border-color: var(--danger);
+  background: var(--danger);
+}
+
+.project-management-row {
+  min-height: 62px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.project-management-row.fixed {
+  color: var(--muted);
+  background: var(--surface-subtle);
+}
+
+.project-management-swatch {
+  width: 10px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.project-management-swatch.neutral {
+  background: var(--line-strong);
+}
+
+.project-management-row > div:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.project-management-row strong,
+.project-management-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-management-row small,
+.project-management-row > span,
+.project-management-row em {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-style: normal;
+}
+
+.project-row-actions,
+.project-delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.project-row-actions > button,
+.project-delete-confirm button {
+  min-height: 30px;
+  padding: 0 8px;
+  font-size: 0.68rem;
+}
+
+.project-management-row.dragging {
+  z-index: 1;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  box-shadow: 0 7px 18px rgba(24, 24, 22, 0.12);
+}
+
+.project-drag-handle {
+  width: 34px;
+  min-width: 34px;
+  min-height: 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  border-color: transparent;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.project-drag-handle:hover,
+.project-drag-handle:focus-visible {
+  color: var(--text);
+  border-color: var(--line);
+  background: var(--surface-subtle);
+}
+
+.project-drag-handle:active {
+  cursor: grabbing;
+}
+
+.project-drag-handle span {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.35rem;
+  transform: translateX(-0.16rem);
+}
+
+.project-delete-action,
+.project-delete-confirm button:last-child {
+  color: var(--danger);
+  border-color: #efc5c1;
+}
+
+.project-inline-editor {
+  margin-top: 16px;
+  padding: 16px;
+  display: grid;
+  gap: 13px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  border-radius: 10px;
+  background: var(--surface-subtle);
+}
+
+.project-inline-heading,
+.project-inline-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.project-inline-heading h3 {
+  margin: 0;
+}
+
+.project-inline-heading > button {
+  min-height: 30px;
+  font-size: 0.7rem;
+}
+
+.project-custom-color {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(180px, 0.8fr);
+  align-items: stretch;
+  gap: 14px;
+}
+
+.project-visual-color-picker {
+  min-height: 220px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  gap: 10px;
+}
+
+.project-saturation-field {
+  position: relative;
+  min-height: 220px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  touch-action: none;
+  cursor: crosshair;
+  background:
+    linear-gradient(to top, #000, transparent),
+    linear-gradient(to right, #fff, transparent),
+    hsl(var(--picker-hue) 100% 50%);
+}
+
+.project-saturation-field:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 32%, transparent);
+  outline-offset: 2px;
+}
+
+.project-color-cursor {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(24, 24, 22, 0.65);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.project-hue-control,
+.project-hue-control input {
+  width: 28px;
+  height: 220px;
+}
+
+.project-hue-control input {
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    to bottom,
+    #f00,
+    #ff0,
+    #0f0,
+    #0ff,
+    #00f,
+    #f0f,
+    #f00
+  );
+  cursor: ns-resize;
+  writing-mode: vertical-lr;
+}
+
+.project-hue-control input::-webkit-slider-runnable-track {
+  border-radius: 999px;
+  background: transparent;
+}
+
+.project-hue-control input::-webkit-slider-thumb {
+  width: 34px;
+  height: 9px;
+  appearance: none;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: 0 0 0 2px rgba(24, 24, 22, 0.7);
+}
+
+.project-color-values {
+  padding: 12px;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.project-color-values label,
+.project-color-hex {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.project-color-values label > span,
+.project-color-hex > span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.project-color-values input[type='number'] {
+  width: 100%;
+}
+
+.project-color-hex output {
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.project-color-preview {
+  padding: 12px;
+  display: grid;
+  gap: 3px;
+  border: 1px solid color-mix(in srgb, var(--project-color) 30%, var(--line));
+  border-radius: 8px;
+  color: color-mix(in srgb, var(--project-color) 78%, #171714);
+  background: color-mix(in srgb, var(--project-color) 10%, white);
+}
+
+.project-color-preview span {
+  color: color-mix(in srgb, var(--project-color) 62%, #62635f);
+  font-size: 0.72rem;
+}
+
+.project-inline-actions {
+  padding-top: 12px;
+  justify-content: flex-end;
+  border-top: 1px solid var(--line);
 }
 
 .event-delete-button {
@@ -6313,6 +6818,11 @@ button.event-chip:hover {
   text-align: right;
 }
 
+.settings-saved-state.dirty {
+  color: #a8452f;
+  background: #fbe9e3;
+}
+
 .settings-card {
   margin-bottom: 14px;
   overflow: hidden;
@@ -7121,14 +7631,102 @@ footer a {
   .shared-project-sidebar {
     position: static;
     margin-bottom: 14px;
+    padding: 11px;
+  }
+
+  .shared-project-sidebar.collapsed {
+    margin-bottom: 10px;
+  }
+
+  .shared-project-heading {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .shared-project-sidebar.expanded .shared-project-heading {
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .shared-project-heading-actions button {
+    min-height: 30px;
+    padding: 0 8px;
   }
 
   .shared-project-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .shared-project-row {
-    min-width: 0;
+  .project-modal-backdrop {
+    padding: 8px;
+  }
+
+  .project-create-modal.project-management-modal {
+    max-height: calc(100dvh - 16px);
+    padding: 16px;
+  }
+
+  .project-management-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .project-management-toolbar label,
+  .project-management-toolbar > button {
+    width: 100%;
+  }
+
+  .project-management-savebar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .project-management-savebar > div:last-child button {
+    flex: 1;
+  }
+
+  .project-management-row {
+    grid-template-columns: 10px minmax(0, 1fr) auto 34px;
+  }
+
+  .project-management-row > em {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+
+  .project-row-actions {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    align-items: flex-end;
+    flex-direction: column;
+  }
+
+  .project-drag-handle {
+    grid-column: 4;
+    grid-row: 1 / span 2;
+  }
+
+  .project-delete-confirm {
+    align-items: flex-end;
+    flex-direction: column;
+  }
+
+  .project-custom-color {
+    grid-template-columns: 1fr;
+  }
+
+  .project-visual-color-picker,
+  .project-saturation-field {
+    min-height: 180px;
+  }
+
+  .project-hue-control,
+  .project-hue-control input {
+    height: 180px;
+  }
+
+  .project-inline-editor {
+    padding: 13px;
   }
 
   .section-heading,
