@@ -11,6 +11,17 @@ export type ProjectInput = {
   accent: ProjectAccent
 }
 
+export const BACKLOG_PROJECT_NAME = '백로그'
+export const LEGACY_INBOX_PROJECT_NAME = '받은 편지함'
+
+export const isBacklogProject = (project?: string) =>
+  !project ||
+  project === BACKLOG_PROJECT_NAME ||
+  project === LEGACY_INBOX_PROJECT_NAME
+
+export const normalizeBacklogProject = (project?: string) =>
+  project === LEGACY_INBOX_PROJECT_NAME ? BACKLOG_PROJECT_NAME : project
+
 export const createInitialProjects = (): PlannerProject[] => [
   { id: 'haru-renewal', name: '하루 리뉴얼', accent: 'coral' },
   { id: 'team-operations', name: '팀 운영', accent: 'blue' },
