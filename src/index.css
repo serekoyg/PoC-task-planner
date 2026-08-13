@@ -3659,29 +3659,121 @@ button.event-chip:hover {
 
 .project-custom-color {
   display: grid;
-  grid-template-columns: repeat(3, minmax(64px, 1fr)) minmax(90px, 1fr) auto;
-  align-items: end;
+  grid-template-columns: minmax(0, 1.7fr) minmax(180px, 0.8fr);
+  align-items: stretch;
+  gap: 14px;
+}
+
+.project-visual-color-picker {
+  min-height: 220px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  gap: 10px;
+}
+
+.project-saturation-field {
+  position: relative;
+  min-height: 220px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  touch-action: none;
+  cursor: crosshair;
+  background:
+    linear-gradient(to top, #000, transparent),
+    linear-gradient(to right, #fff, transparent),
+    hsl(var(--picker-hue) 100% 50%);
+}
+
+.project-saturation-field:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 32%, transparent);
+  outline-offset: 2px;
+}
+
+.project-color-cursor {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(24, 24, 22, 0.65);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.project-hue-control,
+.project-hue-control input {
+  width: 28px;
+  height: 220px;
+}
+
+.project-hue-control input {
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(
+    to bottom,
+    #f00,
+    #ff0,
+    #0f0,
+    #0ff,
+    #00f,
+    #f0f,
+    #f00
+  );
+  cursor: ns-resize;
+  writing-mode: vertical-lr;
+}
+
+.project-hue-control input::-webkit-slider-runnable-track {
+  border-radius: 999px;
+  background: transparent;
+}
+
+.project-hue-control input::-webkit-slider-thumb {
+  width: 34px;
+  height: 9px;
+  appearance: none;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: 0 0 0 2px rgba(24, 24, 22, 0.7);
+}
+
+.project-color-values {
+  padding: 12px;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.project-color-values label,
+.project-color-hex {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
   gap: 8px;
 }
 
-.project-custom-color input[type='number'] {
+.project-color-values label > span,
+.project-color-hex > span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.project-color-values input[type='number'] {
   width: 100%;
 }
 
-.project-color-picker input {
-  min-height: 38px;
-  padding: 3px;
-}
-
-.project-custom-color output {
-  min-height: 38px;
-  padding: 0 10px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--surface);
-  font-size: 0.72rem;
+.project-color-hex output {
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .project-color-preview {
@@ -7120,12 +7212,17 @@ footer a {
   }
 
   .project-custom-color {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
-  .project-color-picker,
-  .project-custom-color output {
-    grid-column: span 3;
+  .project-visual-color-picker,
+  .project-saturation-field {
+    min-height: 180px;
+  }
+
+  .project-hue-control,
+  .project-hue-control input {
+    height: 180px;
   }
 
   .project-inline-editor {

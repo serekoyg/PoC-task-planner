@@ -1,4 +1,12 @@
-import { type CSSProperties, type FormEvent, useEffect, useMemo, useState } from 'react'
+import {
+  type CSSProperties,
+  type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import {
   PROJECT_ACCENT_COLORS,
   getProjectColor,
@@ -51,6 +59,55 @@ const hexToRgb = (color: string) => {
   ] as const
 }
 
+const rgbToHsv = (red: number, green: number, blue: number) => {
+  const normalized = [red / 255, green / 255, blue / 255]
+  const max = Math.max(...normalized)
+  const min = Math.min(...normalized)
+  const delta = max - min
+  let hue = 0
+
+  if (delta > 0) {
+    if (max === normalized[0]) {
+      hue = 60 * (((normalized[1] - normalized[2]) / delta) % 6)
+    } else if (max === normalized[1]) {
+      hue = 60 * ((normalized[2] - normalized[0]) / delta + 2)
+    } else {
+      hue = 60 * ((normalized[0] - normalized[1]) / delta + 4)
+    }
+  }
+
+  return {
+    hue: hue < 0 ? hue + 360 : hue,
+    saturation: max === 0 ? 0 : (delta / max) * 100,
+    value: max * 100,
+  }
+}
+
+const hsvToHex = (hue: number, saturation: number, value: number) => {
+  const chroma = (value / 100) * (saturation / 100)
+  const hueSection = hue / 60
+  const secondary = chroma * (1 - Math.abs((hueSection % 2) - 1))
+  const offset = value / 100 - chroma
+  const [red, green, blue] =
+    hueSection < 1
+      ? [chroma, secondary, 0]
+      : hueSection < 2
+        ? [secondary, chroma, 0]
+        : hueSection < 3
+          ? [0, chroma, secondary]
+          : hueSection < 4
+            ? [0, secondary, chroma]
+            : hueSection < 5
+              ? [secondary, 0, chroma]
+              : [chroma, 0, secondary]
+
+  return rgbToHex(
+    Math.round((red + offset) * 255),
+    Math.round((green + offset) * 255),
+    Math.round((blue + offset) * 255),
+  )
+}
+
 const sortProjects = (
   projects: PlannerProject[],
   sortMode: ProjectSortMode,
@@ -97,6 +154,7 @@ export default function ProjectManagementModal({
   const [color, setColor] = useState(PROJECT_ACCENT_COLORS.blue)
   const [error, setError] = useState('')
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string>()
+  const [isPickingColor, setIsPickingColor] = useState(false)
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -199,11 +257,56 @@ export default function ProjectManagementModal({
   }
 
   const [red, green, blue] = hexToRgb(color)
+  const { hue, saturation, value } = rgbToHsv(red, green, blue)
+  const setCustomHsvColor = (
+    nextHue: number,
+    nextSaturation: number,
+    nextValue: number,
+  ) => {
+    setAccent('custom')
+    setColor(hsvToHex(nextHue, nextSaturation, nextValue))
+  }
   const setRgbPart = (index: number, value: number) => {
     const next = [red, green, blue]
     next[index] = clampRgb(value)
     setAccent('custom')
     setColor(rgbToHex(next[0], next[1], next[2]))
+  }
+
+  const pickSaturationAndValue = (
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) => {
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const nextSaturation = Math.max(
+      0,
+      Math.min(100, ((event.clientX - bounds.left) / bounds.width) * 100),
+    )
+    const nextValue = Math.max(
+      0,
+      Math.min(100, (1 - (event.clientY - bounds.top) / bounds.height) * 100),
+    )
+    setCustomHsvColor(hue, nextSaturation, nextValue)
+  }
+
+  const handleColorFieldKeyDown = (
+    event: ReactKeyboardEvent<HTMLDivElement>,
+  ) => {
+    const amount = event.shiftKey ? 10 : 2
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return
+    event.preventDefault()
+    const nextSaturation =
+      event.key === 'ArrowLeft'
+        ? Math.max(0, saturation - amount)
+        : event.key === 'ArrowRight'
+          ? Math.min(100, saturation + amount)
+          : saturation
+    const nextValue =
+      event.key === 'ArrowDown'
+        ? Math.max(0, value - amount)
+        : event.key === 'ArrowUp'
+          ? Math.min(100, value + amount)
+          : value
+    setCustomHsvColor(hue, nextSaturation, nextValue)
   }
 
   return (
@@ -335,12 +438,70 @@ export default function ProjectManagementModal({
               </div>
             </fieldset>
             {accent === 'custom' && (
-              <div className="project-custom-color" aria-label="사용자 색상 RGB 설정">
-                <label><span>R</span><input type="number" min="0" max="255" value={red} onChange={(event) => setRgbPart(0, Number(event.target.value))} /></label>
-                <label><span>G</span><input type="number" min="0" max="255" value={green} onChange={(event) => setRgbPart(1, Number(event.target.value))} /></label>
-                <label><span>B</span><input type="number" min="0" max="255" value={blue} onChange={(event) => setRgbPart(2, Number(event.target.value))} /></label>
-                <label className="project-color-picker"><span>색상표</span><input type="color" value={color} onChange={(event) => { setAccent('custom'); setColor(event.target.value) }} /></label>
-                <output>{color.toUpperCase()}</output>
+              <div className="project-custom-color" aria-label="사용자 색상 설정">
+                <div className="project-visual-color-picker">
+                  <div
+                    className="project-saturation-field"
+                    style={{ '--picker-hue': `${hue}` } as CSSProperties}
+                    role="slider"
+                    tabIndex={0}
+                    aria-label="채도와 밝기"
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(saturation)}
+                    aria-valuetext={`채도 ${Math.round(saturation)}%, 밝기 ${Math.round(value)}%`}
+                    onKeyDown={handleColorFieldKeyDown}
+                    onPointerDown={(event) => {
+                      setIsPickingColor(true)
+                      event.currentTarget.setPointerCapture(event.pointerId)
+                      pickSaturationAndValue(event)
+                    }}
+                    onPointerMove={(event) => {
+                      if (isPickingColor) pickSaturationAndValue(event)
+                    }}
+                    onPointerUp={(event) => {
+                      setIsPickingColor(false)
+                      event.currentTarget.releasePointerCapture(event.pointerId)
+                    }}
+                    onPointerCancel={() => setIsPickingColor(false)}
+                  >
+                    <span
+                      className="project-color-cursor"
+                      style={{
+                        left: `${saturation}%`,
+                        top: `${100 - value}%`,
+                        backgroundColor: color,
+                      }}
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <label className="project-hue-control">
+                    <span className="sr-only">색상 계열</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="359"
+                      value={Math.round(hue)}
+                      aria-label="색상 계열"
+                      onChange={(event) =>
+                        setCustomHsvColor(
+                          Number(event.target.value),
+                          saturation,
+                          value,
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+                <div className="project-color-values">
+                  <div className="project-color-hex">
+                    <span>HEX</span>
+                    <output>{color.toUpperCase()}</output>
+                  </div>
+                  <label><span>R</span><input type="number" min="0" max="255" value={red} onChange={(event) => setRgbPart(0, Number(event.target.value))} /></label>
+                  <label><span>G</span><input type="number" min="0" max="255" value={green} onChange={(event) => setRgbPart(1, Number(event.target.value))} /></label>
+                  <label><span>B</span><input type="number" min="0" max="255" value={blue} onChange={(event) => setRgbPart(2, Number(event.target.value))} /></label>
+                </div>
               </div>
             )}
             <div className="project-color-preview" style={{ '--project-color': color } as CSSProperties}>
