@@ -23,6 +23,7 @@ type PlanCollectionsPageProps = {
   projects: PlannerProject[]
   trash: TrashedPlan[]
   collectionCounts: Record<PlanCollection, number>
+  managementItemCounts: Record<string, number>
   onToggleTodo: (todoId: string) => void
   onRemoveTodo: (todoId: string) => void
   onRestoreTrash: (trashId: string) => void
@@ -31,6 +32,7 @@ type PlanCollectionsPageProps = {
   onCreateProject: (input: ProjectInput) => string
   onUpdateProject: (projectId: string, input: ProjectInput) => void
   onDeleteProject: (projectId: string) => void
+  onReorderProjects: (orderedProjectIds: string[]) => void
 }
 
 const formatDeletedAt = (deletedAt: string) =>
@@ -48,6 +50,7 @@ export default function PlanCollectionsPage({
   projects,
   trash,
   collectionCounts,
+  managementItemCounts,
   onToggleTodo,
   onRemoveTodo,
   onRestoreTrash,
@@ -56,6 +59,7 @@ export default function PlanCollectionsPage({
   onCreateProject,
   onUpdateProject,
   onDeleteProject,
+  onReorderProjects,
 }: PlanCollectionsPageProps) {
   const navigate = useNavigate()
   const [trashFilter, setTrashFilter] = useState<TrashFilter>('all')
@@ -100,6 +104,7 @@ export default function PlanCollectionsPage({
           selectedProjectId="all"
           selectedCollection={collection}
           itemCounts={projectCounts}
+          managementItemCounts={managementItemCounts}
           itemLabel="활성 계획"
           collectionCounts={collectionCounts}
           onSelectProject={selectProject}
@@ -113,6 +118,7 @@ export default function PlanCollectionsPage({
           }}
           onUpdateProject={onUpdateProject}
           onDeleteProject={onDeleteProject}
+          onReorderProjects={onReorderProjects}
         />
 
         <div className="project-filter-content plan-collection-content">

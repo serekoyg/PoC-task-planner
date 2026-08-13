@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 import type { Todo } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
 import { formatTaskDate, getTaskPriority } from '../lib/task'
@@ -58,10 +58,14 @@ export default function TodoProjectListView({
         const bucketTodos = getBucketTodos(todos, bucket)
 
         return (
-          <section className="todo-project-section" key={bucket.id}>
+          <section
+            className="todo-project-section project-color-surface"
+            style={{ '--project-color': bucket.color } as CSSProperties}
+            key={bucket.id}
+          >
             <header>
               <div>
-                <span className={`todo-project-dot ${bucket.accent}`} aria-hidden="true" />
+                <span className="todo-project-dot" style={{ backgroundColor: bucket.color }} aria-hidden="true" />
                 <h2>{bucket.name}</h2>
               </div>
               <span>{bucketTodos.length}개</span>

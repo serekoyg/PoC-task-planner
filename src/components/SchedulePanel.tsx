@@ -1,7 +1,11 @@
-import { useMemo } from 'react'
+import { type CSSProperties, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import type { CalendarEvent } from '../data/initialData'
-import { BACKLOG_PROJECT_NAME } from '../data/projects'
+import {
+  BACKLOG_PROJECT_NAME,
+  getProjectColorByName,
+  type PlannerProject,
+} from '../data/projects'
 import { toDateKey } from '../data/initialData'
 import type { StudySharedItemEntry } from '../data/studyRooms'
 import { formatSelectedDate, isCalendarEventOnDate } from '../lib/date'
@@ -10,6 +14,7 @@ import { getSharedRepeatLabel, isSharedItemOnDate } from '../lib/studyShared'
 type SchedulePanelProps = {
   selectedDate: Date
   events: CalendarEvent[]
+  projects: PlannerProject[]
   sharedItems: StudySharedItemEntry[]
   onCreateEvent: () => void
   onEditEvent: (event: CalendarEvent) => void
@@ -49,6 +54,7 @@ const formatDuration = (minutes: number) => {
 export default function SchedulePanel({
   selectedDate,
   events,
+  projects,
   sharedItems,
   onCreateEvent,
   onEditEvent,
@@ -106,7 +112,13 @@ export default function SchedulePanel({
         {totalEventCount ? (
           <>
             {selectedEvents.map((item) => (
-              <article className={`schedule-item ${item.color}`} key={item.id}>
+              <article
+                className="schedule-item project-color-surface"
+                style={{
+                  '--project-color': getProjectColorByName(projects, item.project),
+                } as CSSProperties}
+                key={item.id}
+              >
               <div className="schedule-time-block">
                 {item.allDay ? (
                   <strong>하루 종일</strong>
@@ -117,7 +129,7 @@ export default function SchedulePanel({
                   </>
                 )}
               </div>
-              <span className={`schedule-dot ${item.color}`} aria-hidden="true" />
+              <span className="schedule-dot" aria-hidden="true" />
               <div className="schedule-item-copy">
                 <div className="schedule-item-title">
                   <h3>{item.title}</h3>

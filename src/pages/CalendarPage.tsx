@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { type CSSProperties, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ProjectSidebar, {
   type PlanCollection,
@@ -14,6 +14,7 @@ import type {
 import { toDateKey } from '../data/initialData'
 import {
   BACKLOG_PROJECT_NAME,
+  getProjectColorByName,
   isBacklogProject,
   type PlannerProject,
   type ProjectInput,
@@ -60,6 +61,7 @@ type CalendarPageProps = {
   studyRooms: StudyRoom[]
   sharedItems: StudySharedItemEntry[]
   collectionCounts: Record<PlanCollection, number>
+  managementItemCounts: Record<string, number>
   onSelectDate: (date: Date) => void
   onMoveMonth: (amount: number) => void
   onSelectToday: () => void
@@ -70,6 +72,7 @@ type CalendarPageProps = {
   onCreateProject: (input: ProjectInput) => string
   onUpdateProject: (projectId: string, input: ProjectInput) => void
   onDeleteProject: (projectId: string) => void
+  onReorderProjects: (orderedProjectIds: string[]) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
   onChangeRoom: (
     roomId: string,
@@ -86,6 +89,7 @@ export default function CalendarPage({
   studyRooms,
   sharedItems,
   collectionCounts,
+  managementItemCounts,
   onSelectDate,
   onMoveMonth,
   onSelectToday,
@@ -96,6 +100,7 @@ export default function CalendarPage({
   onCreateProject,
   onUpdateProject,
   onDeleteProject,
+  onReorderProjects,
   onToggleSharedItemStatus,
   onChangeRoom,
 }: CalendarPageProps) {
@@ -154,6 +159,10 @@ export default function CalendarPage({
     (selectedProjectId === 'backlog'
       ? BACKLOG_PROJECT_NAME
       : '모든 목록')
+  const getEventProjectStyle = (projectName?: string) =>
+    ({
+      '--project-color': getProjectColorByName(projects, projectName),
+    }) as CSSProperties
   const periodTitle =
     calendarView === 'day'
       ? formatSelectedDate(selectedDate)
@@ -245,12 +254,14 @@ export default function CalendarPage({
           projects={projects}
           selectedProjectId={selectedProjectId}
           itemCounts={projectCounts}
+          managementItemCounts={managementItemCounts}
           itemLabel="일정"
           collectionCounts={collectionCounts}
           onSelectProject={setSelectedProjectId}
           onCreateProject={onCreateProject}
           onUpdateProject={onUpdateProject}
           onDeleteProject={onDeleteProject}
+          onReorderProjects={onReorderProjects}
           onSelectCollection={(collection) =>
             navigate(`/collections/${collection}`)
           }
@@ -318,6 +329,7 @@ export default function CalendarPage({
             <SchedulePanel
               selectedDate={selectedDate}
               events={filteredEvents}
+              projects={projects}
               sharedItems={visibleSharedEvents}
               onCreateEvent={() => openNewEvent()}
               onEditEvent={openEditEvent}
@@ -362,7 +374,8 @@ export default function CalendarPage({
                       <div className="week-day-events">
                         {dateEvents.map((event) => (
                           <button
-                            className={`week-event ${event.color}`}
+                            className="week-event project-color-surface"
+                            style={getEventProjectStyle(event.project)}
                             type="button"
                             key={event.id}
                             onClick={() => openEditEvent(event, date)}
@@ -451,7 +464,8 @@ export default function CalendarPage({
                       <span className="day-events">
                         {dateEvents.slice(0, 2).map((item) => (
                           <button
-                            className={`event-chip ${item.color}`}
+                            className="event-chip project-color-surface"
+                            style={getEventProjectStyle(item.project)}
                             type="button"
                             key={item.id}
                             onClick={() => openEditEvent(item, date)}

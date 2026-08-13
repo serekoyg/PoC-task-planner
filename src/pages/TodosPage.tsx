@@ -41,6 +41,7 @@ type TodosPageProps = {
   studyRooms: StudyRoom[]
   sharedItems: StudySharedItemEntry[]
   collectionCounts: Record<PlanCollection, number>
+  managementItemCounts: Record<string, number>
   onAddTodo: (todo: TodoInput, sharedRoomId?: string) => void
   onAddEvent: (event: CalendarEventInput, sharedRoomId?: string) => void
   onUpdateTodo: (todoId: string, todo: TodoInput) => void
@@ -49,6 +50,7 @@ type TodosPageProps = {
   onCreateProject: (input: ProjectInput) => string
   onUpdateProject: (projectId: string, input: ProjectInput) => void
   onDeleteProject: (projectId: string) => void
+  onReorderProjects: (orderedProjectIds: string[]) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
 }
 
@@ -60,6 +62,7 @@ export default function TodosPage({
   studyRooms,
   sharedItems,
   collectionCounts,
+  managementItemCounts,
   onAddTodo,
   onAddEvent,
   onUpdateTodo,
@@ -68,6 +71,7 @@ export default function TodosPage({
   onCreateProject,
   onUpdateProject,
   onDeleteProject,
+  onReorderProjects,
   onToggleSharedItemStatus,
 }: TodosPageProps) {
   const navigate = useNavigate()
@@ -122,12 +126,14 @@ export default function TodosPage({
           projects={projects}
           selectedProjectId={selectedProjectId}
           itemCounts={projectCounts}
+          managementItemCounts={managementItemCounts}
           itemLabel="미완료 할 일"
           collectionCounts={collectionCounts}
           onSelectProject={selectProject}
           onCreateProject={onCreateProject}
           onUpdateProject={onUpdateProject}
           onDeleteProject={onDeleteProject}
+          onReorderProjects={onReorderProjects}
           onSelectCollection={(collection) =>
             navigate(`/collections/${collection}`)
           }

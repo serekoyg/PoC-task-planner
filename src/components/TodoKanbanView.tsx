@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import type { Todo } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
 import type { ProjectFilter } from './ProjectSidebar'
@@ -30,9 +31,13 @@ export default function TodoKanbanView({
           const openCount = bucketTodos.filter((todo) => !todo.done).length
 
           return (
-            <section className="todo-kanban-column" key={bucket.id}>
+            <section
+              className="todo-kanban-column project-color-surface"
+              style={{ '--project-color': bucket.color } as CSSProperties}
+              key={bucket.id}
+            >
               <header>
-                <span className={`todo-project-dot ${bucket.accent}`} aria-hidden="true" />
+                <span className="todo-project-dot" style={{ backgroundColor: bucket.color }} aria-hidden="true" />
                 <strong>{bucket.name}</strong>
                 <small>{openCount}/{bucketTodos.length}</small>
               </header>

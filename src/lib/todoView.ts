@@ -1,18 +1,25 @@
 import type { Todo } from '../data/initialData'
 import type { PlannerProject, ProjectAccent } from '../data/projects'
-import { BACKLOG_PROJECT_NAME, isBacklogProject } from '../data/projects'
+import {
+  BACKLOG_PROJECT_NAME,
+  DEFAULT_PROJECT_COLOR,
+  getProjectColor,
+  isBacklogProject,
+} from '../data/projects'
 import type { ProjectFilter } from '../components/ProjectSidebar'
 
 export type TodoProjectBucket = {
   id: string
   name: string
   accent: ProjectAccent | 'neutral'
+  color: string
 }
 
 const backlogBucket: TodoProjectBucket = {
   id: 'backlog',
   name: BACKLOG_PROJECT_NAME,
   accent: 'neutral',
+  color: DEFAULT_PROJECT_COLOR,
 }
 
 export const getTodoProjectBuckets = (
@@ -25,10 +32,18 @@ export const getTodoProjectBuckets = (
     const selectedProject = projects.find(
       (project) => project.id === selectedProjectId,
     )
-    return selectedProject ? [selectedProject] : []
+    return selectedProject
+      ? [{ ...selectedProject, color: getProjectColor(selectedProject) }]
+      : []
   }
 
-  return [backlogBucket, ...projects]
+  return [
+    backlogBucket,
+    ...projects.map((project) => ({
+      ...project,
+      color: getProjectColor(project),
+    })),
+  ]
 }
 
 export const getBucketTodos = (

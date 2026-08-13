@@ -22,7 +22,9 @@ import {
 import {
   BACKLOG_PROJECT_NAME,
   createInitialProjects,
+  isBacklogProject,
   normalizeBacklogProject,
+  normalizeProjects,
   type PlannerProject,
   type ProjectInput,
 } from './data/projects'
@@ -75,7 +77,9 @@ const readStorage = <T,>(key: string, fallback: () => T): T => {
 }
 
 const readProjects = () =>
-  readStorage<PlannerProject[]>(PROJECT_STORAGE_KEY, createInitialProjects)
+  normalizeProjects(
+    readStorage<PlannerProject[]>(PROJECT_STORAGE_KEY, createInitialProjects),
+  )
 
 const readEvents = () =>
   readStorage<CalendarEvent[]>(EVENT_STORAGE_KEY, createInitialEvents).map(
@@ -270,6 +274,20 @@ export default function App() {
     }),
     [todos, trash.length],
   )
+  const projectPlanCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: todos.length + events.length,
+      backlog:
+        todos.filter((todo) => isBacklogProject(todo.project)).length +
+        events.filter((event) => isBacklogProject(event.project)).length,
+    }
+    projects.forEach((project) => {
+      counts[project.id] =
+        todos.filter((todo) => todo.project === project.name).length +
+        events.filter((event) => event.project === project.name).length
+    })
+    return counts
+  }, [events, projects, todos])
 
   const login = (method: AuthMethod) => {
     localStorage.setItem(AUTH_STORAGE_KEY, 'true')
@@ -588,7 +606,10 @@ export default function App() {
   const createProject = (input: ProjectInput) => {
     const projectId = `project-${crypto.randomUUID()}`
 
-    setProjects((current) => [...current, { id: projectId, ...input }])
+    setProjects((current) => [
+      ...current,
+      { id: projectId, ...input, createdAt: new Date().toISOString() },
+    ])
 
     return projectId
   }
@@ -664,6 +685,17 @@ export default function App() {
         }
       }),
     )
+  }
+
+  const reorderProjects = (orderedProjectIds: string[]) => {
+    setProjects((current) => {
+      const projectById = new Map(current.map((project) => [project.id, project]))
+      const ordered = orderedProjectIds
+        .map((projectId) => projectById.get(projectId))
+        .filter((project): project is PlannerProject => Boolean(project))
+      const orderedIds = new Set(orderedProjectIds)
+      return [...ordered, ...current.filter((project) => !orderedIds.has(project.id))]
+    })
   }
 
   const toggleTodo = (todoId: string) => {
@@ -1012,6 +1044,7 @@ export default function App() {
               events={events}
               projects={projects}
               collectionCounts={collectionCounts}
+              managementItemCounts={projectPlanCounts}
               studyRooms={joinedStudyRooms}
               sharedItems={sharedItemEntries}
               onSelectDate={selectDate}
@@ -1033,6 +1066,7 @@ export default function App() {
               onCreateProject={createProject}
               onUpdateProject={updateProject}
               onDeleteProject={deleteProject}
+              onReorderProjects={reorderProjects}
               onToggleSharedItemStatus={toggleSharedItemStatus}
               onChangeRoom={changeStudyRoom}
             />
@@ -1047,6 +1081,7 @@ export default function App() {
               todos={todos}
               projects={projects}
               collectionCounts={collectionCounts}
+              managementItemCounts={projectPlanCounts}
               studyRooms={joinedStudyRooms}
               sharedItems={sharedItemEntries}
               onAddTodo={addTodo}
@@ -1057,6 +1092,7 @@ export default function App() {
               onCreateProject={createProject}
               onUpdateProject={updateProject}
               onDeleteProject={deleteProject}
+              onReorderProjects={reorderProjects}
               onToggleSharedItemStatus={toggleSharedItemStatus}
             />
           }
@@ -1075,6 +1111,7 @@ export default function App() {
               projects={projects}
               trash={trash}
               collectionCounts={collectionCounts}
+              managementItemCounts={projectPlanCounts}
               onToggleTodo={toggleTodo}
               onRemoveTodo={removeTodo}
               onRestoreTrash={restoreTrash}
@@ -1083,6 +1120,7 @@ export default function App() {
               onCreateProject={createProject}
               onUpdateProject={updateProject}
               onDeleteProject={deleteProject}
+              onReorderProjects={reorderProjects}
             />
           }
         />
@@ -1096,6 +1134,7 @@ export default function App() {
               projects={projects}
               trash={trash}
               collectionCounts={collectionCounts}
+              managementItemCounts={projectPlanCounts}
               onToggleTodo={toggleTodo}
               onRemoveTodo={removeTodo}
               onRestoreTrash={restoreTrash}
@@ -1104,6 +1143,7 @@ export default function App() {
               onCreateProject={createProject}
               onUpdateProject={updateProject}
               onDeleteProject={deleteProject}
+              onReorderProjects={reorderProjects}
             />
           }
         />
