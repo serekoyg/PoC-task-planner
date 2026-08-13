@@ -752,6 +752,311 @@ ol {
   line-height: 1;
 }
 
+.active-focus {
+  position: relative;
+}
+
+.active-focus-trigger {
+  min-height: 34px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #cfe4d8;
+  border-radius: 999px;
+  color: #226345;
+  background: #f0faf4;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.active-focus-trigger:hover,
+.active-focus-trigger.active {
+  border-color: #72b68e;
+  background: #e6f6ed;
+}
+
+.active-focus-trigger.idle {
+  border-color: var(--line);
+  color: #72766f;
+  background: #f3f4f1;
+}
+
+.active-focus-trigger.idle:hover,
+.active-focus-trigger.idle.active {
+  border-color: #c9cbc5;
+  color: var(--text);
+  background: #eceee9;
+}
+
+.active-focus-trigger i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #21a45f;
+  box-shadow: 0 0 0 4px rgba(33, 164, 95, 0.12);
+  animation: focus-live-pulse 1.8s ease-in-out infinite;
+}
+
+.active-focus-trigger.idle i {
+  background: #a7aaa3;
+  box-shadow: none;
+  animation: none;
+}
+
+.active-focus-trigger span {
+  font-weight: 750;
+}
+
+.active-focus-trigger strong {
+  padding-left: 6px;
+  border-left: 1px solid #cfe4d8;
+  font-size: 0.68rem;
+}
+
+@keyframes focus-live-pulse {
+  50% { opacity: 0.45; }
+}
+
+.active-focus-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 30;
+  width: min(390px, calc(100vw - 24px));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 16px 44px rgba(28, 31, 27, 0.14);
+}
+
+.active-focus-popover > header {
+  min-height: auto;
+  padding: 16px 18px 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-subtle);
+}
+
+.active-focus-popover > header p,
+.active-focus-popover > header h2 {
+  margin: 0;
+}
+
+.active-focus-popover > header p {
+  margin-bottom: 3px;
+  color: #288258;
+  font-size: 0.6rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+
+.active-focus-popover > header h2 {
+  font-size: 1rem;
+}
+
+.active-focus-popover > header > button {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  font-size: 1.25rem;
+}
+
+.active-focus-list {
+  max-height: 286px;
+  margin: 0;
+  padding: 8px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.active-focus-list li {
+  padding: 9px 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  border-radius: 9px;
+}
+
+.active-focus-list li + li {
+  border-top: 1px solid var(--line);
+}
+
+.active-focus-link {
+  min-width: 0;
+  padding: 0;
+  display: block;
+  border: 0;
+  color: var(--text);
+  background: transparent;
+  text-align: left;
+}
+
+.active-focus-link span,
+.active-focus-link strong {
+  display: block;
+}
+
+.active-focus-link span {
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.active-focus-link strong {
+  overflow: hidden;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-focus-list time {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.active-focus-stop {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid #efcaca;
+  border-radius: 7px;
+  color: var(--danger);
+  background: #fff8f8;
+  font-size: 0.67rem;
+  font-weight: 750;
+}
+
+.active-focus-resume {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #b9d8c5;
+  border-radius: 7px;
+  color: #226345;
+  background: #f0faf4;
+  font-size: 0.67rem;
+  font-weight: 800;
+}
+
+.active-focus-empty {
+  padding: 30px 18px;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.active-focus-empty > span {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 10px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #8b8e87;
+  background: var(--surface-subtle);
+  font-weight: 800;
+}
+
+.active-focus-empty strong {
+  font-size: 0.78rem;
+}
+
+.active-focus-empty p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.active-focus-summary {
+  margin: 0;
+  padding: 12px 18px;
+  display: grid;
+  gap: 7px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-subtle);
+}
+
+.active-focus-summary > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.active-focus-summary dt {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.active-focus-summary dd {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.active-focus-summary .overlap dd {
+  color: #9d6b1c;
+}
+
+.active-focus-stop-all,
+.active-focus-confirm {
+  margin: 12px;
+}
+
+.active-focus-stop-all {
+  width: calc(100% - 24px);
+  min-height: 38px;
+  border: 1px solid #efcaca;
+  border-radius: 8px;
+  color: var(--danger);
+  background: #fff8f8;
+  font-size: 0.73rem;
+  font-weight: 800;
+}
+
+.active-focus-confirm {
+  padding: 12px;
+  border: 1px solid #efcaca;
+  border-radius: 9px;
+  background: #fff8f8;
+}
+
+.active-focus-confirm p {
+  margin: 0 0 10px;
+  font-size: 0.74rem;
+  font-weight: 750;
+}
+
+.active-focus-confirm > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.active-focus-confirm button {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.active-focus-confirm button:last-child {
+  border-color: var(--danger);
+  color: #fff;
+  background: var(--danger);
+}
+
 .today-label {
   margin: 0;
   color: var(--muted);
@@ -6439,6 +6744,38 @@ footer a {
     min-width: 32px;
     height: 32px;
     padding: 0;
+  }
+
+  .active-focus-trigger {
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  .active-focus-trigger span,
+  .active-focus-trigger strong {
+    display: none;
+  }
+
+  .active-focus-popover {
+    position: fixed;
+    top: 62px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-height: calc(100dvh - 72px);
+  }
+
+  .active-focus-list li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .active-focus-stop,
+  .active-focus-resume {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 
   .notification-badge {

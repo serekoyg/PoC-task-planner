@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Link,
   Navigate,
@@ -11,6 +11,7 @@ import {
 } from 'react-router-dom'
 import GlobalSearch from './components/GlobalSearch'
 import NotificationInbox from './components/NotificationInbox'
+import ActiveFocusPopover from './components/ActiveFocusPopover'
 import {
   type CalendarEvent,
   type CalendarEventInput,
@@ -38,7 +39,17 @@ import {
   type PlannerNotification,
 } from './data/notifications'
 import { createInitialTrash, type TrashedPlan } from './data/trash'
+import {
+  createInitialFocusRecords,
+  type FocusRecord,
+  type FocusSourceType,
+} from './data/focusRecords'
 import { formatHeaderDate } from './lib/date'
+import {
+  getFocusDurationSeconds,
+  getFocusSegments,
+  isFocusRecordRunning,
+} from './lib/focus'
 import type { AuthMethod } from './lib/auth'
 import type { PlannerTarget } from './lib/plannerNavigation'
 import CalendarPage from './pages/CalendarPage'
@@ -59,6 +70,7 @@ const TODO_STORAGE_KEY = 'haru.v2.todos'
 const EVENT_STORAGE_KEY = 'haru.v2.events'
 const STUDY_STORAGE_KEY = 'haru.v2.study-rooms'
 const FOCUS_STORAGE_KEY = 'haru.v2.focus-results'
+const FOCUS_RECORD_STORAGE_KEY = 'haru.v2.focus-records'
 const PROJECT_STORAGE_KEY = 'haru.v2.projects'
 const AUTH_STORAGE_KEY = 'haru.demo-authenticated'
 const NOTIFICATION_STORAGE_KEY = 'haru.v2.notification-inbox'
@@ -108,26 +120,55 @@ const readTrash = () =>
     }),
   ) as TrashedPlan[]
 
+const readFocusRecords = () =>
+  readStorage<FocusRecord[]>(
+    FOCUS_RECORD_STORAGE_KEY,
+    createInitialFocusRecords,
+  ).filter(
+    (record) =>
+      record.id &&
+      record.sourceId &&
+      record.title &&
+      record.startedAt &&
+      (record.sourceType === 'todo' || record.sourceType === 'study'),
+  )
+
 type StudyRoomRouteProps = {
   rooms: StudyRoom[]
+  activeFocusRecords: FocusRecord[]
+  nowMs: number
   onJoinRoom: (roomId: string) => void
   onChangeRoom: (
     roomId: string,
     update: (current: StudyRoom) => StudyRoom,
   ) => void
+  onStartFocus: (
+    sourceType: FocusSourceType,
+    sourceId: string,
+    title: string,
+  ) => void
+  onStopFocus: (recordId: string) => void
 }
 
 function StudyRoomRoute({
   rooms,
+  activeFocusRecords,
+  nowMs,
   onJoinRoom,
   onChangeRoom,
+  onStartFocus,
+  onStopFocus,
 }: StudyRoomRouteProps) {
   const { roomId } = useParams()
   return (
     <StudyRoomDetailPage
       room={rooms.find((room) => room.id === roomId)}
+      activeFocusRecords={activeFocusRecords}
+      nowMs={nowMs}
       onJoinRoom={onJoinRoom}
       onChangeRoom={onChangeRoom}
+      onStartFocus={onStartFocus}
+      onStopFocus={onStopFocus}
     />
   )
 }
@@ -187,14 +228,41 @@ function TaskDetailRoute({ todos, focusResults }: TaskRouteProps) {
 
 type FocusSessionRouteProps = {
   todos: Todo[]
-  onFinish: (todoId: string, elapsedSeconds: number) => void
+  activeFocusRecords: FocusRecord[]
+  nowMs: number
+  onStartFocus: (
+    sourceType: FocusSourceType,
+    sourceId: string,
+    title: string,
+  ) => void
+  onPauseFocus: (recordId: string) => void
+  onFinishFocus: (recordId: string) => void
 }
 
-function FocusSessionRoute({ todos, onFinish }: FocusSessionRouteProps) {
+function FocusSessionRoute({
+  todos,
+  activeFocusRecords,
+  nowMs,
+  onStartFocus,
+  onPauseFocus,
+  onFinishFocus,
+}: FocusSessionRouteProps) {
   const { todoId } = useParams()
   const task = findTask(todos, todoId)
+  const activeRecord = activeFocusRecords.find(
+    (record) => record.sourceType === 'todo' && record.sourceId === todoId,
+  )
 
-  return <FocusSessionPage todo={task?.todo} onFinish={onFinish} />
+  return (
+    <FocusSessionPage
+      todo={task?.todo}
+      activeRecord={activeRecord}
+      nowMs={nowMs}
+      onStartFocus={onStartFocus}
+      onPauseFocus={onPauseFocus}
+      onFinishFocus={onFinishFocus}
+    />
+  )
 }
 
 type FocusResultRouteProps = TaskRouteProps & {
@@ -237,6 +305,7 @@ export default function App() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isNotificationInboxOpen, setIsNotificationInboxOpen] = useState(false)
+  const [isFocusPopoverOpen, setIsFocusPopoverOpen] = useState(false)
   const [profileActionMessage, setProfileActionMessage] = useState(
     '오늘 오후 9:27에 동기화됨',
   )
@@ -255,6 +324,17 @@ export default function App() {
   )
   const [focusResults, setFocusResults] = useState<Record<string, number>>(() =>
     readStorage(FOCUS_STORAGE_KEY, () => ({})),
+  )
+  const [focusRecords, setFocusRecords] =
+    useState<FocusRecord[]>(readFocusRecords)
+  const [focusNowMs, setFocusNowMs] = useState(Date.now())
+  const unfinishedFocusRecords = useMemo(
+    () => focusRecords.filter((record) => !record.endedAt),
+    [focusRecords],
+  )
+  const activeFocusRecords = useMemo(
+    () => unfinishedFocusRecords.filter(isFocusRecordRunning),
+    [unfinishedFocusRecords],
   )
   const joinedStudyRooms = useMemo(
     () => studyRooms.filter((room) => room.joined),
@@ -319,6 +399,18 @@ export default function App() {
   }, [focusResults])
 
   useEffect(() => {
+    localStorage.setItem(FOCUS_RECORD_STORAGE_KEY, JSON.stringify(focusRecords))
+  }, [focusRecords])
+
+  useEffect(() => {
+    if (!activeFocusRecords.length) return
+
+    setFocusNowMs(Date.now())
+    const timer = window.setInterval(() => setFocusNowMs(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [activeFocusRecords.length])
+
+  useEffect(() => {
     localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(projects))
   }, [projects])
 
@@ -337,6 +429,7 @@ export default function App() {
     setIsProfileMenuOpen(false)
     setIsSearchOpen(false)
     setIsNotificationInboxOpen(false)
+    setIsFocusPopoverOpen(false)
   }, [location.pathname])
 
   useEffect(() => {
@@ -345,6 +438,7 @@ export default function App() {
         event.preventDefault()
         setIsProfileMenuOpen(false)
         setIsNotificationInboxOpen(false)
+        setIsFocusPopoverOpen(false)
         setIsSearchOpen(true)
       }
     }
@@ -401,19 +495,26 @@ export default function App() {
     }
     setIsSearchOpen(false)
     setIsNotificationInboxOpen(false)
+    setIsFocusPopoverOpen(false)
   }
 
   const openSearch = () => {
     setIsProfileMenuOpen(false)
     setIsNotificationInboxOpen(false)
+    setIsFocusPopoverOpen(false)
     setIsSearchOpen(true)
   }
 
   const toggleNotificationInbox = () => {
     setIsProfileMenuOpen(false)
     setIsSearchOpen(false)
+    setIsFocusPopoverOpen(false)
     setIsNotificationInboxOpen((current) => !current)
   }
+
+  const closeFocusPopover = useCallback(() => {
+    setIsFocusPopoverOpen(false)
+  }, [])
 
   const markAllNotificationsRead = () => {
     setNotifications((current) =>
@@ -676,11 +777,129 @@ export default function App() {
     setTrash((current) => current.filter((item) => item.trashId !== trashId))
   }
 
-  const finishFocus = (todoId: string, elapsedSeconds: number) => {
-    setFocusResults((current) => ({
-      ...current,
-      [todoId]: elapsedSeconds,
-    }))
+  const startFocus = useCallback((
+    sourceType: FocusSourceType,
+    sourceId: string,
+    title: string,
+  ) => {
+    setFocusRecords((current) => {
+      const existing = current.find(
+        (record) =>
+          !record.endedAt &&
+          record.sourceType === sourceType &&
+          record.sourceId === sourceId,
+      )
+      const startedAt = new Date().toISOString()
+      if (existing) {
+        if (isFocusRecordRunning(existing)) return current
+        return current.map((record) =>
+          record.id === existing.id
+            ? {
+                ...record,
+                segments: [...getFocusSegments(record), { startedAt }],
+              }
+            : record,
+        )
+      }
+
+      return [
+        ...current,
+        {
+          id: `focus-${crypto.randomUUID()}`,
+          sourceType,
+          sourceId,
+          title,
+          startedAt,
+          segments: [{ startedAt }],
+        },
+      ]
+    })
+  }, [])
+
+  const pauseFocus = useCallback((recordId: string) => {
+    const pausedAt = new Date().toISOString()
+    setFocusRecords((current) =>
+      current.map((record) => {
+        if (record.id !== recordId || !isFocusRecordRunning(record)) {
+          return record
+        }
+        const segments = getFocusSegments(record)
+        return {
+          ...record,
+          segments: segments.map((segment, index) =>
+            index === segments.length - 1
+              ? { ...segment, endedAt: pausedAt }
+              : segment,
+          ),
+        }
+      }),
+    )
+  }, [])
+
+  const finishFocus = useCallback((recordId: string) => {
+    const record = focusRecords.find(
+      (candidate) => candidate.id === recordId && !candidate.endedAt,
+    )
+    if (!record) return
+
+    const endedAt = new Date()
+    const endedAtIso = endedAt.toISOString()
+    const segments = getFocusSegments(record)
+    const finishedRecord: FocusRecord = {
+      ...record,
+      endedAt: endedAtIso,
+      segments: segments.map((segment, index) =>
+        index === segments.length - 1 && !segment.endedAt
+          ? { ...segment, endedAt: endedAtIso }
+          : segment,
+      ),
+    }
+    const elapsedSeconds = getFocusDurationSeconds(
+      finishedRecord,
+      endedAt.getTime(),
+    )
+
+    setFocusRecords((current) =>
+      current.map((candidate) =>
+        candidate.id === recordId ? finishedRecord : candidate,
+      ),
+    )
+
+    if (record.sourceType === 'todo') {
+      setFocusResults((current) => ({
+        ...current,
+        [record.sourceId]: (current[record.sourceId] ?? 0) + elapsedSeconds,
+      }))
+    }
+  }, [focusRecords])
+
+  const pauseAllFocus = useCallback(() => {
+    if (!activeFocusRecords.length) return
+
+    const pausedAt = new Date().toISOString()
+    setFocusRecords((current) =>
+      current.map((record) => {
+        if (!isFocusRecordRunning(record)) return record
+        const segments = getFocusSegments(record)
+        return {
+          ...record,
+          segments: segments.map((segment, index) =>
+            index === segments.length - 1
+              ? { ...segment, endedAt: pausedAt }
+              : segment,
+          ),
+        }
+      }),
+    )
+  }, [activeFocusRecords.length])
+
+  const openFocusSource = (record: FocusRecord) => {
+    navigate(
+      record.sourceType === 'todo'
+        ? `/todos/${record.sourceId}/focus`
+        : `/studies/${record.sourceId}`,
+    )
+    setIsFocusPopoverOpen(false)
   }
 
   const completeTodo = (todoId: string, dateKey: string) => {
@@ -877,6 +1096,29 @@ export default function App() {
               )}
             </button>
           </div>
+          <ActiveFocusPopover
+            records={unfinishedFocusRecords}
+            nowMs={focusNowMs}
+            isOpen={isFocusPopoverOpen}
+            onToggle={() => {
+              setIsProfileMenuOpen(false)
+              setIsSearchOpen(false)
+              setIsNotificationInboxOpen(false)
+              setIsFocusPopoverOpen((current) => !current)
+            }}
+            onClose={closeFocusPopover}
+            onSelect={openFocusSource}
+            onPause={pauseFocus}
+            onResume={(recordId) => {
+              const record = unfinishedFocusRecords.find(
+                (candidate) => candidate.id === recordId,
+              )
+              if (record) {
+                startFocus(record.sourceType, record.sourceId, record.title)
+              }
+            }}
+            onPauseAll={pauseAllFocus}
+          />
           <div className="profile-menu" ref={profileMenuRef}>
             <button
               className={`avatar${isProfileMenuOpen ? ' active' : ''}`}
@@ -884,7 +1126,12 @@ export default function App() {
               aria-label="사용자 메뉴"
               aria-controls="profile-menu-popover"
               aria-expanded={isProfileMenuOpen}
-              onClick={() => setIsProfileMenuOpen((current) => !current)}
+              onClick={() => {
+                setIsSearchOpen(false)
+                setIsNotificationInboxOpen(false)
+                setIsFocusPopoverOpen(false)
+                setIsProfileMenuOpen((current) => !current)
+              }}
             >
               민
             </button>
@@ -1077,7 +1324,16 @@ export default function App() {
         />
         <Route
           path="/todos/:todoId/focus"
-          element={<FocusSessionRoute todos={todos} onFinish={finishFocus} />}
+          element={
+            <FocusSessionRoute
+              todos={todos}
+              activeFocusRecords={activeFocusRecords}
+              nowMs={focusNowMs}
+              onStartFocus={startFocus}
+              onPauseFocus={pauseFocus}
+              onFinishFocus={finishFocus}
+            />
+          }
         />
         <Route
           path="/todos/:todoId/result"
@@ -1114,8 +1370,12 @@ export default function App() {
           element={
             <StudyRoomRoute
               rooms={studyRooms}
+              activeFocusRecords={activeFocusRecords}
+              nowMs={focusNowMs}
               onJoinRoom={joinStudyRoom}
               onChangeRoom={changeStudyRoom}
+              onStartFocus={startFocus}
+              onStopFocus={finishFocus}
             />
           }
         />

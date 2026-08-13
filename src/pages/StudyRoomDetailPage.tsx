@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import PlanEditorModal from '../components/PlanEditorModal'
 import StudyRoomChat from '../components/StudyRoomChat'
+import type { FocusRecord, FocusSourceType } from '../data/focusRecords'
 import type {
   StudyMemberStatus,
   StudyRoom,
@@ -12,27 +13,29 @@ import {
   getSharedRepeatLabel,
   sharedItemTypeLabels,
 } from '../lib/studyShared'
+import { formatFocusTimer, getFocusDurationSeconds } from '../lib/focus'
 
 type StudyRoomDetailPageProps = {
   room?: StudyRoom
+  activeFocusRecords: FocusRecord[]
+  nowMs: number
   onJoinRoom: (roomId: string) => void
   onChangeRoom: (
     roomId: string,
     update: (current: StudyRoom) => StudyRoom,
   ) => void
+  onStartFocus: (
+    sourceType: FocusSourceType,
+    sourceId: string,
+    title: string,
+  ) => void
+  onStopFocus: (recordId: string) => void
 }
 
 const formatMinutes = (minutes: number) => {
   const hours = Math.floor(minutes / 60)
   const rest = minutes % 60
   return hours ? `${hours}시간 ${rest}분` : `${rest}분`
-}
-
-const formatTimer = (seconds: number) => {
-  const hours = String(Math.floor(seconds / 3600)).padStart(2, '0')
-  const minutes = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0')
-  const rest = String(seconds % 60).padStart(2, '0')
-  return `${hours}:${minutes}:${rest}`
 }
 
 const statusLabels: Record<StudyMemberStatus, string> = {
@@ -59,15 +62,19 @@ type StudyRoomTab = 'home' | 'plans' | 'chat'
 
 export default function StudyRoomDetailPage({
   room,
+  activeFocusRecords,
+  nowMs,
   onJoinRoom,
   onChangeRoom,
+  onStartFocus,
+  onStopFocus,
 }: StudyRoomDetailPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
-  const [isFocusing, setIsFocusing] = useState(false)
-  const [elapsedSeconds, setElapsedSeconds] = useState(0)
-  const [activeActivityTitle, setActiveActivityTitle] = useState('')
   const [activeTab, setActiveTab] = useState<StudyRoomTab>('home')
   const [isPlanEditorOpen, setIsPlanEditorOpen] = useState(false)
+  const activeRoomFocus = activeFocusRecords.find(
+    (record) => record.sourceType === 'study' && record.sourceId === room?.id,
+  )
   const rankedMembers = useMemo(
     () => [...(room?.members ?? [])].sort((a, b) => b.minutes - a.minutes),
     [room],
@@ -78,25 +85,19 @@ export default function StudyRoomDetailPage({
     if (!activityId || !room) return
 
     const activity = room.sharedItems.find((item) => item.id === activityId)
-    setActiveActivityTitle(activity?.title ?? '')
     setActiveTab('home')
-    setIsFocusing(true)
-    setElapsedSeconds(0)
+    if (!activeRoomFocus) {
+      onStartFocus(
+        'study',
+        room.id,
+        activity?.title ?? `${room.name} 활동`,
+      )
+    }
 
     const nextParams = new URLSearchParams(searchParams)
     nextParams.delete('startActivity')
     setSearchParams(nextParams, { replace: true })
-  }, [room, searchParams, setSearchParams])
-
-  useEffect(() => {
-    if (!isFocusing) return
-
-    const timer = window.setInterval(
-      () => setElapsedSeconds((seconds) => seconds + 1),
-      1000,
-    )
-    return () => window.clearInterval(timer)
-  }, [isFocusing])
+  }, [activeRoomFocus, onStartFocus, room, searchParams, setSearchParams])
 
   if (!room) {
     return (
@@ -269,30 +270,37 @@ export default function StudyRoomDetailPage({
       ) : (
         <section className="focus-console" aria-labelledby="focus-console-title" hidden={activeTab !== 'home'}>
           <div className="focus-console-copy">
-            <span className={isFocusing ? 'focus-pulse active' : 'focus-pulse'}>
+            <span className={activeRoomFocus ? 'focus-pulse active' : 'focus-pulse'}>
               <i aria-hidden="true" />
             </span>
             <div>
               <p id="focus-console-title">
-                {isFocusing
-                  ? activeActivityTitle
-                    ? `‘${activeActivityTitle}’ 활동 중이에요`
-                    : '지금 함께 활동하고 있어요'
+                {activeRoomFocus
+                  ? `‘${activeRoomFocus.title}’ 활동 중이에요`
                   : '오늘의 활동을 시작해 볼까요?'}
               </p>
-              <strong>{formatTimer(elapsedSeconds)}</strong>
+              <strong>
+                {formatFocusTimer(
+                  activeRoomFocus
+                    ? getFocusDurationSeconds(activeRoomFocus, nowMs)
+                    : 0,
+                )}
+              </strong>
             </div>
           </div>
           <button
-            className={isFocusing ? 'stop' : ''}
+            className={activeRoomFocus ? 'stop' : ''}
             type="button"
             onClick={() => {
-              setIsFocusing((current) => !current)
-              if (isFocusing) setActiveActivityTitle('')
+              if (activeRoomFocus) {
+                onStopFocus(activeRoomFocus.id)
+              } else {
+                onStartFocus('study', room.id, `${room.name} 활동`)
+              }
             }}
           >
-            <span aria-hidden="true">{isFocusing ? '■' : '▶'}</span>
-            {isFocusing ? '활동 마치기' : '활동 시작'}
+            <span aria-hidden="true">{activeRoomFocus ? '■' : '▶'}</span>
+            {activeRoomFocus ? '활동 마치기' : '활동 시작'}
           </button>
         </section>
       )}
