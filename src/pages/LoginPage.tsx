@@ -1,10 +1,13 @@
 import { type FormEvent, useState } from 'react'
+import { Link } from 'react-router-dom'
+import SocialLoginButtons from '../components/SocialLoginButtons'
+import type { AuthMethod } from '../lib/auth'
 
 const DEMO_EMAIL = 'demo@haru.app'
 const DEMO_PASSWORD = 'haru1234'
 
 type LoginPageProps = {
-  onLogin: () => void
+  onLogin: (method: AuthMethod) => void
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
@@ -21,7 +24,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     }
 
     setErrorMessage('')
-    onLogin()
+    onLogin('email')
   }
 
   return (
@@ -38,6 +41,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           <p className="eyebrow">DEMO WORKSPACE</p>
           <h1 id="login-title">오늘의 계획을 시작해 볼까요?</h1>
           <p>로그인하면 일정, 할 일, 모임을 한곳에서 이어서 관리할 수 있어요.</p>
+        </div>
+
+        <SocialLoginButtons onSocialLogin={onLogin} />
+
+        <div className="auth-divider">
+          <span>또는 데모 계정으로 로그인</span>
         </div>
 
         <div className="demo-account-note">
@@ -84,7 +93,9 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </button>
         </form>
 
-        <p className="login-footnote">별도 가입 없이 데모 기능을 둘러볼 수 있어요.</p>
+        <p className="login-footnote auth-switch-link">
+          아직 계정이 없나요? <Link to="/signup">회원가입</Link>
+        </p>
       </section>
 
       <aside className="login-preview" aria-hidden="true">

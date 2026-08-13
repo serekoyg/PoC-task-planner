@@ -29,12 +29,14 @@ import {
   type StudyRoomCreateInput,
 } from './data/studyRooms'
 import { formatHeaderDate } from './lib/date'
+import type { AuthMethod } from './lib/auth'
 import CalendarPage from './pages/CalendarPage'
 import FocusResultPage from './pages/FocusResultPage'
 import FocusSessionPage from './pages/FocusSessionPage'
 import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
+import SignupPage from './pages/SignupPage'
 import StudyRoomDetailPage from './pages/StudyRoomDetailPage'
 import StudyRoomManagementPage from './pages/StudyRoomManagementPage'
 import StudyRoomsPage from './pages/StudyRoomsPage'
@@ -47,6 +49,7 @@ const STUDY_STORAGE_KEY = 'haru.v2.study-rooms'
 const FOCUS_STORAGE_KEY = 'haru.v2.focus-results'
 const PROJECT_STORAGE_KEY = 'haru.v2.projects'
 const AUTH_STORAGE_KEY = 'haru.demo-authenticated'
+const AUTH_METHOD_STORAGE_KEY = 'haru.demo-auth-method'
 
 const readStorage = <T,>(key: string, fallback: () => T): T => {
   try {
@@ -216,13 +219,15 @@ export default function App() {
     [studyRooms],
   )
 
-  const login = () => {
+  const login = (method: AuthMethod) => {
     localStorage.setItem(AUTH_STORAGE_KEY, 'true')
+    localStorage.setItem(AUTH_METHOD_STORAGE_KEY, method)
     setIsAuthenticated(true)
   }
 
   const logout = () => {
     localStorage.removeItem(AUTH_STORAGE_KEY)
+    localStorage.removeItem(AUTH_METHOD_STORAGE_KEY)
     setIsProfileMenuOpen(false)
     setIsAuthenticated(false)
   }
@@ -631,7 +636,13 @@ export default function App() {
   }
 
   if (!isAuthenticated) {
-    return <LoginPage onLogin={login} />
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage onLogin={login} />} />
+        <Route path="/signup" element={<SignupPage onSignup={login} />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    )
   }
 
   return (
