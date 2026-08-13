@@ -155,6 +155,7 @@ export default function ProjectManagementModal({
   const [error, setError] = useState('')
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string>()
   const [isPickingColor, setIsPickingColor] = useState(false)
+  const [draggingProjectId, setDraggingProjectId] = useState<string>()
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -244,16 +245,33 @@ export default function ProjectManagementModal({
     setSortMode(nextMode)
   }
 
-  const moveProject = (projectId: string, amount: -1 | 1) => {
+  const moveProjectToIndex = (projectId: string, nextIndex: number) => {
     const currentIndex = projects.findIndex((project) => project.id === projectId)
-    const nextIndex = currentIndex + amount
-    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= projects.length) return
+    if (
+      currentIndex < 0 ||
+      nextIndex < 0 ||
+      nextIndex >= projects.length ||
+      currentIndex === nextIndex
+    ) return
     const reordered = [...projects]
-    ;[reordered[currentIndex], reordered[nextIndex]] = [
-      reordered[nextIndex],
-      reordered[currentIndex],
-    ]
+    const [movedProject] = reordered.splice(currentIndex, 1)
+    reordered.splice(nextIndex, 0, movedProject)
     onReorderProjects(reordered.map((project) => project.id))
+  }
+
+  const moveProjectOver = (
+    projectId: string,
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    const row = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>('[data-project-id]')
+    const targetProjectId = row?.dataset.projectId
+    if (!targetProjectId || targetProjectId === projectId) return
+    const targetIndex = projects.findIndex(
+      (project) => project.id === targetProjectId,
+    )
+    moveProjectToIndex(projectId, targetIndex)
   }
 
   const [red, green, blue] = hexToRgb(color)
@@ -364,20 +382,18 @@ export default function ProjectManagementModal({
             <span>{itemCounts.backlog ?? 0}개</span>
             <em>고정</em>
           </article>
-          {visibleProjects.map((project, index) => (
-            <article className="project-management-row" key={project.id}>
+          {visibleProjects.map((project) => (
+            <article
+              className={`project-management-row${draggingProjectId === project.id ? ' dragging' : ''}`}
+              key={project.id}
+              data-project-id={project.id}
+            >
               <span
                 className="project-management-swatch"
                 style={{ backgroundColor: getProjectColor(project) }}
                 aria-hidden="true"
               />
               <div><strong>{project.name}</strong><small>{itemCounts[project.id] ?? 0}개 항목</small></div>
-              {sortMode === 'manual' && (
-                <div className="project-order-actions" aria-label={`${project.name} 순서 변경`}>
-                  <button type="button" disabled={index === 0} onClick={() => moveProject(project.id, -1)}>위로</button>
-                  <button type="button" disabled={index === projects.length - 1} onClick={() => moveProject(project.id, 1)}>아래로</button>
-                </div>
-              )}
               <div className="project-row-actions">
                 <button type="button" aria-label={`${project.name} 목록 편집`} onClick={() => openEditEditor(project)}>편집</button>
                 {confirmingDeleteId === project.id ? (
@@ -398,6 +414,47 @@ export default function ProjectManagementModal({
                   <button className="project-delete-action" type="button" aria-label={`${project.name} 목록 삭제`} onClick={() => setConfirmingDeleteId(project.id)}>삭제</button>
                 )}
               </div>
+              {sortMode === 'manual' && (
+                <button
+                  className="project-drag-handle"
+                  type="button"
+                  aria-label={`${project.name} 순서 변경`}
+                  title="끌어서 순서 변경"
+                  onKeyDown={(event) => {
+                    const currentIndex = projects.findIndex(
+                      (item) => item.id === project.id,
+                    )
+                    if (event.key === 'ArrowUp') {
+                      event.preventDefault()
+                      moveProjectToIndex(project.id, currentIndex - 1)
+                    }
+                    if (event.key === 'ArrowDown') {
+                      event.preventDefault()
+                      moveProjectToIndex(project.id, currentIndex + 1)
+                    }
+                  }}
+                  onPointerDown={(event) => {
+                    event.preventDefault()
+                    event.currentTarget.focus()
+                    event.currentTarget.setPointerCapture(event.pointerId)
+                    setDraggingProjectId(project.id)
+                  }}
+                  onPointerMove={(event) => {
+                    if (draggingProjectId === project.id) {
+                      moveProjectOver(project.id, event)
+                    }
+                  }}
+                  onPointerUp={(event) => {
+                    setDraggingProjectId(undefined)
+                    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                      event.currentTarget.releasePointerCapture(event.pointerId)
+                    }
+                  }}
+                  onPointerCancel={() => setDraggingProjectId(undefined)}
+                >
+                  <span aria-hidden="true">⋮⋮</span>
+                </button>
+              )}
             </article>
           ))}
         </div>

@@ -3608,7 +3608,6 @@ button.event-chip:hover {
   font-style: normal;
 }
 
-.project-order-actions,
 .project-row-actions,
 .project-delete-confirm {
   display: flex;
@@ -3616,12 +3615,51 @@ button.event-chip:hover {
   gap: 5px;
 }
 
-.project-order-actions button,
 .project-row-actions > button,
 .project-delete-confirm button {
   min-height: 30px;
   padding: 0 8px;
   font-size: 0.68rem;
+}
+
+.project-management-row.dragging {
+  z-index: 1;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  box-shadow: 0 7px 18px rgba(24, 24, 22, 0.12);
+}
+
+.project-drag-handle {
+  width: 34px;
+  min-width: 34px;
+  min-height: 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  border-color: transparent;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.project-drag-handle:hover,
+.project-drag-handle:focus-visible {
+  color: var(--text);
+  border-color: var(--line);
+  background: var(--surface-subtle);
+}
+
+.project-drag-handle:active {
+  cursor: grabbing;
+}
+
+.project-drag-handle span {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.35rem;
+  transform: translateX(-0.16rem);
 }
 
 .project-delete-action,
@@ -7185,17 +7223,11 @@ footer a {
   }
 
   .project-management-row {
-    grid-template-columns: 10px minmax(0, 1fr) auto;
+    grid-template-columns: 10px minmax(0, 1fr) auto 34px;
   }
 
-  .project-management-row > em,
-  .project-management-row > .project-row-actions {
+  .project-management-row > em {
     grid-column: 2 / -1;
-    justify-self: start;
-  }
-
-  .project-order-actions {
-    grid-column: 2;
     justify-self: start;
   }
 
@@ -7204,6 +7236,11 @@ footer a {
     grid-row: 1 / span 2;
     align-items: flex-end;
     flex-direction: column;
+  }
+
+  .project-drag-handle {
+    grid-column: 4;
+    grid-row: 1 / span 2;
   }
 
   .project-delete-confirm {
