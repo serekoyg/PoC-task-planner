@@ -63,27 +63,23 @@ export default function ProjectSidebar({
         <div className="shared-project-heading">
           <div>
             <p className="eyebrow">나의 계획 정리</p>
-            <h2>목록</h2>
+            <h2>
+              <span>{selectedLabel}</span>
+              <small>{selectedCount ?? 0}개</small>
+            </h2>
           </div>
           <div className="shared-project-heading-actions">
-            <button type="button" onClick={() => setIsManagementOpen(true)}>목록 관리</button>
+            <button type="button" aria-label="목록 관리" onClick={() => setIsManagementOpen(true)}>관리</button>
             <button
               type="button"
               aria-expanded={isExpanded}
               aria-controls="project-sidebar-content"
               onClick={() => setIsExpanded((current) => !current)}
             >
-              {isExpanded ? '접기' : '펼치기'}
+              {isExpanded ? '접기' : '열기'}
             </button>
           </div>
         </div>
-
-        {!isExpanded && (
-          <button className="project-collapsed-summary" type="button" onClick={() => setIsExpanded(true)}>
-            <span>{selectedLabel}</span>
-            <small>{selectedCount ?? 0}개 · 목록 펼치기</small>
-          </button>
-        )}
 
         {isExpanded && (
           <div id="project-sidebar-content" className="shared-project-content">
