@@ -7,6 +7,7 @@ import type {
 } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
+import { BACKLOG_PROJECT_NAME } from '../data/projects'
 import type {
   StudyRoom,
   StudySharedItem,
@@ -117,7 +118,9 @@ export default function PlanEditorModal({
   const [repeatEndDate, setRepeatEndDate] = useState(
     item?.repeatEndDate ?? personalItem?.repeatEndDate ?? getDefaultRepeatEndDate(initialDate),
   )
-  const [project, setProject] = useState(personalItem?.project ?? defaultProjectName ?? '받은 편지함')
+  const [project, setProject] = useState(
+    personalItem?.project ?? defaultProjectName ?? BACKLOG_PROJECT_NAME,
+  )
   const [priority, setPriority] = useState<TodoInput['priority']>(todo?.priority ?? 'medium')
   const [reminder, setReminder] = useState<TodoInput['reminder']>(personalItem?.reminder ?? '30m')
   const [error, setError] = useState('')
@@ -208,7 +211,7 @@ export default function PlanEditorModal({
           reminder,
           color: todo?.color ?? 'blue',
           note: note.trim(),
-          project: isPersonal ? project : '받은 편지함',
+          project: isPersonal ? project : BACKLOG_PROJECT_NAME,
           estimatedMinutes: todo?.estimatedMinutes ?? 30,
           ...repeatFields,
         },
@@ -223,7 +226,7 @@ export default function PlanEditorModal({
           endTime,
           allDay: false,
           color: calendarEvent?.color ?? 'blue',
-          project: isPersonal ? project : '받은 편지함',
+          project: isPersonal ? project : BACKLOG_PROJECT_NAME,
           category: calendarEvent?.category ?? '개인',
           location: location.trim(),
           note: note.trim(),
@@ -454,7 +457,7 @@ export default function PlanEditorModal({
             <fieldset className="personal-plan-fields">
               <legend>나의 계획 설정</legend>
               <div className="study-form-row">
-                <label><span>프로젝트</span><select value={project} onChange={(event) => setProject(event.target.value)}><option value="받은 편지함">받은 편지함</option>{projects.map((item) => <option value={item.name} key={item.id}>{item.name}</option>)}</select></label>
+                <label><span>프로젝트</span><select value={project} onChange={(event) => setProject(event.target.value)}><option value={BACKLOG_PROJECT_NAME}>{BACKLOG_PROJECT_NAME}</option>{projects.map((item) => <option value={item.name} key={item.id}>{item.name}</option>)}</select></label>
                 {type === 'todo' && <label><span>우선순위</span><select value={priority} onChange={(event) => setPriority(event.target.value as TodoInput['priority'])}><option value="high">높음</option><option value="medium">보통</option><option value="low">낮음</option></select></label>}
                 <label><span>알림</span><select value={reminder} onChange={(event) => setReminder(event.target.value as TodoInput['reminder'])}><option value="none">알림 없음</option><option value="10m">10분 전</option><option value="30m">30분 전</option><option value="1h">1시간 전</option><option value="1d">1일 전</option></select></label>
               </div>

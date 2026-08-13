@@ -1,7 +1,8 @@
 import type { Todo } from '../data/initialData'
+import { BACKLOG_PROJECT_NAME } from '../data/projects'
 
 export const getTaskProject = (todo: Todo) =>
-  todo.project ?? todo.category ?? '받은 편지함'
+  todo.project ?? todo.category ?? BACKLOG_PROJECT_NAME
 
 export const getTaskEstimate = (todo: Todo) => todo.estimatedMinutes ?? 30
 

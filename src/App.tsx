@@ -17,7 +17,9 @@ import {
   type TodoInput,
 } from './data/initialData'
 import {
+  BACKLOG_PROJECT_NAME,
   createInitialProjects,
+  normalizeBacklogProject,
   type PlannerProject,
   type ProjectInput,
 } from './data/projects'
@@ -28,12 +30,14 @@ import {
   type StudyRoom,
   type StudyRoomCreateInput,
 } from './data/studyRooms'
+import { createInitialTrash, type TrashedPlan } from './data/trash'
 import { formatHeaderDate } from './lib/date'
 import type { AuthMethod } from './lib/auth'
 import CalendarPage from './pages/CalendarPage'
 import FocusResultPage from './pages/FocusResultPage'
 import FocusSessionPage from './pages/FocusSessionPage'
 import LoginPage from './pages/LoginPage'
+import PlanCollectionsPage from './pages/PlanCollectionsPage'
 import ProfilePage from './pages/ProfilePage'
 import SettingsPage from './pages/SettingsPage'
 import SignupPage from './pages/SignupPage'
@@ -49,6 +53,7 @@ const STUDY_STORAGE_KEY = 'haru.v2.study-rooms'
 const FOCUS_STORAGE_KEY = 'haru.v2.focus-results'
 const PROJECT_STORAGE_KEY = 'haru.v2.projects'
 const AUTH_STORAGE_KEY = 'haru.demo-authenticated'
+const TRASH_STORAGE_KEY = 'haru.v2.deleted-plans'
 const AUTH_METHOD_STORAGE_KEY = 'haru.demo-auth-method'
 
 const readStorage = <T,>(key: string, fallback: () => T): T => {
@@ -64,13 +69,29 @@ const readProjects = () =>
   readStorage<PlannerProject[]>(PROJECT_STORAGE_KEY, createInitialProjects)
 
 const readEvents = () =>
-  readStorage<CalendarEvent[]>(EVENT_STORAGE_KEY, createInitialEvents)
+  readStorage<CalendarEvent[]>(EVENT_STORAGE_KEY, createInitialEvents).map(
+    (event) => ({ ...event, project: normalizeBacklogProject(event.project) }),
+  )
 
 const readTodos = () =>
-  readStorage<Todo[]>(TODO_STORAGE_KEY, createInitialTodos)
+  readStorage<Todo[]>(TODO_STORAGE_KEY, createInitialTodos).map((todo) => ({
+    ...todo,
+    project: normalizeBacklogProject(todo.project),
+  }))
 
 const readStudyRooms = () =>
   readStorage<StudyRoom[]>(STUDY_STORAGE_KEY, createInitialStudyRooms)
+
+const readTrash = () =>
+  readStorage<TrashedPlan[]>(TRASH_STORAGE_KEY, createInitialTrash).map(
+    (entry) => ({
+      ...entry,
+      item: {
+        ...entry.item,
+        project: normalizeBacklogProject(entry.item.project),
+      },
+    }),
+  ) as TrashedPlan[]
 
 type StudyRoomRouteProps = {
   rooms: StudyRoom[]
@@ -208,6 +229,7 @@ export default function App() {
   const [todos, setTodos] = useState<Todo[]>(readTodos)
   const [events, setEvents] = useState<CalendarEvent[]>(readEvents)
   const [projects, setProjects] = useState<PlannerProject[]>(readProjects)
+  const [trash, setTrash] = useState<TrashedPlan[]>(readTrash)
   const [studyRooms, setStudyRooms] = useState<StudyRoom[]>(() =>
     readStudyRooms(),
   )
@@ -217,6 +239,13 @@ export default function App() {
   const joinedStudyRooms = useMemo(
     () => studyRooms.filter((room) => room.joined),
     [studyRooms],
+  )
+  const collectionCounts = useMemo(
+    () => ({
+      completed: todos.filter((todo) => todo.done).length,
+      trash: trash.length,
+    }),
+    [todos, trash.length],
   )
 
   const login = (method: AuthMethod) => {
@@ -269,6 +298,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(projects))
   }, [projects])
+
+  useEffect(() => {
+    localStorage.setItem(TRASH_STORAGE_KEY, JSON.stringify(trash))
+  }, [trash])
 
   useEffect(() => {
     setIsProfileMenuOpen(false)
@@ -377,7 +410,7 @@ export default function App() {
       {
         id: crypto.randomUUID(),
         ...event,
-        project: event.project ?? '받은 편지함',
+        project: event.project ?? BACKLOG_PROJECT_NAME,
       },
     ])
   }
@@ -391,6 +424,18 @@ export default function App() {
   }
 
   const removeEvent = (eventId: string) => {
+    const event = events.find((item) => item.id === eventId)
+    if (event) {
+      setTrash((current) => [
+        {
+          trashId: `trash-${crypto.randomUUID()}`,
+          type: 'event',
+          item: event,
+          deletedAt: new Date().toISOString(),
+        },
+        ...current,
+      ])
+    }
     setEvents((current) => current.filter((event) => event.id !== eventId))
   }
 
@@ -479,14 +524,14 @@ export default function App() {
     setTodos((current) =>
       current.map((todo) =>
         todo.project === project.name
-          ? { ...todo, project: '받은 편지함' }
+          ? { ...todo, project: BACKLOG_PROJECT_NAME }
           : todo,
       ),
     )
     setEvents((current) =>
       current.map((event) =>
         event.project === project.name
-          ? { ...event, project: '받은 편지함' }
+          ? { ...event, project: BACKLOG_PROJECT_NAME }
           : event,
       ),
     )
@@ -501,7 +546,43 @@ export default function App() {
   }
 
   const removeTodo = (todoId: string) => {
+    const todo = todos.find((item) => item.id === todoId)
+    if (todo) {
+      setTrash((current) => [
+        {
+          trashId: `trash-${crypto.randomUUID()}`,
+          type: 'todo',
+          item: todo,
+          deletedAt: new Date().toISOString(),
+        },
+        ...current,
+      ])
+    }
     setTodos((current) => current.filter((todo) => todo.id !== todoId))
+  }
+
+  const restoreTrash = (trashId: string) => {
+    const entry = trash.find((item) => item.trashId === trashId)
+    if (!entry) return
+
+    if (entry.type === 'todo') {
+      setTodos((current) =>
+        current.some((todo) => todo.id === entry.item.id)
+          ? current
+          : [...current, entry.item],
+      )
+    } else {
+      setEvents((current) =>
+        current.some((event) => event.id === entry.item.id)
+          ? current
+          : [...current, entry.item],
+      )
+    }
+    setTrash((current) => current.filter((item) => item.trashId !== trashId))
+  }
+
+  const deleteTrash = (trashId: string) => {
+    setTrash((current) => current.filter((item) => item.trashId !== trashId))
   }
 
   const finishFocus = (todoId: string, elapsedSeconds: number) => {
@@ -749,6 +830,7 @@ export default function App() {
               visibleMonth={visibleMonth}
               events={events}
               projects={projects}
+              collectionCounts={collectionCounts}
               studyRooms={joinedStudyRooms}
               sharedItems={sharedItemEntries}
               onSelectDate={selectDate}
@@ -783,6 +865,7 @@ export default function App() {
               selectedDate={selectedDate}
               todos={todos}
               projects={projects}
+              collectionCounts={collectionCounts}
               studyRooms={joinedStudyRooms}
               sharedItems={sharedItemEntries}
               onAddTodo={addTodo}
@@ -800,6 +883,48 @@ export default function App() {
         <Route
           path="/projects/:projectId?"
           element={<Navigate to="/todos" replace />}
+        />
+        <Route
+          path="/collections/completed"
+          element={
+            <PlanCollectionsPage
+              collection="completed"
+              todos={todos}
+              events={events}
+              projects={projects}
+              trash={trash}
+              collectionCounts={collectionCounts}
+              onToggleTodo={toggleTodo}
+              onRemoveTodo={removeTodo}
+              onRestoreTrash={restoreTrash}
+              onDeleteTrash={deleteTrash}
+              onEmptyTrash={() => setTrash([])}
+              onCreateProject={createProject}
+              onUpdateProject={updateProject}
+              onDeleteProject={deleteProject}
+            />
+          }
+        />
+        <Route
+          path="/collections/trash"
+          element={
+            <PlanCollectionsPage
+              collection="trash"
+              todos={todos}
+              events={events}
+              projects={projects}
+              trash={trash}
+              collectionCounts={collectionCounts}
+              onToggleTodo={toggleTodo}
+              onRemoveTodo={removeTodo}
+              onRestoreTrash={restoreTrash}
+              onDeleteTrash={deleteTrash}
+              onEmptyTrash={() => setTrash([])}
+              onCreateProject={createProject}
+              onUpdateProject={updateProject}
+              onDeleteProject={deleteProject}
+            />
+          }
         />
         <Route
           path="/todos/:todoId"

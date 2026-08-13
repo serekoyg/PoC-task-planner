@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import type { Todo } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
+import { isBacklogProject } from '../data/projects'
 import type { StudySharedItemEntry } from '../data/studyRooms'
 import { formatSelectedDate } from '../lib/date'
 import { getSharedRepeatLabel } from '../lib/studyShared'
@@ -30,8 +31,7 @@ type TodoDateListViewProps = {
   onCreateTodo: () => void
 }
 
-const isInboxTodo = (todo: Todo) =>
-  !todo.project || todo.project === '받은 편지함'
+const isBacklogTodo = (todo: Todo) => isBacklogProject(todo.project)
 
 export default function TodoDateListView({
   today,
@@ -50,7 +50,7 @@ export default function TodoDateListView({
     )
     const filteredTodos = todos.filter((todo) => {
       if (selectedProjectId === 'all') return true
-      if (selectedProjectId === 'inbox') return isInboxTodo(todo)
+      if (selectedProjectId === 'backlog') return isBacklogTodo(todo)
       return selectedProject ? todo.project === selectedProject.name : true
     })
     const visibleSharedItems =

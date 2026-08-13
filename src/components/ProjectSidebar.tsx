@@ -4,18 +4,23 @@ import type {
   ProjectAccent,
   ProjectInput,
 } from '../data/projects'
+import { BACKLOG_PROJECT_NAME } from '../data/projects'
 
-export type ProjectFilter = 'all' | 'inbox' | string
+export type ProjectFilter = 'all' | 'backlog' | string
+export type PlanCollection = 'completed' | 'trash'
 
 type ProjectSidebarProps = {
   projects: PlannerProject[]
   selectedProjectId: ProjectFilter
   itemCounts: Record<string, number>
   itemLabel: string
+  collectionCounts?: Record<PlanCollection, number>
+  selectedCollection?: PlanCollection
   onSelectProject: (projectId: ProjectFilter) => void
   onCreateProject: (input: ProjectInput) => string
   onUpdateProject: (projectId: string, input: ProjectInput) => void
   onDeleteProject: (projectId: string) => void
+  onSelectCollection?: (collection: PlanCollection) => void
 }
 
 const accentLabels: Record<ProjectAccent, string> = {
@@ -30,10 +35,13 @@ export default function ProjectSidebar({
   selectedProjectId,
   itemCounts,
   itemLabel,
+  collectionCounts,
+  selectedCollection,
   onSelectProject,
   onCreateProject,
   onUpdateProject,
   onDeleteProject,
+  onSelectCollection,
 }: ProjectSidebarProps) {
   const [editorMode, setEditorMode] = useState<'create' | 'edit'>()
   const [editingProject, setEditingProject] = useState<PlannerProject>()
@@ -86,6 +94,11 @@ export default function ProjectSidebar({
       return
     }
 
+    if (trimmedName === BACKLOG_PROJECT_NAME) {
+      setError('백로그는 분류되지 않은 계획을 위한 기본 공간이에요.')
+      return
+    }
+
     const duplicated = projects.some(
       (project) =>
         project.id !== editingProject?.id && project.name === trimmedName,
@@ -135,13 +148,13 @@ export default function ProjectSidebar({
             <small>{itemCounts.all ?? 0}</small>
           </button>
           <button
-            className={selectedProjectId === 'inbox' ? 'active' : ''}
+            className={selectedProjectId === 'backlog' ? 'active' : ''}
             type="button"
-            onClick={() => onSelectProject('inbox')}
+            onClick={() => onSelectProject('backlog')}
           >
-            <span className="project-filter-icon inbox" aria-hidden="true">○</span>
-            <span>받은 편지함</span>
-            <small>{itemCounts.inbox ?? 0}</small>
+            <span className="project-filter-icon backlog" aria-hidden="true">○</span>
+            <span>백로그</span>
+            <small>{itemCounts.backlog ?? 0}</small>
           </button>
 
           {projects.map((project) => (
@@ -170,6 +183,29 @@ export default function ProjectSidebar({
         <button className="shared-project-add" type="button" onClick={openCreateEditor}>
           <span aria-hidden="true">＋</span> 새 프로젝트
         </button>
+
+        {collectionCounts && onSelectCollection && (
+          <nav className="plan-collection-list" aria-label="계획 보관함">
+            <button
+              className={selectedCollection === 'completed' ? 'active' : ''}
+              type="button"
+              onClick={() => onSelectCollection('completed')}
+            >
+              <span className="plan-collection-icon completed" aria-hidden="true">✓</span>
+              <span>완료 모음</span>
+              <small>{collectionCounts.completed}</small>
+            </button>
+            <button
+              className={selectedCollection === 'trash' ? 'active' : ''}
+              type="button"
+              onClick={() => onSelectCollection('trash')}
+            >
+              <span className="plan-collection-icon trash" aria-hidden="true">♲</span>
+              <span>쓰레기통</span>
+              <small>{collectionCounts.trash}</small>
+            </button>
+          </nav>
+        )}
       </aside>
 
       {editorMode && (
@@ -245,7 +281,7 @@ export default function ProjectSidebar({
                   )}
                   {editingProject && isDeleteConfirming && (
                     <div className="event-delete-confirm">
-                      <span>연결된 항목은 받은 편지함으로 이동해요.</span>
+                      <span>연결된 항목은 백로그로 이동해요.</span>
                       <button type="button" onClick={() => setIsDeleteConfirming(false)}>취소</button>
                       <button
                         type="button"

@@ -1077,7 +1077,7 @@ fieldset {
 }
 
 .project-filter-icon.all,
-.project-filter-icon.inbox {
+.project-filter-icon.backlog {
   width: 12px;
   height: 12px;
   background: transparent;
@@ -1106,6 +1106,68 @@ fieldset {
   border-style: dashed;
   color: var(--muted);
   background: transparent;
+}
+
+.plan-collection-list {
+  margin-top: 12px;
+  padding-top: 10px;
+  display: grid;
+  gap: 3px;
+  border-top: 1px solid var(--line);
+}
+
+.plan-collection-list::before {
+  margin: 0 8px 3px;
+  color: var(--muted);
+  content: '보관함';
+  font-size: 0.66rem;
+  font-weight: 750;
+}
+
+.plan-collection-list button {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 8px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.76rem;
+  text-align: left;
+}
+
+.plan-collection-list button:hover,
+.plan-collection-list button.active {
+  color: var(--text);
+  background: var(--surface-subtle);
+}
+
+.plan-collection-list small {
+  color: var(--muted);
+}
+
+.plan-collection-icon {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.plan-collection-icon.completed {
+  color: var(--success);
+  background: #edf8f1;
+}
+
+.plan-collection-icon.trash {
+  color: var(--muted);
+  background: #eeeeea;
 }
 
 .calendar-view-content {
@@ -1606,6 +1668,312 @@ button.event-chip:hover {
 /* Todos */
 .todo-view-content {
   gap: 14px;
+}
+
+.plan-collection-content {
+  gap: 14px;
+}
+
+.plan-collection-hero,
+.plan-collection-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.plan-collection-hero {
+  min-height: 132px;
+  padding: 22px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.plan-collection-hero h1 {
+  margin-bottom: 5px;
+  font-size: 1.55rem;
+}
+
+.plan-collection-hero > div:first-child > p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.plan-collection-switch {
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-subtle);
+}
+
+.plan-collection-switch a {
+  min-height: 34px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.plan-collection-switch a.active {
+  color: var(--accent);
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(32, 33, 36, 0.08);
+}
+
+.plan-collection-switch span {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: #e8e9e5;
+  font-size: 0.62rem;
+}
+
+.plan-collection-switch a.active span {
+  background: var(--accent-soft);
+}
+
+.plan-collection-card {
+  min-height: 420px;
+  overflow: hidden;
+}
+
+.plan-collection-card-heading,
+.trash-toolbar {
+  min-height: 70px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  background: #fafaf8;
+}
+
+.plan-collection-card-heading h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.plan-collection-card-heading p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.plan-collection-card-heading > strong {
+  min-width: 40px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--success);
+  background: #edf8f1;
+  font-size: 0.72rem;
+}
+
+.completed-plan-list li,
+.trash-plan-list li {
+  min-height: 88px;
+  padding: 15px 20px;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+}
+
+.completed-plan-list li + li,
+.trash-plan-list li + li {
+  border-top: 1px solid var(--line);
+}
+
+.collection-plan-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  font-size: 0.85rem;
+  font-weight: 850;
+}
+
+.collection-plan-icon.completed,
+.collection-plan-icon.todo {
+  color: var(--success);
+  background: #edf8f1;
+}
+
+.collection-plan-icon.event {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.completed-plan-list li > div:nth-child(2),
+.trash-plan-list li > div:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.completed-plan-list a,
+.trash-plan-list strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 750;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.completed-plan-list a:hover {
+  color: var(--accent);
+}
+
+.completed-plan-list li > div:nth-child(2) > span,
+.trash-plan-list li > div:nth-child(2) > span,
+.trash-plan-list small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.trash-plan-list small {
+  color: #979993;
+}
+
+.collection-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.collection-row-actions > button,
+.delete-forever-confirm button,
+.empty-trash-button,
+.empty-trash-confirm button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--muted);
+  background: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.collection-row-actions > button:hover,
+.delete-forever-confirm button:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.collection-row-actions .collection-danger-action,
+.delete-forever-confirm button:last-child,
+.empty-trash-confirm button:last-child {
+  color: var(--danger);
+}
+
+.delete-forever-confirm {
+  display: flex;
+  gap: 5px;
+}
+
+.trash-filter-tabs {
+  padding: 3px;
+  display: flex;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.trash-filter-tabs button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.trash-filter-tabs button.active {
+  color: var(--accent);
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(32, 33, 36, 0.08);
+}
+
+.empty-trash-button {
+  color: var(--danger);
+  background: transparent;
+}
+
+.empty-trash-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.empty-trash-confirm span {
+  color: var(--danger);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.plan-collection-empty {
+  min-height: 350px;
+  padding: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.plan-collection-empty > span {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 13px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 1.15rem;
+  font-weight: 850;
+}
+
+.plan-collection-empty p {
+  margin: 5px 0 16px;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.plan-collection-empty a {
+  min-height: 34px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-decoration: none;
 }
 
 .todo-view-toolbar {
@@ -5677,6 +6045,46 @@ footer a {
 
   .project-filter-layout {
     display: block;
+  }
+
+  .plan-collection-hero {
+    padding: 18px;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .plan-collection-switch {
+    width: 100%;
+  }
+
+  .plan-collection-switch a {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .completed-plan-list li,
+  .trash-plan-list li {
+    padding: 14px;
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .collection-row-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .trash-toolbar {
+    padding: 12px;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .trash-filter-tabs button {
+    flex: 1;
+  }
+
+  .empty-trash-confirm {
+    flex-wrap: wrap;
   }
 
   .room-management-layout {
