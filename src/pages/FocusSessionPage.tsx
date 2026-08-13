@@ -18,7 +18,8 @@ type FocusSessionPageProps = {
     sourceId: string,
     title: string,
   ) => void
-  onStopFocus: (recordId: string) => void
+  onPauseFocus: (recordId: string) => void
+  onFinishFocus: (recordId: string) => void
 }
 
 export default function FocusSessionPage({
@@ -26,7 +27,8 @@ export default function FocusSessionPage({
   activeRecord,
   nowMs,
   onStartFocus,
-  onStopFocus,
+  onPauseFocus,
+  onFinishFocus,
 }: FocusSessionPageProps) {
   const navigate = useNavigate()
   const hasStartedOnEntry = useRef(false)
@@ -71,14 +73,14 @@ export default function FocusSessionPage({
   const progress = Math.min((elapsedSeconds / estimateSeconds) * 360, 360)
 
   const finishSession = () => {
-    if (activeRecord) onStopFocus(activeRecord.id)
+    if (activeRecord) onFinishFocus(activeRecord.id)
     navigate(`/todos/${todo.id}/result`)
   }
 
   const toggleSession = () => {
     if (activeRecord) {
       setPausedSeconds(getFocusDurationSeconds(activeRecord, nowMs))
-      onStopFocus(activeRecord.id)
+      onPauseFocus(activeRecord.id)
       return
     }
 

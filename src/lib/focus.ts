@@ -1,21 +1,42 @@
-import type { FocusRecord } from '../data/focusRecords'
+import type { FocusRecord, FocusSegment } from '../data/focusRecords'
 
 type FocusInterval = {
   start: number
   end: number
 }
 
-const toInterval = (record: FocusRecord, nowMs: number): FocusInterval => ({
-  start: new Date(record.startedAt).getTime(),
-  end: record.endedAt ? new Date(record.endedAt).getTime() : nowMs,
+export const getFocusSegments = (record: FocusRecord): FocusSegment[] =>
+  record.segments?.length
+    ? record.segments
+    : [{ startedAt: record.startedAt, endedAt: record.endedAt }]
+
+const toInterval = (
+  segment: FocusSegment,
+  nowMs: number,
+): FocusInterval => ({
+  start: new Date(segment.startedAt).getTime(),
+  end: segment.endedAt ? new Date(segment.endedAt).getTime() : nowMs,
 })
+
+export const isFocusRecordRunning = (record: FocusRecord) => {
+  if (record.endedAt) return false
+  const segments = getFocusSegments(record)
+  return Boolean(segments.length && !segments[segments.length - 1].endedAt)
+}
 
 export const getFocusDurationSeconds = (
   record: FocusRecord,
   nowMs = Date.now(),
 ) => {
-  const { start, end } = toInterval(record, nowMs)
-  return Math.max(0, Math.floor((end - start) / 1000))
+  const milliseconds = getFocusSegments(record).reduce((total, segment) => {
+    const { start, end } = toInterval(segment, nowMs)
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+      return total
+    }
+    return total + end - start
+  }, 0)
+
+  return Math.floor(milliseconds / 1000)
 }
 
 export const getTotalFocusSeconds = (
@@ -31,7 +52,9 @@ export const getPureFocusSeconds = (
   nowMs = Date.now(),
 ) => {
   const intervals = records
-    .map((record) => toInterval(record, nowMs))
+    .flatMap((record) =>
+      getFocusSegments(record).map((segment) => toInterval(segment, nowMs)),
+    )
     .filter(({ start, end }) => Number.isFinite(start) && Number.isFinite(end) && end > start)
     .sort((a, b) => a.start - b.start)
 

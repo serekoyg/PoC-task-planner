@@ -45,7 +45,11 @@ import {
   type FocusSourceType,
 } from './data/focusRecords'
 import { formatHeaderDate } from './lib/date'
-import { getFocusDurationSeconds } from './lib/focus'
+import {
+  getFocusDurationSeconds,
+  getFocusSegments,
+  isFocusRecordRunning,
+} from './lib/focus'
 import type { AuthMethod } from './lib/auth'
 import type { PlannerTarget } from './lib/plannerNavigation'
 import CalendarPage from './pages/CalendarPage'
@@ -231,7 +235,8 @@ type FocusSessionRouteProps = {
     sourceId: string,
     title: string,
   ) => void
-  onStopFocus: (recordId: string) => void
+  onPauseFocus: (recordId: string) => void
+  onFinishFocus: (recordId: string) => void
 }
 
 function FocusSessionRoute({
@@ -239,7 +244,8 @@ function FocusSessionRoute({
   activeFocusRecords,
   nowMs,
   onStartFocus,
-  onStopFocus,
+  onPauseFocus,
+  onFinishFocus,
 }: FocusSessionRouteProps) {
   const { todoId } = useParams()
   const task = findTask(todos, todoId)
@@ -253,7 +259,8 @@ function FocusSessionRoute({
       activeRecord={activeRecord}
       nowMs={nowMs}
       onStartFocus={onStartFocus}
-      onStopFocus={onStopFocus}
+      onPauseFocus={onPauseFocus}
+      onFinishFocus={onFinishFocus}
     />
   )
 }
@@ -321,9 +328,13 @@ export default function App() {
   const [focusRecords, setFocusRecords] =
     useState<FocusRecord[]>(readFocusRecords)
   const [focusNowMs, setFocusNowMs] = useState(Date.now())
-  const activeFocusRecords = useMemo(
+  const unfinishedFocusRecords = useMemo(
     () => focusRecords.filter((record) => !record.endedAt),
     [focusRecords],
+  )
+  const activeFocusRecords = useMemo(
+    () => unfinishedFocusRecords.filter(isFocusRecordRunning),
+    [unfinishedFocusRecords],
   )
   const joinedStudyRooms = useMemo(
     () => studyRooms.filter((room) => room.joined),
@@ -778,7 +789,18 @@ export default function App() {
           record.sourceType === sourceType &&
           record.sourceId === sourceId,
       )
-      if (existing) return current
+      const startedAt = new Date().toISOString()
+      if (existing) {
+        if (isFocusRecordRunning(existing)) return current
+        return current.map((record) =>
+          record.id === existing.id
+            ? {
+                ...record,
+                segments: [...getFocusSegments(record), { startedAt }],
+              }
+            : record,
+        )
+      }
 
       return [
         ...current,
@@ -787,25 +809,59 @@ export default function App() {
           sourceType,
           sourceId,
           title,
-          startedAt: new Date().toISOString(),
+          startedAt,
+          segments: [{ startedAt }],
         },
       ]
     })
   }, [])
 
-  const stopFocus = useCallback((recordId: string) => {
+  const pauseFocus = useCallback((recordId: string) => {
+    const pausedAt = new Date().toISOString()
+    setFocusRecords((current) =>
+      current.map((record) => {
+        if (record.id !== recordId || !isFocusRecordRunning(record)) {
+          return record
+        }
+        const segments = getFocusSegments(record)
+        return {
+          ...record,
+          segments: segments.map((segment, index) =>
+            index === segments.length - 1
+              ? { ...segment, endedAt: pausedAt }
+              : segment,
+          ),
+        }
+      }),
+    )
+  }, [])
+
+  const finishFocus = useCallback((recordId: string) => {
     const record = focusRecords.find(
       (candidate) => candidate.id === recordId && !candidate.endedAt,
     )
     if (!record) return
 
     const endedAt = new Date()
-    const elapsedSeconds = getFocusDurationSeconds(record, endedAt.getTime())
+    const endedAtIso = endedAt.toISOString()
+    const segments = getFocusSegments(record)
+    const finishedRecord: FocusRecord = {
+      ...record,
+      endedAt: endedAtIso,
+      segments: segments.map((segment, index) =>
+        index === segments.length - 1 && !segment.endedAt
+          ? { ...segment, endedAt: endedAtIso }
+          : segment,
+      ),
+    }
+    const elapsedSeconds = getFocusDurationSeconds(
+      finishedRecord,
+      endedAt.getTime(),
+    )
+
     setFocusRecords((current) =>
       current.map((candidate) =>
-        candidate.id === recordId
-          ? { ...candidate, endedAt: endedAt.toISOString() }
-          : candidate,
+        candidate.id === recordId ? finishedRecord : candidate,
       ),
     )
 
@@ -817,39 +873,25 @@ export default function App() {
     }
   }, [focusRecords])
 
-  const stopAllFocus = useCallback(() => {
+  const pauseAllFocus = useCallback(() => {
     if (!activeFocusRecords.length) return
 
-    const endedAt = new Date()
-    const endedAtIso = endedAt.toISOString()
-    const todoAdditions = activeFocusRecords.reduce<Record<string, number>>(
-      (totals, record) => {
-        if (record.sourceType === 'todo') {
-          totals[record.sourceId] =
-            (totals[record.sourceId] ?? 0) +
-            getFocusDurationSeconds(record, endedAt.getTime())
-        }
-        return totals
-      },
-      {},
-    )
-
+    const pausedAt = new Date().toISOString()
     setFocusRecords((current) =>
-      current.map((record) =>
-        record.endedAt ? record : { ...record, endedAt: endedAtIso },
-      ),
+      current.map((record) => {
+        if (!isFocusRecordRunning(record)) return record
+        const segments = getFocusSegments(record)
+        return {
+          ...record,
+          segments: segments.map((segment, index) =>
+            index === segments.length - 1
+              ? { ...segment, endedAt: pausedAt }
+              : segment,
+          ),
+        }
+      }),
     )
-    if (Object.keys(todoAdditions).length) {
-      setFocusResults((current) => {
-        const next = { ...current }
-        Object.entries(todoAdditions).forEach(([todoId, seconds]) => {
-          next[todoId] = (next[todoId] ?? 0) + seconds
-        })
-        return next
-      })
-    }
-    setIsFocusPopoverOpen(false)
-  }, [activeFocusRecords])
+  }, [activeFocusRecords.length])
 
   const openFocusSource = (record: FocusRecord) => {
     navigate(
@@ -1055,7 +1097,7 @@ export default function App() {
             </button>
           </div>
           <ActiveFocusPopover
-            records={activeFocusRecords}
+            records={unfinishedFocusRecords}
             nowMs={focusNowMs}
             isOpen={isFocusPopoverOpen}
             onToggle={() => {
@@ -1066,8 +1108,16 @@ export default function App() {
             }}
             onClose={closeFocusPopover}
             onSelect={openFocusSource}
-            onStop={stopFocus}
-            onStopAll={stopAllFocus}
+            onPause={pauseFocus}
+            onResume={(recordId) => {
+              const record = unfinishedFocusRecords.find(
+                (candidate) => candidate.id === recordId,
+              )
+              if (record) {
+                startFocus(record.sourceType, record.sourceId, record.title)
+              }
+            }}
+            onPauseAll={pauseAllFocus}
           />
           <div className="profile-menu" ref={profileMenuRef}>
             <button
@@ -1280,7 +1330,8 @@ export default function App() {
               activeFocusRecords={activeFocusRecords}
               nowMs={focusNowMs}
               onStartFocus={startFocus}
-              onStopFocus={stopFocus}
+              onPauseFocus={pauseFocus}
+              onFinishFocus={finishFocus}
             />
           }
         />
@@ -1324,7 +1375,7 @@ export default function App() {
               onJoinRoom={joinStudyRoom}
               onChangeRoom={changeStudyRoom}
               onStartFocus={startFocus}
-              onStopFocus={stopFocus}
+              onStopFocus={finishFocus}
             />
           }
         />

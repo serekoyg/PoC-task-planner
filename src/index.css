@@ -776,6 +776,19 @@ ol {
   background: #e6f6ed;
 }
 
+.active-focus-trigger.idle {
+  border-color: var(--line);
+  color: #72766f;
+  background: #f3f4f1;
+}
+
+.active-focus-trigger.idle:hover,
+.active-focus-trigger.idle.active {
+  border-color: #c9cbc5;
+  color: var(--text);
+  background: #eceee9;
+}
+
 .active-focus-trigger i {
   width: 7px;
   height: 7px;
@@ -783,6 +796,12 @@ ol {
   background: #21a45f;
   box-shadow: 0 0 0 4px rgba(33, 164, 95, 0.12);
   animation: focus-live-pulse 1.8s ease-in-out infinite;
+}
+
+.active-focus-trigger.idle i {
+  background: #a7aaa3;
+  box-shadow: none;
+  animation: none;
 }
 
 .active-focus-trigger span {
@@ -913,6 +932,46 @@ ol {
   background: #fff8f8;
   font-size: 0.67rem;
   font-weight: 750;
+}
+
+.active-focus-resume {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #b9d8c5;
+  border-radius: 7px;
+  color: #226345;
+  background: #f0faf4;
+  font-size: 0.67rem;
+  font-weight: 800;
+}
+
+.active-focus-empty {
+  padding: 30px 18px;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.active-focus-empty > span {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 10px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #8b8e87;
+  background: var(--surface-subtle);
+  font-weight: 800;
+}
+
+.active-focus-empty strong {
+  font-size: 0.78rem;
+}
+
+.active-focus-empty p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.68rem;
 }
 
 .active-focus-summary {
@@ -6713,7 +6772,8 @@ footer a {
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .active-focus-stop {
+  .active-focus-stop,
+  .active-focus-resume {
     grid-column: 1 / -1;
     width: 100%;
   }
