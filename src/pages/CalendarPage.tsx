@@ -17,7 +17,6 @@ import {
   getProjectColorByName,
   isBacklogProject,
   type PlannerProject,
-  type ProjectInput,
 } from '../data/projects'
 import type {
   StudyRoom,
@@ -61,7 +60,6 @@ type CalendarPageProps = {
   studyRooms: StudyRoom[]
   sharedItems: StudySharedItemEntry[]
   collectionCounts: Record<PlanCollection, number>
-  managementItemCounts: Record<string, number>
   onSelectDate: (date: Date) => void
   onMoveMonth: (amount: number) => void
   onSelectToday: () => void
@@ -69,10 +67,6 @@ type CalendarPageProps = {
   onAddTodo: (todo: TodoInput, sharedRoomId?: string) => void
   onUpdateEvent: (eventId: string, event: CalendarEventInput) => void
   onRemoveEvent: (eventId: string) => void
-  onCreateProject: (input: ProjectInput) => string
-  onUpdateProject: (projectId: string, input: ProjectInput) => void
-  onDeleteProject: (projectId: string) => void
-  onReorderProjects: (orderedProjectIds: string[]) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
   onChangeRoom: (
     roomId: string,
@@ -89,7 +83,6 @@ export default function CalendarPage({
   studyRooms,
   sharedItems,
   collectionCounts,
-  managementItemCounts,
   onSelectDate,
   onMoveMonth,
   onSelectToday,
@@ -97,10 +90,6 @@ export default function CalendarPage({
   onAddTodo,
   onUpdateEvent,
   onRemoveEvent,
-  onCreateProject,
-  onUpdateProject,
-  onDeleteProject,
-  onReorderProjects,
   onToggleSharedItemStatus,
   onChangeRoom,
 }: CalendarPageProps) {
@@ -254,14 +243,9 @@ export default function CalendarPage({
           projects={projects}
           selectedProjectId={selectedProjectId}
           itemCounts={projectCounts}
-          managementItemCounts={managementItemCounts}
           itemLabel="일정"
           collectionCounts={collectionCounts}
           onSelectProject={setSelectedProjectId}
-          onCreateProject={onCreateProject}
-          onUpdateProject={onUpdateProject}
-          onDeleteProject={onDeleteProject}
-          onReorderProjects={onReorderProjects}
           onSelectCollection={(collection) =>
             navigate(`/collections/${collection}`)
           }

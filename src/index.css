@@ -3539,6 +3539,10 @@ button.event-chip:hover {
   gap: 12px;
 }
 
+.settings-list-management-panel {
+  padding: 20px;
+}
+
 .project-management-toolbar label {
   width: min(280px, 100%);
 }

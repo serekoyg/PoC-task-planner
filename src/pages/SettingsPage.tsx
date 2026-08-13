@@ -1,10 +1,13 @@
 import { useMemo, useState, type ReactNode } from 'react'
+import ProjectManagementModal from '../components/ProjectManagementModal'
+import type { PlannerProject, ProjectInput } from '../data/projects'
 
 type SettingsSection =
   | 'account'
   | 'general'
   | 'theme'
   | 'sidebar'
+  | 'lists'
   | 'quick-add'
   | 'productivity'
   | 'reminders'
@@ -49,6 +52,13 @@ const sections: Array<{
     title: '사이드바',
     description: '주요 메뉴에 표시할 항목을 정해요.',
     keywords: '메뉴 캘린더 할 일 모임 목록',
+  },
+  {
+    id: 'lists',
+    icon: '≡',
+    title: '목록 관리',
+    description: '목록의 순서와 색상, 포함된 계획을 관리해요.',
+    keywords: '목록 생성 정렬 순서 색상 편집 삭제',
   },
   {
     id: 'quick-add',
@@ -196,7 +206,23 @@ function Choice({ label, options, value, onChange }: ChoiceProps) {
   )
 }
 
-export default function SettingsPage() {
+type SettingsPageProps = {
+  projects: PlannerProject[]
+  itemCounts: Record<string, number>
+  onCreateProject: (input: ProjectInput) => string
+  onUpdateProject: (projectId: string, input: ProjectInput) => void
+  onDeleteProject: (projectId: string) => void
+  onReorderProjects: (orderedProjectIds: string[]) => void
+}
+
+export default function SettingsPage({
+  projects,
+  itemCounts,
+  onCreateProject,
+  onUpdateProject,
+  onDeleteProject,
+  onReorderProjects,
+}: SettingsPageProps) {
   const [selectedSection, setSelectedSection] =
     useState<SettingsSection>('account')
   const [query, setQuery] = useState('')
@@ -326,12 +352,25 @@ export default function SettingsPage() {
             ))}
           </section>
         )
+      case 'lists':
+        return (
+          <ProjectManagementModal
+            embedded
+            projects={projects}
+            itemCounts={itemCounts}
+            onCreateProject={onCreateProject}
+            onUpdateProject={onUpdateProject}
+            onDeleteProject={onDeleteProject}
+            onReorderProjects={onReorderProjects}
+          />
+        )
       case 'quick-add':
         return (
           <section className="settings-card">
             <SettingRow title="기본 목록" description="새 일정과 할 일을 먼저 담아둘 목록이에요.">
               <select aria-label="기본 목록" value={String(values.defaultProject)} onChange={(event) => setValue('defaultProject', event.target.value)}>
-                <option>미분류</option><option>하루 리뉴얼</option><option>팀 운영</option><option>주간 계획</option>
+                <option>미분류</option>
+                {projects.map((project) => <option key={project.id}>{project.name}</option>)}
               </select>
             </SettingRow>
             <SettingRow title="기본 우선순위" description="새 할 일에 자동으로 적용할 우선순위예요.">

@@ -15,9 +15,10 @@ const PROJECT_SORT_STORAGE_KEY = 'haru-project-sort-mode'
 type ProjectManagementModalProps = {
   projects: PlannerProject[]
   itemCounts: Record<string, number>
-  selectedProjectId: string
-  onClose: () => void
-  onSelectProject: (projectId: string) => void
+  embedded?: boolean
+  selectedProjectId?: string
+  onClose?: () => void
+  onSelectProject?: (projectId: string) => void
   onCreateProject: (input: ProjectInput) => string
   onUpdateProject: (projectId: string, input: ProjectInput) => void
   onDeleteProject: (projectId: string) => void
@@ -74,6 +75,7 @@ const sortProjects = (
 export default function ProjectManagementModal({
   projects,
   itemCounts,
+  embedded = false,
   selectedProjectId,
   onClose,
   onSelectProject,
@@ -105,7 +107,7 @@ export default function ProjectManagementModal({
         setError('')
         return
       }
-      onClose()
+      onClose?.()
     }
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
@@ -175,7 +177,7 @@ export default function ProjectManagementModal({
       onUpdateProject(editingProject.id, input)
     } else {
       const createdId = onCreateProject(input)
-      onSelectProject(createdId)
+      onSelectProject?.(createdId)
     }
     closeEditor()
   }
@@ -206,26 +208,33 @@ export default function ProjectManagementModal({
 
   return (
     <div
-      className="project-modal-backdrop"
-      role="presentation"
+      className={embedded ? 'settings-list-management' : 'project-modal-backdrop'}
+      role={embedded ? undefined : 'presentation'}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose()
+        if (!embedded && event.target === event.currentTarget) onClose?.()
       }}
     >
       <section
-        className="project-create-modal project-management-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="project-management-title"
+        className={
+          embedded
+            ? 'settings-card settings-list-management-panel'
+            : 'project-create-modal project-management-modal'
+        }
+        role={embedded ? 'region' : 'dialog'}
+        aria-modal={embedded ? undefined : 'true'}
+        aria-label={embedded ? '목록 관리' : undefined}
+        aria-labelledby={embedded ? undefined : 'project-management-title'}
       >
-        <div className="project-modal-heading">
-          <div>
-            <p className="eyebrow">나의 계획 정리</p>
-            <h2 id="project-management-title">목록 관리</h2>
-            <p>목록의 표시 순서와 색상을 한곳에서 관리하세요.</p>
+        {!embedded && (
+          <div className="project-modal-heading">
+            <div>
+              <p className="eyebrow">나의 계획 정리</p>
+              <h2 id="project-management-title">목록 관리</h2>
+              <p>목록의 표시 순서와 색상을 한곳에서 관리하세요.</p>
+            </div>
+            <button type="button" onClick={onClose} aria-label="목록 관리 닫기">×</button>
           </div>
-          <button type="button" onClick={onClose} aria-label="목록 관리 닫기">×</button>
-        </div>
+        )}
 
         <div className="project-management-toolbar">
           <label>
@@ -276,7 +285,7 @@ export default function ProjectManagementModal({
                       aria-label={`${project.name} 삭제 확인`}
                       onClick={() => {
                         onDeleteProject(project.id)
-                        if (selectedProjectId === project.id) onSelectProject('all')
+                        if (selectedProjectId === project.id) onSelectProject?.('all')
                         setConfirmingDeleteId(undefined)
                         if (editingProject?.id === project.id) closeEditor()
                       }}

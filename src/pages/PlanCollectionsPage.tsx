@@ -9,7 +9,6 @@ import {
   BACKLOG_PROJECT_NAME,
   isBacklogProject,
   type PlannerProject,
-  type ProjectInput,
 } from '../data/projects'
 import type { TrashedPlan } from '../data/trash'
 import { formatTaskDate, getTaskProject } from '../lib/task'
@@ -23,16 +22,11 @@ type PlanCollectionsPageProps = {
   projects: PlannerProject[]
   trash: TrashedPlan[]
   collectionCounts: Record<PlanCollection, number>
-  managementItemCounts: Record<string, number>
   onToggleTodo: (todoId: string) => void
   onRemoveTodo: (todoId: string) => void
   onRestoreTrash: (trashId: string) => void
   onDeleteTrash: (trashId: string) => void
   onEmptyTrash: () => void
-  onCreateProject: (input: ProjectInput) => string
-  onUpdateProject: (projectId: string, input: ProjectInput) => void
-  onDeleteProject: (projectId: string) => void
-  onReorderProjects: (orderedProjectIds: string[]) => void
 }
 
 const formatDeletedAt = (deletedAt: string) =>
@@ -50,16 +44,11 @@ export default function PlanCollectionsPage({
   projects,
   trash,
   collectionCounts,
-  managementItemCounts,
   onToggleTodo,
   onRemoveTodo,
   onRestoreTrash,
   onDeleteTrash,
   onEmptyTrash,
-  onCreateProject,
-  onUpdateProject,
-  onDeleteProject,
-  onReorderProjects,
 }: PlanCollectionsPageProps) {
   const navigate = useNavigate()
   const [trashFilter, setTrashFilter] = useState<TrashFilter>('all')
@@ -104,21 +93,12 @@ export default function PlanCollectionsPage({
           selectedProjectId="all"
           selectedCollection={collection}
           itemCounts={projectCounts}
-          managementItemCounts={managementItemCounts}
           itemLabel="활성 계획"
           collectionCounts={collectionCounts}
           onSelectProject={selectProject}
           onSelectCollection={(nextCollection) =>
             navigate(`/collections/${nextCollection}`)
           }
-          onCreateProject={(input) => {
-            const id = onCreateProject(input)
-            navigate(`/todos?project=${id}`)
-            return id
-          }}
-          onUpdateProject={onUpdateProject}
-          onDeleteProject={onDeleteProject}
-          onReorderProjects={onReorderProjects}
         />
 
         <div className="project-filter-content plan-collection-content">

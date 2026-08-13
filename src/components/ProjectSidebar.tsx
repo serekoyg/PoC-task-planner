@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { getProjectColor, type PlannerProject, type ProjectInput } from '../data/projects'
-import ProjectManagementModal from './ProjectManagementModal'
+import { getProjectColor, type PlannerProject } from '../data/projects'
 
 export type ProjectFilter = 'all' | 'backlog' | string
 export type PlanCollection = 'completed' | 'trash'
@@ -9,15 +8,10 @@ type ProjectSidebarProps = {
   projects: PlannerProject[]
   selectedProjectId: ProjectFilter
   itemCounts: Record<string, number>
-  managementItemCounts?: Record<string, number>
   itemLabel: string
   collectionCounts?: Record<PlanCollection, number>
   selectedCollection?: PlanCollection
   onSelectProject: (projectId: ProjectFilter) => void
-  onCreateProject: (input: ProjectInput) => string
-  onUpdateProject: (projectId: string, input: ProjectInput) => void
-  onDeleteProject: (projectId: string) => void
-  onReorderProjects: (orderedProjectIds: string[]) => void
   onSelectCollection?: (collection: PlanCollection) => void
 }
 
@@ -25,15 +19,10 @@ export default function ProjectSidebar({
   projects,
   selectedProjectId,
   itemCounts,
-  managementItemCounts,
   itemLabel,
   collectionCounts,
   selectedCollection,
   onSelectProject,
-  onCreateProject,
-  onUpdateProject,
-  onDeleteProject,
-  onReorderProjects,
   onSelectCollection,
 }: ProjectSidebarProps) {
   const [isExpanded, setIsExpanded] = useState(() =>
@@ -41,7 +30,6 @@ export default function ProjectSidebar({
       ? true
       : !window.matchMedia('(max-width: 720px)').matches,
   )
-  const [isManagementOpen, setIsManagementOpen] = useState(false)
   const selectedProject = projects.find(
     (project) => project.id === selectedProjectId,
   )
@@ -58,8 +46,7 @@ export default function ProjectSidebar({
           : 0
 
   return (
-    <>
-      <aside className={`shared-project-sidebar${isExpanded ? ' expanded' : ' collapsed'}`} aria-label="목록 필터">
+    <aside className={`shared-project-sidebar${isExpanded ? ' expanded' : ' collapsed'}`} aria-label="목록 필터">
         <div className="shared-project-heading">
           <div>
             <p className="eyebrow">나의 계획 정리</p>
@@ -69,7 +56,6 @@ export default function ProjectSidebar({
             </h2>
           </div>
           <div className="shared-project-heading-actions">
-            <button type="button" aria-label="목록 관리" onClick={() => setIsManagementOpen(true)}>관리</button>
             <button
               type="button"
               aria-expanded={isExpanded}
@@ -145,21 +131,6 @@ export default function ProjectSidebar({
             )}
           </div>
         )}
-      </aside>
-
-      {isManagementOpen && (
-        <ProjectManagementModal
-          projects={projects}
-          itemCounts={managementItemCounts ?? itemCounts}
-          selectedProjectId={selectedProjectId}
-          onClose={() => setIsManagementOpen(false)}
-          onSelectProject={onSelectProject}
-          onCreateProject={onCreateProject}
-          onUpdateProject={onUpdateProject}
-          onDeleteProject={onDeleteProject}
-          onReorderProjects={onReorderProjects}
-        />
-      )}
-    </>
+    </aside>
   )
 }

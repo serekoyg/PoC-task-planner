@@ -9,7 +9,7 @@ import TodoDateListView from '../components/TodoDateListView'
 import TodoKanbanView from '../components/TodoKanbanView'
 import TodoProjectListView from '../components/TodoProjectListView'
 import type { CalendarEventInput, Todo, TodoInput } from '../data/initialData'
-import type { PlannerProject, ProjectInput } from '../data/projects'
+import type { PlannerProject } from '../data/projects'
 import { BACKLOG_PROJECT_NAME, isBacklogProject } from '../data/projects'
 import type { StudyRoom, StudySharedItemEntry } from '../data/studyRooms'
 
@@ -41,16 +41,11 @@ type TodosPageProps = {
   studyRooms: StudyRoom[]
   sharedItems: StudySharedItemEntry[]
   collectionCounts: Record<PlanCollection, number>
-  managementItemCounts: Record<string, number>
   onAddTodo: (todo: TodoInput, sharedRoomId?: string) => void
   onAddEvent: (event: CalendarEventInput, sharedRoomId?: string) => void
   onUpdateTodo: (todoId: string, todo: TodoInput) => void
   onToggleTodo: (todoId: string) => void
   onRemoveTodo: (todoId: string) => void
-  onCreateProject: (input: ProjectInput) => string
-  onUpdateProject: (projectId: string, input: ProjectInput) => void
-  onDeleteProject: (projectId: string) => void
-  onReorderProjects: (orderedProjectIds: string[]) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
 }
 
@@ -62,16 +57,11 @@ export default function TodosPage({
   studyRooms,
   sharedItems,
   collectionCounts,
-  managementItemCounts,
   onAddTodo,
   onAddEvent,
   onUpdateTodo,
   onToggleTodo,
   onRemoveTodo,
-  onCreateProject,
-  onUpdateProject,
-  onDeleteProject,
-  onReorderProjects,
   onToggleSharedItemStatus,
 }: TodosPageProps) {
   const navigate = useNavigate()
@@ -126,14 +116,9 @@ export default function TodosPage({
           projects={projects}
           selectedProjectId={selectedProjectId}
           itemCounts={projectCounts}
-          managementItemCounts={managementItemCounts}
           itemLabel="미완료 할 일"
           collectionCounts={collectionCounts}
           onSelectProject={selectProject}
-          onCreateProject={onCreateProject}
-          onUpdateProject={onUpdateProject}
-          onDeleteProject={onDeleteProject}
-          onReorderProjects={onReorderProjects}
           onSelectCollection={(collection) =>
             navigate(`/collections/${collection}`)
           }

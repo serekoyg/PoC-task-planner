@@ -1044,7 +1044,6 @@ export default function App() {
               events={events}
               projects={projects}
               collectionCounts={collectionCounts}
-              managementItemCounts={projectPlanCounts}
               studyRooms={joinedStudyRooms}
               sharedItems={sharedItemEntries}
               onSelectDate={selectDate}
@@ -1063,10 +1062,6 @@ export default function App() {
               onAddTodo={addTodo}
               onUpdateEvent={updateEvent}
               onRemoveEvent={removeEvent}
-              onCreateProject={createProject}
-              onUpdateProject={updateProject}
-              onDeleteProject={deleteProject}
-              onReorderProjects={reorderProjects}
               onToggleSharedItemStatus={toggleSharedItemStatus}
               onChangeRoom={changeStudyRoom}
             />
@@ -1081,7 +1076,6 @@ export default function App() {
               todos={todos}
               projects={projects}
               collectionCounts={collectionCounts}
-              managementItemCounts={projectPlanCounts}
               studyRooms={joinedStudyRooms}
               sharedItems={sharedItemEntries}
               onAddTodo={addTodo}
@@ -1089,10 +1083,6 @@ export default function App() {
               onUpdateTodo={updateTodo}
               onToggleTodo={toggleTodo}
               onRemoveTodo={removeTodo}
-              onCreateProject={createProject}
-              onUpdateProject={updateProject}
-              onDeleteProject={deleteProject}
-              onReorderProjects={reorderProjects}
               onToggleSharedItemStatus={toggleSharedItemStatus}
             />
           }
@@ -1111,16 +1101,11 @@ export default function App() {
               projects={projects}
               trash={trash}
               collectionCounts={collectionCounts}
-              managementItemCounts={projectPlanCounts}
               onToggleTodo={toggleTodo}
               onRemoveTodo={removeTodo}
               onRestoreTrash={restoreTrash}
               onDeleteTrash={deleteTrash}
               onEmptyTrash={() => setTrash([])}
-              onCreateProject={createProject}
-              onUpdateProject={updateProject}
-              onDeleteProject={deleteProject}
-              onReorderProjects={reorderProjects}
             />
           }
         />
@@ -1134,16 +1119,11 @@ export default function App() {
               projects={projects}
               trash={trash}
               collectionCounts={collectionCounts}
-              managementItemCounts={projectPlanCounts}
               onToggleTodo={toggleTodo}
               onRemoveTodo={removeTodo}
               onRestoreTrash={restoreTrash}
               onDeleteTrash={deleteTrash}
               onEmptyTrash={() => setTrash([])}
-              onCreateProject={createProject}
-              onUpdateProject={updateProject}
-              onDeleteProject={deleteProject}
-              onReorderProjects={reorderProjects}
             />
           }
         />
@@ -1201,7 +1181,19 @@ export default function App() {
           path="/profile"
           element={<ProfilePage todos={todos} rooms={studyRooms} />}
         />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route
+          path="/settings"
+          element={
+            <SettingsPage
+              projects={projects}
+              itemCounts={projectPlanCounts}
+              onCreateProject={createProject}
+              onUpdateProject={updateProject}
+              onDeleteProject={deleteProject}
+              onReorderProjects={reorderProjects}
+            />
+          }
+        />
         <Route path="*" element={<Navigate to="/calendar" replace />} />
       </Routes>
 
