@@ -6,6 +6,7 @@ import ProjectSidebar, {
 } from '../components/ProjectSidebar'
 import type { CalendarEvent, Todo } from '../data/initialData'
 import {
+  BACKLOG_PROJECT_NAME,
   isBacklogProject,
   type PlannerProject,
   type ProjectInput,
@@ -159,7 +160,7 @@ export default function PlanCollectionsPage({
                       <div>
                         <Link to={`/todos/${todo.id}`}>{todo.text}</Link>
                         <span>
-                          {getTaskProject(todo)} · {formatTaskDate(todo.date)}
+                          {getTaskProject(todo)} · 나의 계획 · {formatTaskDate(todo.date)}
                           {todo.dueTime ? ` · ${todo.dueTime}` : ''}
                         </span>
                       </div>
@@ -258,7 +259,7 @@ export default function PlanCollectionsPage({
                           <strong>{title}</strong>
                           <span>
                             {entry.type === 'todo' ? '할 일' : '일정'} ·{' '}
-                            {entry.item.project ?? '백로그'} ·{' '}
+                            {entry.item.project ?? BACKLOG_PROJECT_NAME} · 나의 계획 ·{' '}
                             {formatTaskDate(entry.item.date)}
                             {time ? ` · ${time}` : ''}
                           </span>

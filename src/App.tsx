@@ -509,7 +509,14 @@ export default function App() {
   const updateEvent = (eventId: string, event: CalendarEventInput) => {
     setEvents((current) =>
       current.map((item) =>
-        item.id === eventId ? { ...item, ...event, id: eventId } : item,
+        item.id === eventId
+          ? {
+              ...item,
+              ...event,
+              id: eventId,
+              project: event.project ?? BACKLOG_PROJECT_NAME,
+            }
+          : item,
       ),
     )
   }
@@ -558,6 +565,7 @@ export default function App() {
       id: crypto.randomUUID(),
       done: false,
       ...input,
+      project: input.project ?? BACKLOG_PROJECT_NAME,
     }
 
     setTodos((current) => [...current, newTodo])
@@ -566,7 +574,13 @@ export default function App() {
   const updateTodo = (todoId: string, input: TodoInput) => {
     setTodos((current) =>
       current.map((todo) =>
-        todo.id === todoId ? { ...todo, ...input } : todo,
+        todo.id === todoId
+          ? {
+              ...todo,
+              ...input,
+              project: input.project ?? BACKLOG_PROJECT_NAME,
+            }
+          : todo,
       ),
     )
   }
@@ -604,6 +618,15 @@ export default function App() {
             : event,
         ),
       )
+      setTrash((current) =>
+        current.map((entry) => {
+          if (entry.item.project !== previousProject.name) return entry
+          if (entry.type === 'todo') {
+            return { ...entry, item: { ...entry.item, project: input.name } }
+          }
+          return { ...entry, item: { ...entry.item, project: input.name } }
+        }),
+      )
     }
   }
 
@@ -625,6 +648,21 @@ export default function App() {
           ? { ...event, project: BACKLOG_PROJECT_NAME }
           : event,
       ),
+    )
+    setTrash((current) =>
+      current.map((entry) => {
+        if (entry.item.project !== project.name) return entry
+        if (entry.type === 'todo') {
+          return {
+            ...entry,
+            item: { ...entry.item, project: BACKLOG_PROJECT_NAME },
+          }
+        }
+        return {
+          ...entry,
+          item: { ...entry.item, project: BACKLOG_PROJECT_NAME },
+        }
+      }),
     )
   }
 

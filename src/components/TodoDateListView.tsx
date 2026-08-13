@@ -169,7 +169,7 @@ export default function TodoDateListView({
                       >
                         {todo.text}
                       </button>
-                      <span>{getTaskProject(todo)}</span>
+                      <span>{getTaskProject(todo)} · 나의 계획</span>
                     </div>
                     <p>
                       우선순위 {getTaskPriority(todo)}
@@ -224,7 +224,7 @@ export default function TodoDateListView({
                           ◉
                         </span>
                         <span className="shared-source-badge">
-                          모임 · {roomName}
+                          {roomName} · 모임
                         </span>
                         <span className="shared-todo-type-badge">
                           {typeLabel}

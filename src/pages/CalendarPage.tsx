@@ -153,7 +153,7 @@ export default function CalendarPage({
     selectedProject?.name ??
     (selectedProjectId === 'backlog'
       ? BACKLOG_PROJECT_NAME
-      : '모든 프로젝트')
+      : '모든 목록')
   const periodTitle =
     calendarView === 'day'
       ? formatSelectedDate(selectedDate)
@@ -370,7 +370,7 @@ export default function CalendarPage({
                           >
                             <time>{event.allDay ? '종일' : event.startTime}</time>
                             <strong>{event.title}</strong>
-                            <small>{event.project ?? BACKLOG_PROJECT_NAME}</small>
+                            <small>{event.project ?? BACKLOG_PROJECT_NAME} · 나의 계획</small>
                           </button>
                         ))}
                         {dateSharedEvents.map((entry) => (
@@ -391,7 +391,7 @@ export default function CalendarPage({
                           >
                             <time>{entry.item.time ?? '종일'}</time>
                             <strong>{entry.item.title}</strong>
-                            <small>{entry.roomName} · 공동 일정</small>
+                            <small>{entry.roomName} · 모임</small>
                           </button>
                         ))}
                         {!dateEvents.length && !dateSharedEvents.length && (

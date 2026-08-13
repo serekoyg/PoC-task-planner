@@ -53,7 +53,7 @@ export default function TodoProjectListView({
   }, [buckets.length, hasMore, visibleProjectCount])
 
   return (
-    <section className="todo-project-list" aria-label="프로젝트별 전체 할 일">
+    <section className="todo-project-list" aria-label="목록별 전체 할 일">
       {buckets.slice(0, visibleProjectCount).map((bucket) => {
         const bucketTodos = getBucketTodos(todos, bucket)
 
@@ -114,7 +114,7 @@ export default function TodoProjectListView({
       })}
 
       <div className="todo-list-loader" ref={loadMoreRef} aria-live="polite">
-        {hasMore ? '다음 프로젝트의 할 일을 불러오는 중…' : '모든 할 일을 불러왔어요.'}
+        {hasMore ? '다음 목록의 할 일을 불러오는 중…' : '모든 할 일을 불러왔어요.'}
       </div>
     </section>
   )

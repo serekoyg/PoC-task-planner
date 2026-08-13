@@ -4,7 +4,7 @@ export type Todo = {
   text: string
   done: boolean
   priority: 'high' | 'medium' | 'low'
-  category: '개인' | '업무' | '공부' | '운동' | '기타'
+  category?: '개인' | '업무' | '공부' | '운동' | '기타'
   dueTime: string
   reminder: 'none' | '10m' | '30m' | '1h' | '1d'
   color: 'coral' | 'blue' | 'green'
@@ -34,7 +34,7 @@ export type CalendarEvent = {
   allDay: boolean
   color: 'coral' | 'blue' | 'green'
   project?: string
-  category: '개인' | '업무' | '약속' | '운동' | '기타'
+  category?: '개인' | '업무' | '약속' | '운동' | '기타'
   location: string
   note: string
   repeat:

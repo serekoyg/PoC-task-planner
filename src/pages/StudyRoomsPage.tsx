@@ -172,7 +172,7 @@ export default function StudyRoomsPage({
             return (
               <article className={`study-room-card ${room.accent}`} key={room.id}>
                 <div className="room-card-topline">
-                  <span className="room-category">{room.category}</span>
+                  <span className="room-category">분류 · {room.category}</span>
                   {liveMembers > 0 && (
                     <span className="room-live-count">
                       <i aria-hidden="true" /> {liveMembers}명 활동 중
@@ -286,7 +286,7 @@ export default function StudyRoomsPage({
               </label>
               <div className="study-form-row">
                 <label>
-                  <span>카테고리</span>
+                  <span>분류</span>
                   <select
                     value={form.category}
                     onChange={(event) =>

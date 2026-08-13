@@ -1,5 +1,6 @@
 import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react'
 import type { CalendarEvent, Todo } from '../data/initialData'
+import { BACKLOG_PROJECT_NAME } from '../data/projects'
 import type { StudyRoom } from '../data/studyRooms'
 import type { PlannerTarget } from '../lib/plannerNavigation'
 
@@ -59,13 +60,12 @@ export default function GlobalSearch({
         description: event.location || event.note || '등록된 일정',
         meta: `${formatResultDate(event.date)} · ${
           event.allDay ? '하루 종일' : event.startTime
-        }`,
+        } · ${event.project ?? BACKLOG_PROJECT_NAME} · 나의 계획`,
         keywords: [
           event.title,
           event.location,
           event.note,
           event.project,
-          event.category,
         ]
           .filter(Boolean)
           .join(' '),
@@ -78,13 +78,12 @@ export default function GlobalSearch({
         description: todo.note || todo.memo || '등록된 할 일',
         meta: `${formatResultDate(todo.date)} · ${
           todo.dueTime || '시간 미정'
-        }${todo.done ? ' · 완료' : ''}`,
+        } · ${todo.project ?? BACKLOG_PROJECT_NAME} · 나의 계획${todo.done ? ' · 완료' : ''}`,
         keywords: [
           todo.text,
           todo.note,
           todo.memo,
           todo.project,
-          todo.category,
         ]
           .filter(Boolean)
           .join(' '),
@@ -95,7 +94,7 @@ export default function GlobalSearch({
         kind: '모임' as const,
         title: room.name,
         description: room.description,
-        meta: `${room.category} · ${room.memberCount}/${room.maxMembers}명${
+        meta: `${room.category} 분류 · ${room.memberCount}/${room.maxMembers}명${
           room.joined ? ' · 참여 중' : ''
         }`,
         keywords: [room.name, room.description, room.category, room.goal].join(' '),
@@ -193,7 +192,7 @@ export default function GlobalSearch({
           <div className="global-search-empty">
             <span aria-hidden="true">⌕</span>
             <strong>일치하는 항목이 없어요</strong>
-            <p>다른 제목이나 프로젝트 이름으로 다시 검색해 보세요.</p>
+            <p>다른 제목이나 목록 이름으로 다시 검색해 보세요.</p>
           </div>
         )}
 

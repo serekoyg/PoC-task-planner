@@ -18,19 +18,19 @@ type TodoView = 'dates' | 'kanban' | 'projects'
 const viewLabels: Record<TodoView, string> = {
   dates: '날짜별',
   kanban: '칸반',
-  projects: '프로젝트 목록',
+  projects: '목록별',
 }
 
 const viewTitles: Record<TodoView, string> = {
   dates: '날짜별 할 일',
-  kanban: '프로젝트 칸반',
-  projects: '프로젝트 목록',
+  kanban: '목록 칸반',
+  projects: '목록별 보기',
 }
 
 const viewDescriptions: Record<TodoView, string> = {
   dates: '모든 할 일을 날짜 순서대로 계속 내려가며 확인하세요.',
-  kanban: '모든 날짜의 할 일을 프로젝트 열로 나누어 한눈에 확인하세요.',
-  projects: '프로젝트별 할 일을 날짜와 함께 세로로 계속 탐색하세요.',
+  kanban: '모든 날짜의 할 일을 목록별 열로 나누어 한눈에 확인하세요.',
+  projects: '목록별 할 일을 날짜와 함께 세로로 계속 탐색하세요.',
 }
 
 type TodosPageProps = {
@@ -103,7 +103,7 @@ export default function TodosPage({
     selectedProject?.name ??
     (selectedProjectId === 'backlog'
       ? BACKLOG_PROJECT_NAME
-      : '모든 프로젝트')
+      : '모든 목록')
 
   const closeEditor = () => {
     setIsCreating(false)

@@ -131,7 +131,7 @@ export default function ProfilePage({ todos, rooms }: ProfilePageProps) {
         <div className="profile-room-list">
           {joinedRooms.map((room) => (
             <Link className={room.accent} to={`/studies/${room.id}`} key={room.id}>
-              <span>{room.category}</span>
+              <span>분류 · {room.category}</span>
               <div><strong>{room.name}</strong><p>{room.goal}</p></div>
               <small>이번 주 {room.weeklyProgress}%</small>
             </Link>

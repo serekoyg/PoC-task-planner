@@ -23,7 +23,7 @@ export default function TodoKanbanView({
   const buckets = getTodoProjectBuckets(projects, selectedProjectId)
 
   return (
-    <section className="todo-kanban" aria-label="프로젝트별 할 일 칸반">
+    <section className="todo-kanban" aria-label="목록별 할 일 칸반">
       <div className="todo-kanban-board">
         {buckets.map((bucket) => {
           const bucketTodos = getBucketTodos(todos, bucket)

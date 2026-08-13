@@ -206,7 +206,6 @@ export default function PlanEditorModal({
           date,
           text: title.trim(),
           priority,
-          category: todo?.category ?? '개인',
           dueTime: time,
           reminder,
           color: todo?.color ?? 'blue',
@@ -227,7 +226,6 @@ export default function PlanEditorModal({
           allDay: false,
           color: calendarEvent?.color ?? 'blue',
           project: isPersonal ? project : BACKLOG_PROJECT_NAME,
-          category: calendarEvent?.category ?? '개인',
           location: location.trim(),
           note: note.trim(),
           reminder,
@@ -457,7 +455,7 @@ export default function PlanEditorModal({
             <fieldset className="personal-plan-fields">
               <legend>나의 계획 설정</legend>
               <div className="study-form-row">
-                <label><span>프로젝트</span><select value={project} onChange={(event) => setProject(event.target.value)}><option value={BACKLOG_PROJECT_NAME}>{BACKLOG_PROJECT_NAME}</option>{projects.map((item) => <option value={item.name} key={item.id}>{item.name}</option>)}</select></label>
+                <label><span>목록</span><select aria-label="목록 선택" value={project} onChange={(event) => setProject(event.target.value)}><option value={BACKLOG_PROJECT_NAME}>{BACKLOG_PROJECT_NAME}</option>{projects.map((item) => <option value={item.name} key={item.id}>{item.name}</option>)}</select></label>
                 {type === 'todo' && <label><span>우선순위</span><select value={priority} onChange={(event) => setPriority(event.target.value as TodoInput['priority'])}><option value="high">높음</option><option value="medium">보통</option><option value="low">낮음</option></select></label>}
                 <label><span>알림</span><select value={reminder} onChange={(event) => setReminder(event.target.value as TodoInput['reminder'])}><option value="none">알림 없음</option><option value="10m">10분 전</option><option value="30m">30분 전</option><option value="1h">1시간 전</option><option value="1d">1일 전</option></select></label>
               </div>

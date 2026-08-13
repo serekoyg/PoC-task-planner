@@ -4,7 +4,7 @@ import type {
   ProjectAccent,
   ProjectInput,
 } from '../data/projects'
-import { BACKLOG_PROJECT_NAME } from '../data/projects'
+import { isBacklogProject } from '../data/projects'
 
 export type ProjectFilter = 'all' | 'backlog' | string
 export type PlanCollection = 'completed' | 'trash'
@@ -90,12 +90,12 @@ export default function ProjectSidebar({
     const trimmedName = name.trim()
 
     if (!trimmedName) {
-      setError('프로젝트 이름을 입력해 주세요.')
+      setError('목록 이름을 입력해 주세요.')
       return
     }
 
-    if (trimmedName === BACKLOG_PROJECT_NAME) {
-      setError('백로그는 분류되지 않은 계획을 위한 기본 공간이에요.')
+    if (isBacklogProject(trimmedName)) {
+      setError('미분류는 목록을 선택하지 않은 계획을 위한 기본 공간이에요.')
       return
     }
 
@@ -104,7 +104,7 @@ export default function ProjectSidebar({
         project.id !== editingProject?.id && project.name === trimmedName,
     )
     if (duplicated) {
-      setError('같은 이름의 프로젝트가 이미 있어요.')
+      setError('같은 이름의 목록이 이미 있어요.')
       return
     }
 
@@ -119,32 +119,32 @@ export default function ProjectSidebar({
 
   return (
     <>
-      <aside className="shared-project-sidebar" aria-label="프로젝트 필터">
+      <aside className="shared-project-sidebar" aria-label="목록 필터">
         <div className="shared-project-heading">
           <div>
-            <p className="eyebrow">공통 카테고리</p>
-            <h2>프로젝트</h2>
+            <p className="eyebrow">나의 계획 정리</p>
+            <h2>목록</h2>
           </div>
           <button
             type="button"
             onClick={openCreateEditor}
-            aria-label="새 프로젝트 만들기"
+            aria-label="새 목록 만들기"
           >
             ＋
           </button>
         </div>
         <p className="shared-project-description">
-          일정과 할 일을 같은 프로젝트로 묶어보세요.
+          일정과 할 일을 같은 목록에 모아보세요.
         </p>
 
-        <nav className="shared-project-list" aria-label={`프로젝트별 ${itemLabel}`}>
+        <nav className="shared-project-list" aria-label={`목록별 ${itemLabel}`}>
           <button
             className={selectedProjectId === 'all' ? 'active' : ''}
             type="button"
             onClick={() => onSelectProject('all')}
           >
             <span className="project-filter-icon all" aria-hidden="true">◆</span>
-            <span>모든 프로젝트</span>
+            <span>모든 목록</span>
             <small>{itemCounts.all ?? 0}</small>
           </button>
           <button
@@ -153,7 +153,7 @@ export default function ProjectSidebar({
             onClick={() => onSelectProject('backlog')}
           >
             <span className="project-filter-icon backlog" aria-hidden="true">○</span>
-            <span>백로그</span>
+            <span>미분류</span>
             <small>{itemCounts.backlog ?? 0}</small>
           </button>
 
@@ -172,7 +172,7 @@ export default function ProjectSidebar({
                 className="shared-project-edit"
                 type="button"
                 onClick={() => openEditEditor(project)}
-                aria-label={`${project.name} 프로젝트 편집`}
+                aria-label={`${project.name} 목록 편집`}
               >
                 ···
               </button>
@@ -181,7 +181,7 @@ export default function ProjectSidebar({
         </nav>
 
         <button className="shared-project-add" type="button" onClick={openCreateEditor}>
-          <span aria-hidden="true">＋</span> 새 프로젝트
+          <span aria-hidden="true">＋</span> 새 목록
         </button>
 
         {collectionCounts && onSelectCollection && (
@@ -224,17 +224,17 @@ export default function ProjectSidebar({
           >
             <div className="project-modal-heading">
               <div>
-                <p className="eyebrow">공통 카테고리</p>
+                <p className="eyebrow">나의 계획 정리</p>
                 <h2 id="project-editor-title">
-                  {editorMode === 'edit' ? '프로젝트 편집' : '새 프로젝트'}
+                  {editorMode === 'edit' ? '목록 편집' : '새 목록'}
                 </h2>
               </div>
-              <button type="button" onClick={closeEditor} aria-label="프로젝트 창 닫기">×</button>
+              <button type="button" onClick={closeEditor} aria-label="목록 창 닫기">×</button>
             </div>
 
             <form onSubmit={saveProject}>
               <label>
-                <span>프로젝트 이름</span>
+                <span>목록 이름</span>
                 <input
                   autoFocus
                   maxLength={30}
@@ -276,12 +276,12 @@ export default function ProjectSidebar({
                       type="button"
                       onClick={() => setIsDeleteConfirming(true)}
                     >
-                      프로젝트 삭제
+                      목록 삭제
                     </button>
                   )}
                   {editingProject && isDeleteConfirming && (
                     <div className="event-delete-confirm">
-                      <span>연결된 항목은 백로그로 이동해요.</span>
+                      <span>연결된 항목은 미분류로 이동해요.</span>
                       <button type="button" onClick={() => setIsDeleteConfirming(false)}>취소</button>
                       <button
                         type="button"

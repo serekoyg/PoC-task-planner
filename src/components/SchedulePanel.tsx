@@ -121,7 +121,7 @@ export default function SchedulePanel({
               <div className="schedule-item-copy">
                 <div className="schedule-item-title">
                   <h3>{item.title}</h3>
-                  <span>{item.project ?? BACKLOG_PROJECT_NAME}</span>
+                  <span>{item.project ?? BACKLOG_PROJECT_NAME} · 나의 계획</span>
                   {item.repeat !== 'none' && <span>{repeatLabels[item.repeat]}</span>}
                 </div>
                 <div className="schedule-item-meta">
@@ -158,7 +158,7 @@ export default function SchedulePanel({
                     <div className="schedule-item-title">
                       <h3>{item.title}</h3>
                       <Link className="shared-source-badge" to={`/studies/${roomId}`}>
-                        {roomName} · 공동 일정
+                        {roomName} · 모임
                       </Link>
                       {item.repeat !== 'none' && <span>{getSharedRepeatLabel(item)}</span>}
                     </div>

@@ -191,7 +191,7 @@ export default function StudyRoomDetailPage({
       <section className={`study-detail-hero ${room.accent}`}>
         <div>
           <div className="study-detail-badges">
-            <span>{room.category}</span>
+            <span>분류 · {room.category}</span>
             <span className="study-detail-live">
               <i aria-hidden="true" /> {liveMembers}명 활동 중
             </span>
