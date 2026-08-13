@@ -1,5 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import ProjectManagementModal from '../components/ProjectManagementModal'
+import ProjectManagementModal, {
+  UnsavedChangesDialog,
+} from '../components/ProjectManagementModal'
 import type { PlannerProject, ProjectInput } from '../data/projects'
 
 type SettingsSection =
@@ -229,6 +231,8 @@ export default function SettingsPage({
   const [values, setValues] = useState(initialValues)
   const [notice, setNotice] = useState('모든 변경 사항은 데모에 자동 저장돼요.')
   const [connectedServices, setConnectedServices] = useState<string[]>([])
+  const [isListManagementDirty, setIsListManagementDirty] = useState(false)
+  const [pendingSection, setPendingSection] = useState<SettingsSection>()
 
   const selected = sections.find((section) => section.id === selectedSection)!
   const filteredSections = useMemo(() => {
@@ -362,6 +366,7 @@ export default function SettingsPage({
             onUpdateProject={onUpdateProject}
             onDeleteProject={onDeleteProject}
             onReorderProjects={onReorderProjects}
+            onDirtyChange={setIsListManagementDirty}
           />
         )
       case 'quick-add':
@@ -505,7 +510,23 @@ export default function SettingsPage({
           </label>
           <nav>
             {filteredSections.map((section) => (
-              <button key={section.id} type="button" className={selectedSection === section.id ? 'active' : ''} aria-current={selectedSection === section.id ? 'page' : undefined} onClick={() => setSelectedSection(section.id)}>
+              <button
+                key={section.id}
+                type="button"
+                className={selectedSection === section.id ? 'active' : ''}
+                aria-current={selectedSection === section.id ? 'page' : undefined}
+                onClick={() => {
+                  if (
+                    selectedSection === 'lists' &&
+                    section.id !== 'lists' &&
+                    isListManagementDirty
+                  ) {
+                    setPendingSection(section.id)
+                    return
+                  }
+                  setSelectedSection(section.id)
+                }}
+              >
                 <span aria-hidden="true">{section.icon}</span>
                 {section.title}
               </button>
@@ -523,11 +544,30 @@ export default function SettingsPage({
               <h1 id="settings-title">{selected.title}</h1>
               <p>{selected.description}</p>
             </div>
-            <span className="settings-saved-state" aria-live="polite">✓ {notice}</span>
+            <span
+              className={`settings-saved-state${selectedSection === 'lists' && isListManagementDirty ? ' dirty' : ''}`}
+              aria-live="polite"
+            >
+              {selectedSection === 'lists'
+                ? isListManagementDirty
+                  ? '● 저장이 필요한 변경사항이 있어요.'
+                  : '✓ 목록 변경사항이 저장되어 있어요.'
+                : `✓ ${notice}`}
+            </span>
           </header>
           {renderSettings()}
         </section>
       </div>
+      {pendingSection && (
+        <UnsavedChangesDialog
+          onContinue={() => setPendingSection(undefined)}
+          onLeave={() => {
+            setSelectedSection(pendingSection)
+            setPendingSection(undefined)
+            setIsListManagementDirty(false)
+          }}
+        />
+      )}
     </main>
   )
 }

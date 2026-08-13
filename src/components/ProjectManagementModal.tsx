@@ -5,6 +5,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import {
@@ -24,13 +25,43 @@ type ProjectManagementModalProps = {
   projects: PlannerProject[]
   itemCounts: Record<string, number>
   embedded?: boolean
-  selectedProjectId?: string
   onClose?: () => void
-  onSelectProject?: (projectId: string) => void
   onCreateProject: (input: ProjectInput) => string
   onUpdateProject: (projectId: string, input: ProjectInput) => void
   onDeleteProject: (projectId: string) => void
   onReorderProjects: (orderedProjectIds: string[]) => void
+  onDirtyChange?: (isDirty: boolean) => void
+}
+
+type UnsavedChangesDialogProps = {
+  onContinue: () => void
+  onLeave: () => void
+}
+
+export function UnsavedChangesDialog({
+  onContinue,
+  onLeave,
+}: UnsavedChangesDialogProps) {
+  return (
+    <div className="unsaved-changes-backdrop" role="presentation">
+      <section
+        className="unsaved-changes-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="unsaved-changes-title"
+      >
+        <span className="unsaved-changes-icon" aria-hidden="true">!</span>
+        <div>
+          <h2 id="unsaved-changes-title">변경사항을 저장하지 않았어요</h2>
+          <p>지금 페이지를 나가면 목록 관리에서 바꾼 내용이 사라집니다.</p>
+        </div>
+        <div className="unsaved-changes-actions">
+          <button type="button" onClick={onContinue}>계속 편집</button>
+          <button type="button" onClick={onLeave}>저장하지 않고 나가기</button>
+        </div>
+      </section>
+    </div>
+  )
 }
 
 const presetOptions: Array<{
@@ -133,13 +164,12 @@ export default function ProjectManagementModal({
   projects,
   itemCounts,
   embedded = false,
-  selectedProjectId,
   onClose,
-  onSelectProject,
   onCreateProject,
   onUpdateProject,
   onDeleteProject,
   onReorderProjects,
+  onDirtyChange,
 }: ProjectManagementModalProps) {
   const [sortMode, setSortMode] = useState<ProjectSortMode>(() => {
     const stored = window.localStorage.getItem(PROJECT_SORT_STORAGE_KEY)
@@ -147,6 +177,11 @@ export default function ProjectManagementModal({
       ? stored
       : 'manual'
   })
+  const [savedSortMode, setSavedSortMode] = useState(sortMode)
+  const [draftProjects, setDraftProjects] = useState(projects)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [pendingNavigation, setPendingNavigation] = useState<string>()
+  const allowPageLeaveRef = useRef(false)
   const [editorMode, setEditorMode] = useState<'create' | 'edit'>()
   const [editingProject, setEditingProject] = useState<PlannerProject>()
   const [name, setName] = useState('')
@@ -156,6 +191,21 @@ export default function ProjectManagementModal({
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string>()
   const [isPickingColor, setIsPickingColor] = useState(false)
   const [draggingProjectId, setDraggingProjectId] = useState<string>()
+  const hasEditorChanges = Boolean(
+    editorMode === 'create'
+      ? name.trim() || accent !== 'blue' || color !== PROJECT_ACCENT_COLORS.blue
+      : editorMode === 'edit' &&
+          editingProject &&
+          (name !== editingProject.name ||
+            accent !== editingProject.accent ||
+            color !== getProjectColor(editingProject)),
+  )
+  const hasPendingChanges = hasUnsavedChanges || hasEditorChanges
+
+  useEffect(() => {
+    onDirtyChange?.(hasPendingChanges)
+    return () => onDirtyChange?.(false)
+  }, [hasPendingChanges, onDirtyChange])
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -173,18 +223,41 @@ export default function ProjectManagementModal({
   }, [editorMode, onClose])
 
   useEffect(() => {
-    window.localStorage.setItem(PROJECT_SORT_STORAGE_KEY, sortMode)
-    if (sortMode === 'manual') return
-    const sortedIds = sortProjects(projects, sortMode, itemCounts).map(
-      (project) => project.id,
-    )
-    if (sortedIds.every((projectId, index) => projectId === projects[index]?.id)) return
-    onReorderProjects(sortedIds)
-  }, [itemCounts, onReorderProjects, projects, sortMode])
+    if (!hasUnsavedChanges && !editorMode) setDraftProjects(projects)
+  }, [editorMode, hasUnsavedChanges, projects])
+
+  useEffect(() => {
+    if (!hasPendingChanges) return
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (allowPageLeaveRef.current) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    const blockLinkNavigation = (event: MouseEvent) => {
+      if (event.defaultPrevented || !(event.target instanceof Element)) return
+      const anchor = event.target.closest<HTMLAnchorElement>('a[href]')
+      if (!anchor || anchor.target === '_blank' || anchor.hasAttribute('download')) return
+      const targetUrl = new URL(anchor.href, window.location.href)
+      if (
+        targetUrl.origin !== window.location.origin ||
+        targetUrl.href === window.location.href
+      ) return
+      event.preventDefault()
+      event.stopPropagation()
+      setPendingNavigation(targetUrl.href)
+    }
+
+    window.addEventListener('beforeunload', warnBeforeUnload)
+    document.addEventListener('click', blockLinkNavigation, true)
+    return () => {
+      window.removeEventListener('beforeunload', warnBeforeUnload)
+      document.removeEventListener('click', blockLinkNavigation, true)
+    }
+  }, [hasPendingChanges])
 
   const visibleProjects = useMemo(
-    () => sortProjects(projects, sortMode, itemCounts),
-    [itemCounts, projects, sortMode],
+    () => sortProjects(draftProjects, sortMode, itemCounts),
+    [draftProjects, itemCounts, sortMode],
   )
 
   const openCreateEditor = () => {
@@ -222,7 +295,7 @@ export default function ProjectManagementModal({
       setError('미분류는 목록을 선택하지 않은 계획을 위한 기본 공간이에요.')
       return
     }
-    const duplicated = projects.some(
+    const duplicated = draftProjects.some(
       (project) =>
         project.id !== editingProject?.id && project.name === trimmedName,
     )
@@ -233,30 +306,48 @@ export default function ProjectManagementModal({
 
     const input = { name: trimmedName, accent, color }
     if (editingProject) {
-      onUpdateProject(editingProject.id, input)
+      setDraftProjects((current) =>
+        current.map((project) =>
+          project.id === editingProject.id ? { ...project, ...input } : project,
+        ),
+      )
     } else {
-      const createdId = onCreateProject(input)
-      onSelectProject?.(createdId)
+      setDraftProjects((current) => [
+        ...current,
+        {
+          id: `draft-project-${crypto.randomUUID()}`,
+          ...input,
+          createdAt: new Date().toISOString(),
+        },
+      ])
     }
+    setHasUnsavedChanges(true)
     closeEditor()
   }
 
   const changeSortMode = (nextMode: ProjectSortMode) => {
     setSortMode(nextMode)
+    if (nextMode !== 'manual') {
+      setDraftProjects((current) => sortProjects(current, nextMode, itemCounts))
+    }
+    setHasUnsavedChanges(true)
   }
 
   const moveProjectToIndex = (projectId: string, nextIndex: number) => {
-    const currentIndex = projects.findIndex((project) => project.id === projectId)
+    const currentIndex = draftProjects.findIndex(
+      (project) => project.id === projectId,
+    )
     if (
       currentIndex < 0 ||
       nextIndex < 0 ||
-      nextIndex >= projects.length ||
+      nextIndex >= draftProjects.length ||
       currentIndex === nextIndex
     ) return
-    const reordered = [...projects]
+    const reordered = [...draftProjects]
     const [movedProject] = reordered.splice(currentIndex, 1)
     reordered.splice(nextIndex, 0, movedProject)
-    onReorderProjects(reordered.map((project) => project.id))
+    setDraftProjects(reordered)
+    setHasUnsavedChanges(true)
   }
 
   const moveProjectOver = (
@@ -268,10 +359,57 @@ export default function ProjectManagementModal({
       ?.closest<HTMLElement>('[data-project-id]')
     const targetProjectId = row?.dataset.projectId
     if (!targetProjectId || targetProjectId === projectId) return
-    const targetIndex = projects.findIndex(
+    const targetIndex = draftProjects.findIndex(
       (project) => project.id === targetProjectId,
     )
     moveProjectToIndex(projectId, targetIndex)
+  }
+
+  const saveAllChanges = () => {
+    const originalById = new Map(projects.map((project) => [project.id, project]))
+    const draftIds = new Set(draftProjects.map((project) => project.id))
+    const createdIdMap = new Map<string, string>()
+
+    projects.forEach((project) => {
+      if (!draftIds.has(project.id)) onDeleteProject(project.id)
+    })
+
+    draftProjects.forEach((project) => {
+      const original = originalById.get(project.id)
+      const input = {
+        name: project.name,
+        accent: project.accent,
+        color: getProjectColor(project),
+      }
+      if (!original) {
+        createdIdMap.set(project.id, onCreateProject(input))
+        return
+      }
+      if (
+        original.name !== project.name ||
+        original.accent !== project.accent ||
+        getProjectColor(original) !== getProjectColor(project)
+      ) {
+        onUpdateProject(project.id, input)
+      }
+    })
+
+    const savedProjects = draftProjects.map((project) => ({
+      ...project,
+      id: createdIdMap.get(project.id) ?? project.id,
+    }))
+    onReorderProjects(savedProjects.map((project) => project.id))
+    window.localStorage.setItem(PROJECT_SORT_STORAGE_KEY, sortMode)
+    setSavedSortMode(sortMode)
+    setDraftProjects(savedProjects)
+    setHasUnsavedChanges(false)
+  }
+
+  const discardAllChanges = () => {
+    setDraftProjects(projects)
+    setSortMode(savedSortMode)
+    setHasUnsavedChanges(false)
+    closeEditor()
   }
 
   const [red, green, blue] = hexToRgb(color)
@@ -403,8 +541,10 @@ export default function ProjectManagementModal({
                       type="button"
                       aria-label={`${project.name} 삭제 확인`}
                       onClick={() => {
-                        onDeleteProject(project.id)
-                        if (selectedProjectId === project.id) onSelectProject?.('all')
+                        setDraftProjects((current) =>
+                          current.filter((item) => item.id !== project.id),
+                        )
+                        setHasUnsavedChanges(true)
                         setConfirmingDeleteId(undefined)
                         if (editingProject?.id === project.id) closeEditor()
                       }}
@@ -421,7 +561,7 @@ export default function ProjectManagementModal({
                   aria-label={`${project.name} 순서 변경`}
                   title="끌어서 순서 변경"
                   onKeyDown={(event) => {
-                    const currentIndex = projects.findIndex(
+                    const currentIndex = draftProjects.findIndex(
                       (item) => item.id === project.id,
                     )
                     if (event.key === 'ArrowUp') {
@@ -457,6 +597,38 @@ export default function ProjectManagementModal({
               )}
             </article>
           ))}
+        </div>
+
+        <div
+          className={`project-management-savebar${hasPendingChanges ? ' dirty' : ''}`}
+          aria-live="polite"
+        >
+          <div>
+            <strong>
+              {hasEditorChanges
+                ? '편집 중인 목록을 먼저 반영해 주세요.'
+                : hasUnsavedChanges
+                  ? '저장되지 않은 변경사항이 있어요.'
+                  : '모든 변경사항이 저장되어 있어요.'}
+            </strong>
+            <span>
+              {hasPendingChanges
+                ? '저장하지 않고 페이지를 나가면 변경사항이 사라져요.'
+                : '목록 설정을 변경하면 여기에서 한 번에 저장할 수 있어요.'}
+            </span>
+          </div>
+          <div>
+            {hasUnsavedChanges && (
+              <button type="button" onClick={discardAllChanges}>변경 취소</button>
+            )}
+            <button
+              type="button"
+              disabled={!hasUnsavedChanges || hasEditorChanges}
+              onClick={saveAllChanges}
+            >
+              변경사항 저장
+            </button>
+          </div>
         </div>
 
         {editorMode && (
@@ -570,6 +742,16 @@ export default function ProjectManagementModal({
           </form>
         )}
       </section>
+
+      {pendingNavigation && (
+        <UnsavedChangesDialog
+          onContinue={() => setPendingNavigation(undefined)}
+          onLeave={() => {
+            allowPageLeaveRef.current = true
+            window.location.assign(pendingNavigation)
+          }}
+        />
+      )}
     </div>
   )
 }
