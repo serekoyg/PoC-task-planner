@@ -34,7 +34,6 @@ type PlanEditorModalProps = {
   initialType: PlanType
   selectedDate: Date
   projects?: PlannerProject[]
-  studyRooms?: StudyRoom[]
   fixedRoom?: StudyRoom
   memberId?: string
   item?: StudySharedItem
@@ -42,8 +41,8 @@ type PlanEditorModalProps = {
   calendarEvent?: CalendarEvent
   defaultProjectName?: string
   onClose: () => void
-  onSaveTodo?: (input: TodoInput, sharedRoomId?: string) => void
-  onSaveEvent?: (input: CalendarEventInput, sharedRoomId?: string) => void
+  onSaveTodo?: (input: TodoInput) => void
+  onSaveEvent?: (input: CalendarEventInput) => void
   onSaveShared?: (input: StudySharedItemInput) => void
   onDelete?: () => void
 }
@@ -52,7 +51,6 @@ export default function PlanEditorModal({
   initialType,
   selectedDate,
   projects = [],
-  studyRooms = [],
   fixedRoom,
   memberId,
   item,
@@ -84,7 +82,6 @@ export default function PlanEditorModal({
           ? personalItem.repeatWeekdays
           : [new Date(`${initialDate}T00:00:00`).getDay()]
   const [type, setType] = useState<PlanType>(initialPlanType)
-  const [destination, setDestination] = useState(fixedRoom?.id ?? 'personal')
   const [title, setTitle] = useState(item?.title ?? todo?.text ?? calendarEvent?.title ?? '')
   const [date, setDate] = useState(initialDate)
   const [time, setTime] = useState(
@@ -125,8 +122,7 @@ export default function PlanEditorModal({
   const [reminder, setReminder] = useState<TodoInput['reminder']>(personalItem?.reminder ?? '30m')
   const [error, setError] = useState('')
   const [isDeleteConfirming, setIsDeleteConfirming] = useState(false)
-  const selectedRoom = fixedRoom ?? studyRooms.find((room) => room.id === destination)
-  const isPersonal = isPersonalEditing || (!fixedRoom && destination === 'personal')
+  const isPersonal = !fixedRoom
   const member = fixedRoom?.members.find((candidate) => candidate.id === memberId)
 
   useEffect(() => {
@@ -199,40 +195,33 @@ export default function PlanEditorModal({
       return
     }
 
-    const sharedRoomId = isPersonal || isPersonalEditing ? undefined : destination
     if (type === 'todo') {
-      onSaveTodo?.(
-        {
-          date,
-          text: title.trim(),
-          priority,
-          dueTime: time,
-          reminder,
-          color: todo?.color ?? 'blue',
-          note: note.trim(),
-          project: isPersonal ? project : BACKLOG_PROJECT_NAME,
-          estimatedMinutes: todo?.estimatedMinutes ?? 30,
-          ...repeatFields,
-        },
-        sharedRoomId,
-      )
+      onSaveTodo?.({
+        date,
+        text: title.trim(),
+        priority,
+        dueTime: time,
+        reminder,
+        color: todo?.color ?? 'blue',
+        note: note.trim(),
+        project,
+        estimatedMinutes: todo?.estimatedMinutes ?? 30,
+        ...repeatFields,
+      })
     } else {
-      onSaveEvent?.(
-        {
-          date,
-          title: title.trim(),
-          startTime: time,
-          endTime,
-          allDay: false,
-          color: calendarEvent?.color ?? 'blue',
-          project: isPersonal ? project : BACKLOG_PROJECT_NAME,
-          location: location.trim(),
-          note: note.trim(),
-          reminder,
-          ...repeatFields,
-        },
-        sharedRoomId,
-      )
+      onSaveEvent?.({
+        date,
+        title: title.trim(),
+        startTime: time,
+        endTime,
+        allDay: false,
+        color: calendarEvent?.color ?? 'blue',
+        project,
+        location: location.trim(),
+        note: note.trim(),
+        reminder,
+        ...repeatFields,
+      })
     }
   }
 
@@ -254,7 +243,7 @@ export default function PlanEditorModal({
           <div>
             <p className="eyebrow">{fixedRoom ? `${fixedRoom.name}에 공유` : isEditing ? '계획 관리' : '새로운 계획'}</p>
             <h2 id="unified-plan-editor-title">{isEditing ? '계획 편집' : '계획 만들기'}</h2>
-            <p>{fixedRoom ? '저장하면 모든 멤버에게 하나의 공동 계획으로 표시돼요.' : isEditing ? '등록할 때 사용한 항목을 같은 화면에서 수정하세요.' : '할 일과 일정을 같은 흐름에서 만들고 저장 위치를 선택하세요.'}</p>
+            <p>{fixedRoom ? '저장하면 모든 멤버에게 하나의 공동 계획으로 표시돼요.' : isEditing ? '등록할 때 사용한 항목을 같은 화면에서 수정하세요.' : '할 일과 일정을 같은 흐름에서 간편하게 등록하세요.'}</p>
           </div>
           <button
             type="button"
@@ -290,33 +279,6 @@ export default function PlanEditorModal({
               </label>
             ))}
           </fieldset>
-
-          <label className="plan-storage-field">
-            <span>저장 위치</span>
-            {fixedRoom ? (
-              <div className="fixed-plan-storage"><span aria-hidden="true">◉</span><strong>{fixedRoom.name}</strong><small>현재 모임으로 고정</small></div>
-            ) : isPersonalEditing ? (
-              <div className="fixed-plan-storage"><span aria-hidden="true">●</span><strong>나의 계획</strong><small>편집 중에는 저장 위치 고정</small></div>
-            ) : (
-              <select value={destination} onChange={(event) => setDestination(event.target.value)}>
-                <option value="personal">나의 계획</option>
-                {studyRooms.map((room) => {
-                  const me = room.members.find((candidate) => candidate.isMe)
-                  const canShare = Boolean(
-                    me &&
-                      (room.ownerId === me.id ||
-                        room.managerIds.includes(me.id) ||
-                        room.allowMemberSharing),
-                  )
-                  return (
-                    <option value={room.id} disabled={!canShare} key={room.id}>
-                      {room.name}{canShare ? '' : ' · 공유 권한 없음'}
-                    </option>
-                  )
-                })}
-              </select>
-            )}
-          </label>
 
           <label>
             <span>제목</span>
@@ -463,7 +425,7 @@ export default function PlanEditorModal({
           ) : (
             <div className="shared-plan-permission-info">
               <span aria-hidden="true">◉</span>
-              <p><strong>{fixedRoom ? `${member?.name ?? '내'} 이름으로 공동 계획에 등록돼요.` : `${selectedRoom?.name}의 공동 계획으로 등록돼요.`}</strong><small>{type === 'todo' ? '모든 멤버에게 표시되며 완료 상태는 멤버마다 따로 기록됩니다.' : '모든 멤버에게 표시되며 참여 상태는 멤버마다 따로 기록됩니다.'}</small></p>
+              <p><strong>{member?.name ?? '내'} 이름으로 공동 계획에 등록돼요.</strong><small>{type === 'todo' ? '모든 멤버에게 표시되며 완료 상태는 멤버마다 따로 기록됩니다.' : '모든 멤버에게 표시되며 참여 상태는 멤버마다 따로 기록됩니다.'}</small></p>
             </div>
           )}
 
