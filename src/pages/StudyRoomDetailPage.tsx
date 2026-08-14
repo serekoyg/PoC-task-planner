@@ -63,6 +63,19 @@ const formatSharedDate = (item: StudySharedItem) => {
   return `${label}까지`
 }
 
+const formatCompletedAt = (completedAt?: string) => {
+  if (!completedAt) return '완료 시간 기록 없음'
+  const date = new Date(completedAt)
+  if (Number.isNaN(date.getTime())) return '완료 시간 기록 없음'
+  return `${new Intl.DateTimeFormat('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date)} 완료`
+}
+
 type StudyRoomTab = 'home' | 'plans' | 'chat'
 
 export default function StudyRoomDetailPage({
@@ -170,9 +183,20 @@ export default function StudyRoomDetailPage({
         const nextMemberIds = memberIds.includes(me.id)
           ? memberIds.filter((memberId) => memberId !== me.id)
           : [...memberIds, me.id]
-        return item.type === 'event'
-          ? { ...item, participantMemberIds: nextMemberIds }
-          : { ...item, completedMemberIds: nextMemberIds }
+        if (item.type === 'event') {
+          return { ...item, participantMemberIds: nextMemberIds }
+        }
+        const nextCompletedAtByMember = { ...item.completedAtByMember }
+        if (memberIds.includes(me.id)) {
+          delete nextCompletedAtByMember[me.id]
+        } else {
+          nextCompletedAtByMember[me.id] = new Date().toISOString()
+        }
+        return {
+          ...item,
+          completedMemberIds: nextMemberIds,
+          completedAtByMember: nextCompletedAtByMember,
+        }
       }),
     }))
   }
@@ -187,6 +211,7 @@ export default function StudyRoomDetailPage({
           ...input,
           createdById: me.id,
           completedMemberIds: [],
+          completedAtByMember: {},
           participantMemberIds: [],
         },
         ...current.sharedItems,
@@ -616,7 +641,11 @@ export default function StudyRoomDetailPage({
                       <span>
                         <strong>{member.name}{member.isMe && <small> 나</small>}</strong>
                         <small>
-                          {viewingStatusItem.type === 'event' ? '참여 예정' : '완료'}
+                          {viewingStatusItem.type === 'event'
+                            ? '참여 예정'
+                            : formatCompletedAt(
+                                viewingStatusItem.completedAtByMember?.[member.id],
+                              )}
                         </small>
                       </span>
                       <span aria-hidden="true">→</span>

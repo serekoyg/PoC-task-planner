@@ -45,6 +45,7 @@ export type StudySharedItem = {
   note: string
   createdById: string
   completedMemberIds: string[]
+  completedAtByMember?: Record<string, string>
   participantMemberIds: string[]
 }
 
@@ -57,7 +58,11 @@ export type StudyChatMessage = {
 
 export type StudySharedItemInput = Omit<
   StudySharedItem,
-  'id' | 'createdById' | 'completedMemberIds' | 'participantMemberIds'
+  | 'id'
+  | 'createdById'
+  | 'completedMemberIds'
+  | 'completedAtByMember'
+  | 'participantMemberIds'
 >
 
 export type StudySharedItemEntry = {
@@ -103,6 +108,18 @@ const createWeeklyMinutes = (todayMinutes: number, seed: number) => {
   return pattern.map((weight) => Math.round(todayMinutes * weight))
 }
 
+const createCompletionTimestamp = (
+  date: string,
+  itemIndex: number,
+  memberIndex: number,
+) => {
+  const hour = 9 + ((itemIndex * 2 + memberIndex * 2) % 10)
+  const minute = (18 + itemIndex * 9 + memberIndex * 17) % 60
+  return new Date(
+    `${date}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00+09:00`,
+  ).toISOString()
+}
+
 export const normalizeStudyRooms = (rooms: StudyRoom[]): StudyRoom[] =>
   rooms.map((room, roomIndex) => ({
     ...room,
@@ -110,7 +127,18 @@ export const normalizeStudyRooms = (rooms: StudyRoom[]): StudyRoom[] =>
     ownerId: room.ownerId ?? room.members?.[0]?.id ?? '',
     managerIds: room.managerIds ?? [],
     allowMemberSharing: room.allowMemberSharing ?? true,
-    sharedItems: room.sharedItems ?? [],
+    sharedItems: (room.sharedItems ?? []).map((item, itemIndex) => ({
+      ...item,
+      completedAtByMember: item.completedMemberIds.reduce<Record<string, string>>(
+        (timestamps, memberId, memberIndex) => ({
+          ...timestamps,
+          [memberId]:
+            item.completedAtByMember?.[memberId] ??
+            createCompletionTimestamp(item.date, itemIndex, memberIndex),
+        }),
+        {},
+      ),
+    })),
     chatMessages: room.chatMessages ?? [],
     members: (room.members ?? []).map((member, memberIndex) => ({
       ...member,

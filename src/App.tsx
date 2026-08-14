@@ -971,9 +971,20 @@ export default function App() {
           const nextMemberIds = statusMemberIds.includes(me.id)
             ? statusMemberIds.filter((memberId) => memberId !== me.id)
             : [...statusMemberIds, me.id]
-          return item.type === 'event'
-            ? { ...item, participantMemberIds: nextMemberIds }
-            : { ...item, completedMemberIds: nextMemberIds }
+          if (item.type === 'event') {
+            return { ...item, participantMemberIds: nextMemberIds }
+          }
+          const nextCompletedAtByMember = { ...item.completedAtByMember }
+          if (statusMemberIds.includes(me.id)) {
+            delete nextCompletedAtByMember[me.id]
+          } else {
+            nextCompletedAtByMember[me.id] = new Date().toISOString()
+          }
+          return {
+            ...item,
+            completedMemberIds: nextMemberIds,
+            completedAtByMember: nextCompletedAtByMember,
+          }
         }),
       }
     })

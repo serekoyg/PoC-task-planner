@@ -177,6 +177,7 @@ export default function StudyRoomManagementPage({
               ...input,
               createdById: me.id,
               completedMemberIds: [],
+              completedAtByMember: {},
               participantMemberIds: [],
             },
             ...current.sharedItems,
