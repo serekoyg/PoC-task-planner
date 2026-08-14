@@ -31,7 +31,6 @@ import {
 } from './data/projects'
 import {
   createInitialStudyRooms,
-  type StudySharedItem,
   type StudySharedItemEntry,
   type StudyRoom,
   type StudyRoomCreateInput,
@@ -554,67 +553,7 @@ export default function App() {
     navigateToTarget(target)
   }
 
-  const addSharedItem = (
-    roomId: string,
-    createItem: (memberId: string) => StudySharedItem,
-  ) => {
-    setStudyRooms((current) =>
-      current.map((room) => {
-        if (room.id !== roomId) return room
-        const me = room.members.find((member) => member.isMe)
-        if (!me) return room
-        const canShare =
-          room.ownerId === me.id ||
-          room.managerIds.includes(me.id) ||
-          room.allowMemberSharing
-        if (!canShare) return room
-        return {
-          ...room,
-          sharedItems: [createItem(me.id), ...room.sharedItems],
-        }
-      }),
-    )
-  }
-
-  const addEvent = (event: CalendarEventInput, sharedRoomId?: string) => {
-    if (sharedRoomId) {
-      addSharedItem(sharedRoomId, (memberId) => ({
-        id: `shared-${crypto.randomUUID()}`,
-        type: 'event',
-        title: event.title,
-        date: event.date,
-        time: event.allDay ? undefined : event.startTime,
-        endTime: event.allDay ? undefined : event.endTime,
-        location: event.location,
-        repeat: event.repeat,
-        repeatWeekdays:
-          event.repeat === 'weekly'
-            ? event.repeatWeekdays ?? [new Date(`${event.date}T00:00:00`).getDay()]
-            : undefined,
-        repeatIntervalWeeks:
-          event.repeat === 'weekly' ? event.repeatIntervalWeeks ?? 1 : undefined,
-        repeatMonthDay:
-          event.repeat === 'monthly'
-            ? event.repeatMonthDay ?? new Date(`${event.date}T00:00:00`).getDate()
-            : undefined,
-        repeatMonthlyWeek:
-          event.repeat === 'monthlyWeekday'
-            ? event.repeatMonthlyWeek ?? 'first'
-            : undefined,
-        repeatMonthlyWeekday:
-          event.repeat === 'monthlyWeekday'
-            ? event.repeatMonthlyWeekday ?? new Date(`${event.date}T00:00:00`).getDay()
-            : undefined,
-        repeatEnd: event.repeatEnd,
-        repeatCount: event.repeatCount,
-        repeatEndDate: event.repeatEndDate,
-        note: event.note,
-        createdById: memberId,
-        completedMemberIds: [],
-        participantMemberIds: [],
-      }))
-      return
-    }
+  const addEvent = (event: CalendarEventInput) => {
     setEvents((current) => [
       ...current,
       {
@@ -656,30 +595,7 @@ export default function App() {
     setEvents((current) => current.filter((event) => event.id !== eventId))
   }
 
-  const addTodo = (input: TodoInput, sharedRoomId?: string) => {
-    if (sharedRoomId) {
-      addSharedItem(sharedRoomId, (memberId) => ({
-        id: `shared-${crypto.randomUUID()}`,
-        type: 'todo',
-        title: input.text,
-        date: input.date,
-        time: input.dueTime || undefined,
-        repeat: input.repeat ?? 'none',
-        repeatWeekdays: input.repeatWeekdays,
-        repeatIntervalWeeks: input.repeatIntervalWeeks,
-        repeatMonthDay: input.repeatMonthDay,
-        repeatMonthlyWeek: input.repeatMonthlyWeek,
-        repeatMonthlyWeekday: input.repeatMonthlyWeekday,
-        repeatEnd: input.repeatEnd,
-        repeatCount: input.repeatCount,
-        repeatEndDate: input.repeatEndDate,
-        note: input.note,
-        createdById: memberId,
-        completedMemberIds: [],
-        participantMemberIds: [],
-      }))
-      return
-    }
+  const addTodo = (input: TodoInput) => {
     const newTodo: Todo = {
       id: crypto.randomUUID(),
       done: false,
@@ -1323,7 +1239,6 @@ export default function App() {
               todos={todos}
               projects={projects}
               collectionCounts={collectionCounts}
-              studyRooms={joinedStudyRooms}
               sharedItems={sharedItemEntries}
               onAddTodo={addTodo}
               onAddEvent={addEvent}

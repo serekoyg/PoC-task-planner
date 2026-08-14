@@ -6048,30 +6048,6 @@ button.event-chip:hover {
   width: min(620px, 100%);
 }
 
-.plan-storage-field {
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-subtle);
-}
-
-.fixed-plan-storage {
-  min-height: 42px;
-  padding: 0 10px;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--surface);
-}
-
-.fixed-plan-storage small {
-  color: var(--muted);
-  font-size: 0.65rem;
-}
-
 .unified-plan-actions > div:last-child {
   margin-left: auto;
   display: flex;

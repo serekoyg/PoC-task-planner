@@ -11,7 +11,7 @@ import TodoProjectListView from '../components/TodoProjectListView'
 import type { CalendarEventInput, Todo, TodoInput } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
 import { BACKLOG_PROJECT_NAME, isBacklogProject } from '../data/projects'
-import type { StudyRoom, StudySharedItemEntry } from '../data/studyRooms'
+import type { StudySharedItemEntry } from '../data/studyRooms'
 
 type TodoView = 'dates' | 'kanban' | 'projects'
 
@@ -38,11 +38,10 @@ type TodosPageProps = {
   selectedDate: Date
   todos: Todo[]
   projects: PlannerProject[]
-  studyRooms: StudyRoom[]
   sharedItems: StudySharedItemEntry[]
   collectionCounts: Record<PlanCollection, number>
-  onAddTodo: (todo: TodoInput, sharedRoomId?: string) => void
-  onAddEvent: (event: CalendarEventInput, sharedRoomId?: string) => void
+  onAddTodo: (todo: TodoInput) => void
+  onAddEvent: (event: CalendarEventInput) => void
   onUpdateTodo: (todoId: string, todo: TodoInput) => void
   onToggleTodo: (todoId: string) => void
   onRemoveTodo: (todoId: string) => void
@@ -54,7 +53,6 @@ export default function TodosPage({
   selectedDate,
   todos,
   projects,
-  studyRooms,
   sharedItems,
   collectionCounts,
   onAddTodo,
@@ -198,17 +196,16 @@ export default function TodosPage({
           initialType="todo"
           selectedDate={selectedDate}
           projects={projects}
-          studyRooms={studyRooms}
           todo={editingTodo}
           defaultProjectName={selectedProject?.name}
           onClose={closeEditor}
-          onSaveTodo={(input, sharedRoomId) => {
+          onSaveTodo={(input) => {
             if (editingTodo) onUpdateTodo(editingTodo.id, input)
-            else onAddTodo(input, sharedRoomId)
+            else onAddTodo(input)
             closeEditor()
           }}
-          onSaveEvent={(input, sharedRoomId) => {
-            onAddEvent(input, sharedRoomId)
+          onSaveEvent={(input) => {
+            onAddEvent(input)
             closeEditor()
           }}
           onDelete={

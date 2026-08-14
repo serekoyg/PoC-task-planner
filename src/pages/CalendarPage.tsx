@@ -63,8 +63,8 @@ type CalendarPageProps = {
   onSelectDate: (date: Date) => void
   onMoveMonth: (amount: number) => void
   onSelectToday: () => void
-  onAddEvent: (event: CalendarEventInput, sharedRoomId?: string) => void
-  onAddTodo: (todo: TodoInput, sharedRoomId?: string) => void
+  onAddEvent: (event: CalendarEventInput) => void
+  onAddTodo: (todo: TodoInput) => void
   onUpdateEvent: (eventId: string, event: CalendarEventInput) => void
   onRemoveEvent: (eventId: string) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
@@ -498,7 +498,6 @@ export default function CalendarPage({
           initialType="event"
           selectedDate={editorDate}
           projects={projects}
-          studyRooms={studyRooms}
           fixedRoom={
             editingSharedEvent
               ? studyRooms.find(
@@ -511,13 +510,13 @@ export default function CalendarPage({
           calendarEvent={editingEvent}
           defaultProjectName={selectedProject?.name}
           onClose={closeEditor}
-          onSaveTodo={(input, sharedRoomId) => {
-            onAddTodo(input, sharedRoomId)
+          onSaveTodo={(input) => {
+            onAddTodo(input)
             closeEditor()
           }}
-          onSaveEvent={(input, sharedRoomId) => {
+          onSaveEvent={(input) => {
             if (editingEvent) onUpdateEvent(editingEvent.id, input)
-            else onAddEvent(input, sharedRoomId)
+            else onAddEvent(input)
             closeEditor()
           }}
           onSaveShared={updateSharedEvent}
