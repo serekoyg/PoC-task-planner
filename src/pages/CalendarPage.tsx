@@ -157,19 +157,28 @@ export default function CalendarPage({
       ? enabledCalendarTodos.filter((todo) => todo.project === project.name)
       : enabledCalendarTodos
   }, [enabledCalendarTodos, projects, selectedProjectId])
+  const participatingSharedEvents = useMemo(
+    () =>
+      sharedItems.filter(
+        ({ item, memberId }) =>
+          item.type === 'event' &&
+          item.participantMemberIds.includes(memberId),
+      ),
+    [sharedItems],
+  )
   const visibleSharedEvents = useMemo(
     () =>
       selectedProjectId === 'all'
-        ? sharedItems.filter((entry) => entry.item.type === 'event')
+        ? participatingSharedEvents
         : [],
-    [selectedProjectId, sharedItems],
+    [participatingSharedEvents, selectedProjectId],
   )
   const projectCounts = useMemo(() => {
     const counts: Record<string, number> = {
       all:
         events.length +
         enabledCalendarTodos.length +
-        sharedItems.filter((entry) => entry.item.type === 'event').length,
+        participatingSharedEvents.length,
       backlog:
         events.filter(isBacklogEvent).length +
         enabledCalendarTodos.filter((todo) =>
@@ -184,7 +193,7 @@ export default function CalendarPage({
       ).length
     })
     return counts
-  }, [enabledCalendarTodos, events, projects, sharedItems])
+  }, [enabledCalendarTodos, events, participatingSharedEvents, projects])
   const selectedProjectName =
     selectedProject?.name ??
     (selectedProjectId === 'backlog'

@@ -209,7 +209,7 @@ export const createInitialStudyRooms = (): StudyRoom[] => [
         note: '이번 주에 잘된 점 하나와 다음 주 목표를 나눠요.',
         createdById: 'member-1',
         completedMemberIds: [],
-        participantMemberIds: ['me', 'member-1', 'member-2', 'member-3'],
+        participantMemberIds: ['member-1', 'member-2', 'member-3'],
       },
       {
         id: 'shared-morning-3',
