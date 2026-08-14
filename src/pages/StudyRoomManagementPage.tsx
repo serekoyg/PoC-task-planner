@@ -91,6 +91,10 @@ export default function StudyRoomManagementPage({
   const [roomName, setRoomName] = useState(room?.name ?? '')
   const [roomDescription, setRoomDescription] = useState(room?.description ?? '')
   const [roomGoal, setRoomGoal] = useState(room?.goal ?? '')
+  const [roomVisibility, setRoomVisibility] = useState<'public' | 'private'>(
+    room?.visibility ?? 'public',
+  )
+  const [inviteOnly, setInviteOnly] = useState(room?.inviteOnly ?? false)
 
   const me = room?.members.find((member) => member.isMe)
   const isOwner = Boolean(room && me && room.ownerId === me.id)
@@ -242,6 +246,8 @@ export default function StudyRoomManagementPage({
       name: roomName.trim() || current.name,
       description: roomDescription.trim(),
       goal: roomGoal.trim() || current.goal,
+      visibility: roomVisibility,
+      inviteOnly,
     }))
     showNotice('방 설정을 저장했어요.')
   }
@@ -586,6 +592,57 @@ export default function StudyRoomManagementPage({
                     <span>공동 목표</span>
                     <input value={roomGoal} onChange={(event) => setRoomGoal(event.target.value)} />
                   </label>
+                </section>
+
+                <section className="room-setting-card">
+                  <h3>공개 및 참여 설정</h3>
+                  <p>모임을 찾을 수 있는 사람과 참여 방식을 각각 정해요.</p>
+                  <div className="room-setting-group">
+                    <strong>모임 공개 범위</strong>
+                    <div className="room-permission-options">
+                      <label className={roomVisibility === 'public' ? 'active' : ''}>
+                        <input
+                          type="radio"
+                          name="room-visibility"
+                          checked={roomVisibility === 'public'}
+                          onChange={() => setRoomVisibility('public')}
+                        />
+                        <span><strong>공개</strong><small>모임 라운지에서 누구나 모임 정보와 멤버를 볼 수 있어요.</small></span>
+                      </label>
+                      <label className={roomVisibility === 'private' ? 'active' : ''}>
+                        <input
+                          type="radio"
+                          name="room-visibility"
+                          checked={roomVisibility === 'private'}
+                          onChange={() => setRoomVisibility('private')}
+                        />
+                        <span><strong>비공개</strong><small>참여 중인 멤버만 모임 정보와 활동을 볼 수 있어요.</small></span>
+                      </label>
+                    </div>
+                  </div>
+                  <div className="room-setting-group">
+                    <strong>참여 방식</strong>
+                    <div className="room-permission-options">
+                      <label className={!inviteOnly ? 'active' : ''}>
+                        <input
+                          type="radio"
+                          name="join-policy"
+                          checked={!inviteOnly}
+                          onChange={() => setInviteOnly(false)}
+                        />
+                        <span><strong>자유 참여</strong><small>공개된 모임을 본 사용자가 바로 참여할 수 있어요.</small></span>
+                      </label>
+                      <label className={inviteOnly ? 'active' : ''}>
+                        <input
+                          type="radio"
+                          name="join-policy"
+                          checked={inviteOnly}
+                          onChange={() => setInviteOnly(true)}
+                        />
+                        <span><strong>초대 전용</strong><small>초대받은 사람만 모임에 참여할 수 있어요.</small></span>
+                      </label>
+                    </div>
+                  </div>
                 </section>
 
                 <section className="room-setting-card">

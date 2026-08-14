@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import ProjectManagementModal, {
   UnsavedChangesDialog,
 } from '../components/ProjectManagementModal'
@@ -7,6 +8,7 @@ import type {
   PlannerProject,
   ProjectInput,
 } from '../data/projects'
+import type { StudyProfileVisibility } from '../data/studyRooms'
 
 type SettingsSection =
   | 'account'
@@ -34,9 +36,9 @@ const sections: Array<{
   {
     id: 'account',
     icon: '◎',
-    title: '계정',
-    description: '프로필과 계정 정보를 관리해요.',
-    keywords: '이름 이메일 프로필 로그아웃',
+    title: '계정 및 공개 범위',
+    description: '프로필 정보와 모임에서 공개할 활동 범위를 관리해요.',
+    keywords: '이름 이메일 프로필 공개 범위 개인정보 로그아웃',
   },
   {
     id: 'general',
@@ -223,6 +225,8 @@ type SettingsPageProps = {
   onUpdateCalendarTodoVisibility: (
     visibility: CalendarTodoVisibility,
   ) => void
+  profileVisibility: StudyProfileVisibility
+  onUpdateProfileVisibility: (visibility: StudyProfileVisibility) => void
 }
 
 export default function SettingsPage({
@@ -234,15 +238,33 @@ export default function SettingsPage({
   onDeleteProject,
   onReorderProjects,
   onUpdateCalendarTodoVisibility,
+  profileVisibility,
+  onUpdateProfileVisibility,
 }: SettingsPageProps) {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedSection = searchParams.get('section') as SettingsSection | null
   const [selectedSection, setSelectedSection] =
-    useState<SettingsSection>('account')
+    useState<SettingsSection>(() =>
+      sections.some((section) => section.id === requestedSection)
+        ? requestedSection!
+        : 'account',
+    )
   const [query, setQuery] = useState('')
   const [values, setValues] = useState(initialValues)
   const [notice, setNotice] = useState('모든 변경 사항은 데모에 자동 저장돼요.')
   const [connectedServices, setConnectedServices] = useState<string[]>([])
   const [isListManagementDirty, setIsListManagementDirty] = useState(false)
   const [pendingSection, setPendingSection] = useState<SettingsSection>()
+
+  useEffect(() => {
+    if (
+      requestedSection &&
+      sections.some((section) => section.id === requestedSection) &&
+      requestedSection !== selectedSection
+    ) {
+      setSelectedSection(requestedSection)
+    }
+  }, [requestedSection, selectedSection])
 
   const selected = sections.find((section) => section.id === selectedSection)!
   const filteredSections = useMemo(() => {
@@ -298,6 +320,35 @@ export default function SettingsPage({
               <SettingRow title="이메일" description="로그인과 동기화에 사용할 주소예요.">
                 <input aria-label="이메일" defaultValue="minseo@haru.demo" />
               </SettingRow>
+            </section>
+            <section className="settings-card profile-visibility-card">
+              <div className="settings-card-heading">
+                <p className="eyebrow">공개 범위</p>
+                <h2>모임 프로필 활동 기록</h2>
+                <p>모임 멤버가 내 주간 활동 시간과 현재 활동을 볼 수 있는 범위를 정해요.</p>
+              </div>
+              <fieldset className="settings-visibility-options">
+                <legend className="sr-only">프로필 공개 범위</legend>
+                {([
+                  ['public', '전체 공개', '앱을 사용하는 누구나 활동 기록을 볼 수 있어요.'],
+                  ['roomMembers', '같은 모임 멤버', '나와 같은 모임에 참여 중인 멤버만 볼 수 있어요.'],
+                  ['private', '비공개', '다른 사람에게 활동 시간과 기록을 보여주지 않아요.'],
+                ] as const).map(([value, title, description]) => (
+                  <label className={profileVisibility === value ? 'active' : ''} key={value}>
+                    <input
+                      type="radio"
+                      name="profile-visibility"
+                      value={value}
+                      checked={profileVisibility === value}
+                      onChange={() => {
+                        onUpdateProfileVisibility(value)
+                        setNotice('프로필 공개 범위를 저장했어요.')
+                      }}
+                    />
+                    <span><strong>{title}</strong><small>{description}</small></span>
+                  </label>
+                ))}
+              </fieldset>
             </section>
             <section className="settings-card settings-danger-card">
               <SettingRow title="로그아웃" description="이 기기의 데모 계정에서 로그아웃해요.">
@@ -537,6 +588,7 @@ export default function SettingsPage({
                     return
                   }
                   setSelectedSection(section.id)
+                  setSearchParams({ section: section.id })
                 }}
               >
                 <span aria-hidden="true">{section.icon}</span>
@@ -575,6 +627,7 @@ export default function SettingsPage({
           onContinue={() => setPendingSection(undefined)}
           onLeave={() => {
             setSelectedSection(pendingSection)
+            setSearchParams({ section: pendingSection })
             setPendingSection(undefined)
             setIsListManagementDirty(false)
           }}

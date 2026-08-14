@@ -33,7 +33,10 @@ export default function StudyRoomsPage({
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [form, setForm] = useState(initialForm)
   const joinedRooms = rooms.filter((room) => room.joined)
-  const visibleRooms = view === 'mine' ? joinedRooms : rooms
+  const discoverableRooms = rooms.filter(
+    (room) => room.joined || room.visibility !== 'private',
+  )
+  const visibleRooms = view === 'mine' ? joinedRooms : discoverableRooms
   const studyingCount = useMemo(
     () =>
       rooms.reduce(
@@ -172,7 +175,10 @@ export default function StudyRoomsPage({
             return (
               <article className={`study-room-card ${room.accent}`} key={room.id}>
                 <div className="room-card-topline">
-                  <span className="room-category">분류 · {room.category}</span>
+                  <div>
+                    <span className="room-category">분류 · {room.category}</span>
+                    {room.visibility === 'private' && <span className="room-private-badge">비공개</span>}
+                  </div>
                   {liveMembers > 0 && (
                     <span className="room-live-count">
                       <i aria-hidden="true" /> {liveMembers}명 활동 중
@@ -216,9 +222,9 @@ export default function StudyRoomsPage({
                       className="room-join-button"
                       type="button"
                       onClick={() => joinRoom(room.id)}
-                      disabled={room.memberCount >= room.maxMembers}
+                      disabled={room.memberCount >= room.maxMembers || room.inviteOnly}
                     >
-                      참여하기
+                      {room.inviteOnly ? '초대 전용' : '참여하기'}
                     </button>
                   )}
                 </div>

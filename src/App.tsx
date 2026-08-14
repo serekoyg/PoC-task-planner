@@ -32,6 +32,8 @@ import {
 } from './data/projects'
 import {
   createInitialStudyRooms,
+  normalizeStudyRooms,
+  type StudyProfileVisibility,
   type StudySharedItemEntry,
   type StudyRoom,
   type StudyRoomCreateInput,
@@ -65,6 +67,7 @@ import SignupPage from './pages/SignupPage'
 import StudyRoomDetailPage from './pages/StudyRoomDetailPage'
 import StudyRoomManagementPage from './pages/StudyRoomManagementPage'
 import StudyRoomsPage from './pages/StudyRoomsPage'
+import StudyMemberProfilePage from './pages/StudyMemberProfilePage'
 import TodosPage from './pages/TodosPage'
 
 const TODO_STORAGE_KEY = 'haru.v2.todos'
@@ -106,7 +109,9 @@ const readTodos = () =>
   }))
 
 const readStudyRooms = () =>
-  readStorage<StudyRoom[]>(STUDY_STORAGE_KEY, createInitialStudyRooms)
+  normalizeStudyRooms(
+    readStorage<StudyRoom[]>(STUDY_STORAGE_KEY, createInitialStudyRooms),
+  )
 
 const readNotifications = () =>
   readStorage<PlannerNotification[]>(
@@ -195,6 +200,21 @@ function StudyRoomManagementRoute({
     <StudyRoomManagementPage
       room={rooms.find((room) => room.id === roomId)}
       onChangeRoom={onChangeRoom}
+    />
+  )
+}
+
+type StudyMemberProfileRouteProps = {
+  rooms: StudyRoom[]
+}
+
+function StudyMemberProfileRoute({ rooms }: StudyMemberProfileRouteProps) {
+  const { roomId, memberId } = useParams()
+  const room = rooms.find((item) => item.id === roomId)
+  return (
+    <StudyMemberProfilePage
+      room={room}
+      member={room?.members.find((member) => member.id === memberId)}
     />
   )
 }
@@ -322,6 +342,13 @@ export default function App() {
   )
   const joinedStudyRooms = useMemo(
     () => studyRooms.filter((room) => room.joined),
+    [studyRooms],
+  )
+  const myProfileVisibility = useMemo<StudyProfileVisibility>(
+    () =>
+      studyRooms
+        .flatMap((room) => room.members)
+        .find((member) => member.isMe)?.profileVisibility ?? 'roomMembers',
     [studyRooms],
   )
   const unreadNotificationCount = notifications.filter(
@@ -895,6 +922,9 @@ export default function App() {
               status: 'resting',
               focusLabel: '오늘의 활동을 준비 중이에요',
               isMe: true,
+              weeklyMinutes: [0, 0, 0, 0, 0, 0, 0],
+              profileVisibility: myProfileVisibility,
+              bio: '매일 조금씩 꾸준하게 이어가고 있어요.',
             },
           ],
         }
@@ -908,6 +938,21 @@ export default function App() {
   ) => {
     setStudyRooms((current) =>
       current.map((room) => (room.id === roomId ? update(room) : room)),
+    )
+  }
+
+  const updateMyProfileVisibility = (
+    visibility: StudyProfileVisibility,
+  ) => {
+    setStudyRooms((current) =>
+      current.map((room) => ({
+        ...room,
+        members: room.members.map((member) =>
+          member.isMe
+            ? { ...member, profileVisibility: visibility }
+            : member,
+        ),
+      })),
     )
   }
 
@@ -945,6 +990,7 @@ export default function App() {
         accent: accents[current.length % accents.length],
         memberCount: 1,
         joined: true,
+        visibility: 'public',
         todayMinutes: 0,
         weeklyProgress: 0,
         streak: 1,
@@ -962,6 +1008,9 @@ export default function App() {
             status: 'resting',
             focusLabel: '첫 활동을 준비 중이에요',
             isMe: true,
+            weeklyMinutes: [0, 0, 0, 0, 0, 0, 0],
+            profileVisibility: myProfileVisibility,
+            bio: '매일 조금씩 꾸준하게 이어가고 있어요.',
           },
         ],
       },
@@ -1296,6 +1345,10 @@ export default function App() {
           }
         />
         <Route
+          path="/studies/:roomId/members/:memberId"
+          element={<StudyMemberProfileRoute rooms={studyRooms} />}
+        />
+        <Route
           path="/studies/:roomId"
           element={
             <StudyRoomRoute
@@ -1325,6 +1378,8 @@ export default function App() {
               onDeleteProject={deleteProject}
               onReorderProjects={reorderProjects}
               onUpdateCalendarTodoVisibility={setCalendarTodoVisibility}
+              profileVisibility={myProfileVisibility}
+              onUpdateProfileVisibility={updateMyProfileVisibility}
             />
           }
         />

@@ -1,4 +1,6 @@
 export type StudyMemberStatus = 'studying' | 'resting' | 'offline'
+export type StudyProfileVisibility = 'public' | 'roomMembers' | 'private'
+export type StudyRoomVisibility = 'public' | 'private'
 
 export type StudyMember = {
   id: string
@@ -8,6 +10,9 @@ export type StudyMember = {
   status: StudyMemberStatus
   focusLabel: string
   isMe?: boolean
+  weeklyMinutes?: number[]
+  profileVisibility?: StudyProfileVisibility
+  bio?: string
 }
 
 export type StudySharedItemType = 'todo' | 'event'
@@ -74,6 +79,7 @@ export type StudyRoom = {
   maxMembers: number
   joined: boolean
   inviteOnly: boolean
+  visibility?: StudyRoomVisibility
   todayMinutes: number
   weeklyProgress: number
   streak: number
@@ -84,6 +90,50 @@ export type StudyRoom = {
   chatMessages: StudyChatMessage[]
   members: StudyMember[]
 }
+
+const weeklyPatterns = [
+  [0.68, 1.05, 0.82, 1.12, 1, 0, 0],
+  [1.18, 0.74, 1.06, 0.9, 1, 0, 0],
+  [0.54, 0.92, 1.14, 0.7, 1, 0, 0],
+  [0.88, 1.08, 0.62, 1.2, 1, 0, 0],
+]
+
+const createWeeklyMinutes = (todayMinutes: number, seed: number) => {
+  const pattern = weeklyPatterns[seed % weeklyPatterns.length]
+  return pattern.map((weight) => Math.round(todayMinutes * weight))
+}
+
+export const normalizeStudyRooms = (rooms: StudyRoom[]): StudyRoom[] =>
+  rooms.map((room, roomIndex) => ({
+    ...room,
+    visibility: room.visibility ?? 'public',
+    ownerId: room.ownerId ?? room.members?.[0]?.id ?? '',
+    managerIds: room.managerIds ?? [],
+    allowMemberSharing: room.allowMemberSharing ?? true,
+    sharedItems: room.sharedItems ?? [],
+    chatMessages: room.chatMessages ?? [],
+    members: (room.members ?? []).map((member, memberIndex) => ({
+      ...member,
+      weeklyMinutes:
+        member.weeklyMinutes?.length === 7
+          ? member.weeklyMinutes.map((minutes) => Math.max(0, minutes))
+          : createWeeklyMinutes(member.minutes, roomIndex + memberIndex),
+      profileVisibility:
+        member.profileVisibility ??
+        (member.isMe
+          ? 'roomMembers'
+          : memberIndex === 5
+            ? 'private'
+            : memberIndex === 4
+              ? 'roomMembers'
+              : 'public'),
+      bio:
+        member.bio ??
+        (member.isMe
+          ? '매일 조금씩 꾸준하게 이어가고 있어요.'
+          : `${room.name}에서 함께 활동하고 있어요.`),
+    })),
+  }))
 
 export type StudyRoomCreateInput = Pick<
   StudyRoom,

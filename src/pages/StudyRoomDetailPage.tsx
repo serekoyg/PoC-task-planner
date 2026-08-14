@@ -14,6 +14,11 @@ import {
   sharedItemTypeLabels,
 } from '../lib/studyShared'
 import { formatFocusTimer, getFocusDurationSeconds } from '../lib/focus'
+import {
+  getActivityLevel,
+  getWeeklyActivitySummary,
+  studyWeekdays,
+} from '../lib/studyActivity'
 
 type StudyRoomDetailPageProps = {
   room?: StudyRoom
@@ -110,10 +115,27 @@ export default function StudyRoomDetailPage({
     )
   }
 
+  if (!room.joined && room.visibility === 'private') {
+    return (
+      <main className="study-page study-room-private">
+        <Link className="study-back-link" to="/studies">
+          <span aria-hidden="true">←</span> 모임 라운지
+        </Link>
+        <section>
+          <span aria-hidden="true">🔒</span>
+          <div>
+            <p className="eyebrow">비공개 모임</p>
+            <h1>멤버만 모임 정보를 볼 수 있어요.</h1>
+            <p>초대받은 계정으로 참여하면 활동과 공동 계획을 확인할 수 있어요.</p>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
   const liveMembers = room.members.filter(
     (member) => member.status === 'studying',
   ).length
-  const achievedDays = Math.round((room.weeklyProgress / 100) * 7)
   const me = room.members.find((member) => member.isMe)
   const hasManagementRole = Boolean(
     me && (room.ownerId === me.id || room.managerIds.includes(me.id)),
@@ -385,63 +407,84 @@ export default function StudyRoomDetailPage({
         <section className="study-members-panel" aria-labelledby="members-title">
           <div className="study-panel-heading">
             <div>
-              <p className="eyebrow">오늘 함께한 멤버</p>
-              <h2 id="members-title">오늘도 함께하고 있어요</h2>
+              <p className="eyebrow">멤버 활동</p>
+              <h2 id="members-title">이번 주를 함께 이어가고 있어요</h2>
             </div>
             <span>{room.memberCount}/{room.maxMembers}명</span>
           </div>
 
-          <ol className="study-member-list">
-            {rankedMembers.map((member, index) => (
-              <li key={member.id}>
-                <span className="member-rank">{index + 1}</span>
-                <span className={`study-member-avatar ${member.status}`}>
-                  {member.avatar}
-                  <i aria-hidden="true" />
-                </span>
-                <div className="study-member-copy">
-                  <div>
-                    <strong>
-                      {member.name} {member.isMe && <small>나</small>}
-                    </strong>
-                    <span className={`member-status ${member.status}`}>
-                      {statusLabels[member.status]}
-                    </span>
-                  </div>
-                  <p>{member.focusLabel}</p>
-                </div>
-                <time>{formatMinutes(member.minutes)}</time>
-              </li>
-            ))}
-          </ol>
+          <ul className="study-member-list">
+            {rankedMembers.map((member) => {
+              const weekly = getWeeklyActivitySummary(member)
+              const visibility = member.profileVisibility ?? 'roomMembers'
+              const canViewMemberActivity =
+                member.isMe ||
+                visibility === 'public' ||
+                (visibility === 'roomMembers' && room.joined)
+              return (
+                <li key={member.id}>
+                  <Link
+                    to={`/studies/${room.id}/members/${member.id}`}
+                    aria-label={`${member.name}님의 프로필 보기`}
+                  >
+                    <div className="study-member-card-heading">
+                      <span className={`study-member-avatar ${member.status}`}>
+                        {member.avatar}
+                        <i aria-hidden="true" />
+                      </span>
+                      <div className="study-member-copy">
+                        <div>
+                          <strong>
+                            {member.name} {member.isMe && <small>나</small>}
+                          </strong>
+                          {canViewMemberActivity && (
+                            <span className={`member-status ${member.status}`}>
+                              {statusLabels[member.status]}
+                            </span>
+                          )}
+                        </div>
+                        <p>
+                          {canViewMemberActivity
+                            ? member.focusLabel
+                            : '활동 기록을 공개하지 않았어요.'}
+                        </p>
+                      </div>
+                      <span className="study-member-card-arrow" aria-hidden="true">→</span>
+                    </div>
+
+                    {canViewMemberActivity ? (
+                      <>
+                        <div className="member-weekly-activity" aria-label={`${member.name}님의 이번 주 활동`}>
+                          {studyWeekdays.map((day, index) => {
+                            const minutes = weekly.minutes[index]
+                            return (
+                              <span key={day} aria-label={`${day}요일 ${formatMinutes(minutes)}`}>
+                                <small>{day}</small>
+                                <i className={`level-${getActivityLevel(minutes)}`} aria-hidden="true" />
+                              </span>
+                            )
+                          })}
+                        </div>
+
+                        <div className="study-member-week-summary">
+                          <strong>이번 주 {weekly.activeDays}일</strong>
+                          <span>총 {formatMinutes(weekly.totalMinutes)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="member-activity-private-note">
+                        <span aria-hidden="true">🔒</span>
+                        <strong>주간 활동 비공개</strong>
+                      </div>
+                    )}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
         </section>
 
         <aside className="study-detail-sidebar">
-          <section className="weekly-goal-card" aria-labelledby="weekly-goal-title">
-            <div className="study-panel-heading compact">
-              <div>
-                <p className="eyebrow">이번 주</p>
-                <h2 id="weekly-goal-title">공동 목표</h2>
-              </div>
-              <strong>{room.weeklyProgress}%</strong>
-            </div>
-            <div className="weekly-progress-visual" aria-hidden="true">
-              <span style={{ width: `${room.weeklyProgress}%` }} />
-            </div>
-            <div className="weekly-days" aria-label="주간 체크인 현황">
-              {['월', '화', '수', '목', '금', '토', '일'].map((day, index) => (
-                <span className={index < achievedDays ? 'done' : ''} key={day}>
-                  {index < achievedDays ? '✓' : day}
-                </span>
-              ))}
-            </div>
-            <p>
-              {achievedDays > 0
-                ? `이번 주 ${achievedDays}일 함께 목표를 달성했어요.`
-                : '이번 주 첫 번째 목표 달성을 기다리고 있어요.'}
-            </p>
-          </section>
-
           <section className="study-notice-card" aria-labelledby="notice-title">
             <div className="study-panel-heading compact">
               <div>
