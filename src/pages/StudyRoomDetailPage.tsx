@@ -77,6 +77,7 @@ export default function StudyRoomDetailPage({
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState<StudyRoomTab>('home')
   const [isPlanEditorOpen, setIsPlanEditorOpen] = useState(false)
+  const [viewingStatusItemId, setViewingStatusItemId] = useState<string>()
   const activeRoomFocus = activeFocusRecords.find(
     (record) => record.sourceType === 'study' && record.sourceId === room?.id,
   )
@@ -103,6 +104,15 @@ export default function StudyRoomDetailPage({
     nextParams.delete('startActivity')
     setSearchParams(nextParams, { replace: true })
   }, [activeRoomFocus, onStartFocus, room, searchParams, setSearchParams])
+
+  useEffect(() => {
+    if (!viewingStatusItemId) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setViewingStatusItemId(undefined)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [viewingStatusItemId])
 
   if (!room) {
     return (
@@ -142,6 +152,9 @@ export default function StudyRoomDetailPage({
   )
   const canCreatePlan = Boolean(
     room.joined && me && (hasManagementRole || room.allowMemberSharing),
+  )
+  const viewingStatusItem = room.sharedItems.find(
+    (item) => item.id === viewingStatusItemId,
   )
 
   const changeSharedItemStatus = (itemId: string) => {
@@ -358,6 +371,15 @@ export default function StudyRoomDetailPage({
                   ? item.participantMemberIds.includes(me.id)
                   : item.completedMemberIds.includes(me.id)),
             )
+            const statusMemberIds =
+              item.type === 'event'
+                ? item.participantMemberIds
+                : item.completedMemberIds
+            const statusMembers = statusMemberIds
+              .map((memberId) =>
+                room.members.find((member) => member.id === memberId),
+              )
+              .filter((member) => member !== undefined)
             return (
               <article className={`study-shared-plan-card ${item.type}`} key={item.id}>
                 <div className="study-shared-plan-card-heading">
@@ -374,11 +396,36 @@ export default function StudyRoomDetailPage({
                 {item.note && <p>{item.note}</p>}
                 <div className="study-shared-plan-footer">
                   <span>{creator?.name ?? '멤버'}님이 작성</span>
-                  <span>
-                    {item.type === 'event'
-                      ? `${item.participantMemberIds.length}명 참여 예정`
-                      : `${item.completedMemberIds.length}/${room.memberCount}명 완료`}
-                  </span>
+                  {statusMembers.length ? (
+                    <button
+                      className="shared-plan-members-button"
+                      type="button"
+                      aria-label={
+                        item.type === 'event'
+                          ? `${statusMembers.length}명의 참여 예정 멤버 보기`
+                          : `${statusMembers.length}명의 완료 멤버 보기`
+                      }
+                      onClick={() => setViewingStatusItemId(item.id)}
+                    >
+                      <span className="shared-plan-member-stack" aria-hidden="true">
+                        {statusMembers.slice(0, 5).map((member) => (
+                          <i key={member.id}>{member.avatar}</i>
+                        ))}
+                        {statusMembers.length > 5 && <i>+{statusMembers.length - 5}</i>}
+                      </span>
+                      <span>
+                        {item.type === 'event'
+                          ? `${statusMembers.length}명 참여 예정`
+                          : `${statusMembers.length}/${room.memberCount}명 완료`}
+                      </span>
+                    </button>
+                  ) : (
+                    <span>
+                      {item.type === 'event'
+                        ? '아직 참여 예정인 멤버 없음'
+                        : `0/${room.memberCount}명 완료`}
+                    </span>
+                  )}
                   {room.joined && me && (
                     <button
                       className={isMineActive ? 'active' : ''}
@@ -515,6 +562,71 @@ export default function StudyRoomDetailPage({
           onClose={() => setIsPlanEditorOpen(false)}
           onSaveShared={saveSharedItem}
         />
+      )}
+
+      {viewingStatusItem && (
+        <div
+          className="study-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setViewingStatusItemId(undefined)
+            }
+          }}
+        >
+          <section
+            className="shared-plan-member-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="shared-plan-member-dialog-title"
+          >
+            <header>
+              <div>
+                <p className="eyebrow">
+                  {viewingStatusItem.type === 'event' ? '참여 현황' : '완료 현황'}
+                </p>
+                <h2 id="shared-plan-member-dialog-title">{viewingStatusItem.title}</h2>
+              </div>
+              <button
+                type="button"
+                aria-label="세부 내역 닫기"
+                onClick={() => setViewingStatusItemId(undefined)}
+              >
+                ×
+              </button>
+            </header>
+            <p>
+              {viewingStatusItem.type === 'event'
+                ? `${viewingStatusItem.participantMemberIds.length}명이 참여할 예정이에요.`
+                : `${room.memberCount}명 중 ${viewingStatusItem.completedMemberIds.length}명이 완료했어요.`}
+            </p>
+            <ul>
+              {(viewingStatusItem.type === 'event'
+                ? viewingStatusItem.participantMemberIds
+                : viewingStatusItem.completedMemberIds
+              ).map((memberId) => {
+                const member = room.members.find((item) => item.id === memberId)
+                if (!member) return null
+                return (
+                  <li key={member.id}>
+                    <Link to={`/studies/${room.id}/members/${member.id}`}>
+                      <span className={`study-member-avatar ${member.status}`}>
+                        {member.avatar}<i aria-hidden="true" />
+                      </span>
+                      <span>
+                        <strong>{member.name}{member.isMe && <small> 나</small>}</strong>
+                        <small>
+                          {viewingStatusItem.type === 'event' ? '참여 예정' : '완료'}
+                        </small>
+                      </span>
+                      <span aria-hidden="true">→</span>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        </div>
       )}
     </main>
   )
