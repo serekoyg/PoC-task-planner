@@ -66,7 +66,6 @@ import SignupPage from './pages/SignupPage'
 import StudyRoomDetailPage from './pages/StudyRoomDetailPage'
 import StudyRoomManagementPage from './pages/StudyRoomManagementPage'
 import StudyRoomsPage from './pages/StudyRoomsPage'
-import TaskDetailPage from './pages/TaskDetailPage'
 import TodosPage from './pages/TodosPage'
 
 const TODO_STORAGE_KEY = 'haru.v2.todos'
@@ -203,7 +202,6 @@ function StudyRoomManagementRoute({
 
 type TaskEntry = {
   todo: Todo
-  dateKey: string
 }
 
 const findTask = (
@@ -212,25 +210,7 @@ const findTask = (
 ): TaskEntry | undefined => {
   if (!todoId) return undefined
   const todo = todos.find((item) => item.id === todoId)
-  return todo ? { todo, dateKey: todo.date } : undefined
-}
-
-type TaskRouteProps = {
-  todos: Todo[]
-  focusResults: Record<string, number>
-}
-
-function TaskDetailRoute({ todos, focusResults }: TaskRouteProps) {
-  const { todoId } = useParams()
-  const task = findTask(todos, todoId)
-
-  return (
-    <TaskDetailPage
-      todo={task?.todo}
-      dateKey={task?.dateKey}
-      focusedSeconds={todoId ? focusResults[todoId] : undefined}
-    />
-  )
+  return todo ? { todo } : undefined
 }
 
 type FocusSessionRouteProps = {
@@ -272,20 +252,14 @@ function FocusSessionRoute({
   )
 }
 
-type FocusResultRouteProps = TaskRouteProps & {
-  onComplete: (todoId: string, dateKey: string) => void
-  onReschedule: (
-    todoId: string,
-    fromDateKey: string,
-    toDateKey: string,
-  ) => void
+type FocusResultRouteProps = {
+  todos: Todo[]
+  focusResults: Record<string, number>
 }
 
 function FocusResultRoute({
   todos,
   focusResults,
-  onComplete,
-  onReschedule,
 }: FocusResultRouteProps) {
   const { todoId } = useParams()
   const task = findTask(todos, todoId)
@@ -293,10 +267,7 @@ function FocusResultRoute({
   return (
     <FocusResultPage
       todo={task?.todo}
-      dateKey={task?.dateKey}
       focusedSeconds={todoId ? focusResults[todoId] : undefined}
-      onComplete={onComplete}
-      onReschedule={onReschedule}
     />
   )
 }
@@ -989,35 +960,6 @@ export default function App() {
     setIsFocusPopoverOpen(false)
   }
 
-  const completeTodo = (todoId: string, dateKey: string) => {
-    setTodos((current) =>
-      current.map((todo) =>
-        todo.id === todoId ? { ...todo, done: true } : todo,
-      ),
-    )
-    selectDate(new Date(`${dateKey}T00:00:00`))
-  }
-
-  const rescheduleTodo = (
-    todoId: string,
-    fromDateKey: string,
-    toDateKey: string,
-  ) => {
-    if (fromDateKey === toDateKey) {
-      selectDate(new Date(`${toDateKey}T00:00:00`))
-      return
-    }
-
-    setTodos((current) =>
-      current.map((todo) =>
-        todo.id === todoId
-          ? { ...todo, date: toDateKey, done: false }
-          : todo,
-      ),
-    )
-    selectDate(new Date(`${toDateKey}T00:00:00`))
-  }
-
   const joinStudyRoom = (roomId: string) => {
     setStudyRooms((current) =>
       current.map((room) => {
@@ -1395,9 +1337,7 @@ export default function App() {
         />
         <Route
           path="/todos/:todoId"
-          element={
-            <TaskDetailRoute todos={todos} focusResults={focusResults} />
-          }
+          element={<Navigate to="/todos" replace />}
         />
         <Route
           path="/todos/:todoId/focus"
@@ -1418,8 +1358,6 @@ export default function App() {
             <FocusResultRoute
               todos={todos}
               focusResults={focusResults}
-              onComplete={completeTodo}
-              onReschedule={rescheduleTodo}
             />
           }
         />

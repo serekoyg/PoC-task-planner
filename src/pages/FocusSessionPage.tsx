@@ -91,7 +91,7 @@ export default function FocusSessionPage({
   return (
     <main className="focus-session-page">
       <div className="focus-session-topline">
-        <Link to={`/todos/${todo.id}`}>
+        <Link to="/todos">
           <span aria-hidden="true">×</span> 집중 나가기
         </Link>
         <span className={isRunning ? 'focus-status running' : 'focus-status'}>
