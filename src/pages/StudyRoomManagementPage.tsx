@@ -196,24 +196,6 @@ export default function StudyRoomManagementPage({
     showNotice('공유 계획을 삭제했어요.')
   }
 
-  const toggleMyCompletion = (itemId: string) => {
-    onChangeRoom(room.id, (current) => ({
-      ...current,
-      sharedItems: current.sharedItems.map((item) => {
-        if (item.id !== itemId) return item
-        const memberIds = item.type === 'event'
-          ? item.participantMemberIds
-          : item.completedMemberIds
-        const nextMemberIds = memberIds.includes(me.id)
-          ? memberIds.filter((memberId) => memberId !== me.id)
-          : [...memberIds, me.id]
-        return item.type === 'event'
-          ? { ...item, participantMemberIds: nextMemberIds }
-          : { ...item, completedMemberIds: nextMemberIds }
-      }),
-    }))
-  }
-
   const toggleManager = (memberId: string) => {
     onChangeRoom(room.id, (current) => ({
       ...current,
@@ -349,8 +331,6 @@ export default function StudyRoomManagementPage({
                   const creator = room.members.find(
                     (member) => member.id === item.createdById,
                   )
-                  const isCompleted = item.completedMemberIds.includes(me.id)
-                  const isParticipating = item.participantMemberIds.includes(me.id)
                   const canManagePlan = isOwner || isManager || item.createdById === me.id
 
                   return (
@@ -372,8 +352,8 @@ export default function StudyRoomManagementPage({
                           {item.repeat !== 'none' && ` · ${getSharedRepeatLabel(item)}`}
                         </small>
                       </div>
-                      <div className="shared-plan-manage-actions">
-                        {canManagePlan && (
+                      {canManagePlan && (
+                        <div className="shared-plan-manage-actions">
                           <div>
                             <button type="button" onClick={() => {
                               setEditingSharedItem(item)
@@ -381,25 +361,8 @@ export default function StudyRoomManagementPage({
                             }}>수정</button>
                             <button type="button" onClick={() => setDeletingSharedItemId(item.id)}>삭제</button>
                           </div>
-                        )}
-                        {item.type !== 'event' ? (
-                          <button
-                            className={isCompleted ? 'completed' : ''}
-                            type="button"
-                            onClick={() => toggleMyCompletion(item.id)}
-                          >
-                            {isCompleted ? '✓ 완료함' : '내 완료 체크'}
-                          </button>
-                        ) : (
-                          <button
-                            className={isParticipating ? 'completed' : ''}
-                            type="button"
-                            onClick={() => toggleMyCompletion(item.id)}
-                          >
-                            {isParticipating ? '✓ 참여함' : '참여할게요'}
-                          </button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                       {deletingSharedItemId === item.id && (
                         <div className="shared-plan-delete-confirm room-manage-delete-confirm" role="alert">
                           <span>모든 멤버에게서 이 계획이 사라져요.</span>
