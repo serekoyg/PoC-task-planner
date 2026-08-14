@@ -2,7 +2,11 @@ import { useMemo, useState, type ReactNode } from 'react'
 import ProjectManagementModal, {
   UnsavedChangesDialog,
 } from '../components/ProjectManagementModal'
-import type { PlannerProject, ProjectInput } from '../data/projects'
+import type {
+  CalendarTodoVisibility,
+  PlannerProject,
+  ProjectInput,
+} from '../data/projects'
 
 type SettingsSection =
   | 'account'
@@ -211,19 +215,25 @@ function Choice({ label, options, value, onChange }: ChoiceProps) {
 type SettingsPageProps = {
   projects: PlannerProject[]
   itemCounts: Record<string, number>
+  calendarTodoVisibility: CalendarTodoVisibility
   onCreateProject: (input: ProjectInput) => string
   onUpdateProject: (projectId: string, input: ProjectInput) => void
   onDeleteProject: (projectId: string) => void
   onReorderProjects: (orderedProjectIds: string[]) => void
+  onUpdateCalendarTodoVisibility: (
+    visibility: CalendarTodoVisibility,
+  ) => void
 }
 
 export default function SettingsPage({
   projects,
   itemCounts,
+  calendarTodoVisibility,
   onCreateProject,
   onUpdateProject,
   onDeleteProject,
   onReorderProjects,
+  onUpdateCalendarTodoVisibility,
 }: SettingsPageProps) {
   const [selectedSection, setSelectedSection] =
     useState<SettingsSection>('account')
@@ -362,10 +372,12 @@ export default function SettingsPage({
             embedded
             projects={projects}
             itemCounts={itemCounts}
+            calendarTodoVisibility={calendarTodoVisibility}
             onCreateProject={onCreateProject}
             onUpdateProject={onUpdateProject}
             onDeleteProject={onDeleteProject}
             onReorderProjects={onReorderProjects}
+            onUpdateCalendarTodoVisibility={onUpdateCalendarTodoVisibility}
             onDirtyChange={setIsListManagementDirty}
           />
         )

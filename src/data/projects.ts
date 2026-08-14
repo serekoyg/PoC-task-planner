@@ -15,6 +15,8 @@ export type PlannerProject = {
   createdAt?: string
 }
 
+export type CalendarTodoVisibility = Record<string, boolean>
+
 export type ProjectInput = {
   name: string
   accent: ProjectAccent

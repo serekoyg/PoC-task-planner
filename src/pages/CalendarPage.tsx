@@ -10,6 +10,7 @@ import SchedulePanel from '../components/SchedulePanel'
 import type {
   CalendarEvent,
   CalendarEventInput,
+  Todo,
   TodoInput,
 } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
@@ -17,6 +18,7 @@ import {
   BACKLOG_PROJECT_NAME,
   getProjectColorByName,
   isBacklogProject,
+  type CalendarTodoVisibility,
   type PlannerProject,
 } from '../data/projects'
 import type {
@@ -29,6 +31,7 @@ import {
   getCalendarDays,
   getWeekDays,
   isCalendarEventOnDate,
+  isTodoOnDate,
   moveDate,
 } from '../lib/date'
 import { isSharedItemOnDate } from '../lib/studyShared'
@@ -57,7 +60,9 @@ type CalendarPageProps = {
   selectedDate: Date
   visibleMonth: Date
   events: CalendarEvent[]
+  todos: Todo[]
   projects: PlannerProject[]
+  calendarTodoVisibility: CalendarTodoVisibility
   studyRooms: StudyRoom[]
   sharedItems: StudySharedItemEntry[]
   collectionCounts: Record<PlanCollection, number>
@@ -80,7 +85,9 @@ export default function CalendarPage({
   selectedDate,
   visibleMonth,
   events,
+  todos,
   projects,
+  calendarTodoVisibility,
   studyRooms,
   sharedItems,
   collectionCounts,
@@ -125,6 +132,31 @@ export default function CalendarPage({
       ? events.filter((event) => event.project === project.name)
       : events
   }, [events, projects, selectedProjectId])
+  const enabledCalendarTodos = useMemo(
+    () =>
+      todos.filter((todo) => {
+        if (isBacklogProject(todo.project)) {
+          return Boolean(calendarTodoVisibility.backlog)
+        }
+        const project = projects.find((item) => item.name === todo.project)
+        return project
+          ? Boolean(calendarTodoVisibility[project.id])
+          : false
+      }),
+    [calendarTodoVisibility, projects, todos],
+  )
+  const filteredTodos = useMemo(() => {
+    if (selectedProjectId === 'all') return enabledCalendarTodos
+    if (selectedProjectId === 'backlog') {
+      return enabledCalendarTodos.filter((todo) =>
+        isBacklogProject(todo.project),
+      )
+    }
+    const project = projects.find((item) => item.id === selectedProjectId)
+    return project
+      ? enabledCalendarTodos.filter((todo) => todo.project === project.name)
+      : enabledCalendarTodos
+  }, [enabledCalendarTodos, projects, selectedProjectId])
   const visibleSharedEvents = useMemo(
     () =>
       selectedProjectId === 'all'
@@ -136,16 +168,23 @@ export default function CalendarPage({
     const counts: Record<string, number> = {
       all:
         events.length +
+        enabledCalendarTodos.length +
         sharedItems.filter((entry) => entry.item.type === 'event').length,
-      backlog: events.filter(isBacklogEvent).length,
+      backlog:
+        events.filter(isBacklogEvent).length +
+        enabledCalendarTodos.filter((todo) =>
+          isBacklogProject(todo.project),
+        ).length,
     }
     projects.forEach((project) => {
       counts[project.id] = events.filter(
         (event) => event.project === project.name,
+      ).length + enabledCalendarTodos.filter(
+        (todo) => todo.project === project.name,
       ).length
     })
     return counts
-  }, [events, projects, sharedItems])
+  }, [enabledCalendarTodos, events, projects, sharedItems])
   const selectedProjectName =
     selectedProject?.name ??
     (selectedProjectId === 'backlog'
@@ -256,7 +295,7 @@ export default function CalendarPage({
           projects={projects}
           selectedProjectId={selectedProjectId}
           itemCounts={projectCounts}
-          itemLabel="일정"
+          itemLabel="일정과 할 일"
           collectionCounts={collectionCounts}
           onSelectProject={setSelectedProjectId}
           onSelectCollection={(collection) =>
@@ -338,6 +377,7 @@ export default function CalendarPage({
             <SchedulePanel
               selectedDate={selectedDate}
               events={filteredEvents}
+              todos={filteredTodos}
               projects={projects}
               sharedItems={visibleSharedEvents}
               onCreateEvent={() => openNewEvent()}
@@ -360,6 +400,11 @@ export default function CalendarPage({
                   const dateSharedEvents = visibleSharedEvents.filter((entry) =>
                     isSharedItemOnDate(entry.item, dateKey),
                   )
+                  const dateTodos = filteredTodos
+                    .filter((todo) => isTodoOnDate(todo, dateKey))
+                    .sort((first, second) =>
+                      first.dueTime.localeCompare(second.dueTime),
+                    )
                   const isSelected = dateKey === selectedKey
                   const isToday = dateKey === todayKey
 
@@ -395,6 +440,22 @@ export default function CalendarPage({
                             <small>{event.project ?? BACKLOG_PROJECT_NAME} · 나의 계획</small>
                           </button>
                         ))}
+                        {dateTodos.map((todo) => (
+                          <button
+                            className={`week-event calendar-todo-card project-color-surface${
+                              todo.done ? ' done' : ''
+                            }`}
+                            style={getEventProjectStyle(todo.project)}
+                            type="button"
+                            key={todo.id}
+                            onClick={() => navigate(`/todos/${todo.id}`)}
+                            aria-label={`${todo.text} 할 일 상세 보기`}
+                          >
+                            <time>{todo.done ? '✓ 완료' : todo.dueTime}</time>
+                            <strong>{todo.text}</strong>
+                            <small>{todo.project ?? BACKLOG_PROJECT_NAME} · 할 일</small>
+                          </button>
+                        ))}
                         {dateSharedEvents.map((entry) => (
                           <button
                             className="week-event blue shared"
@@ -416,8 +477,10 @@ export default function CalendarPage({
                             <small>{entry.roomName} · 모임</small>
                           </button>
                         ))}
-                        {!dateEvents.length && !dateSharedEvents.length && (
-                          <span className="week-day-empty">일정 없음</span>
+                        {!dateEvents.length &&
+                          !dateTodos.length &&
+                          !dateSharedEvents.length && (
+                          <span className="week-day-empty">계획 없음</span>
                         )}
                       </div>
                     </article>
@@ -444,8 +507,30 @@ export default function CalendarPage({
                   const dateSharedEvents = visibleSharedEvents.filter((entry) =>
                     isSharedItemOnDate(entry.item, dateKey),
                   )
-                  const dateEventCount =
-                    dateEvents.length + dateSharedEvents.length
+                  const dateTodos = filteredTodos
+                    .filter((todo) => isTodoOnDate(todo, dateKey))
+                    .sort((first, second) =>
+                      first.dueTime.localeCompare(second.dueTime),
+                    )
+                  const datePlanCount =
+                    dateEvents.length +
+                    dateTodos.length +
+                    dateSharedEvents.length
+                  const visibleDateEvents = dateEvents.slice(
+                    0,
+                    dateTodos.length ? 2 : 3,
+                  )
+                  const visibleDateTodos = dateTodos.slice(
+                    0,
+                    Math.max(0, 3 - visibleDateEvents.length),
+                  )
+                  const visibleSharedEventsForDate = dateSharedEvents.slice(
+                    0,
+                    Math.max(
+                      0,
+                      3 - visibleDateEvents.length - visibleDateTodos.length,
+                    ),
+                  )
                   const isSelected = dateKey === selectedKey
                   const isToday = dateKey === todayKey
                   const isCurrentMonth =
@@ -464,14 +549,14 @@ export default function CalendarPage({
                         onClick={() => onSelectDate(date)}
                         onDoubleClick={() => openDayView(date)}
                         aria-label={`${formatSelectedDate(date)}${
-                          dateEventCount ? `, 일정 ${dateEventCount}개` : ''
+                          datePlanCount ? `, 계획 ${datePlanCount}개` : ''
                         }`}
                         aria-pressed={isSelected}
                       >
                         <span className="day-number">{date.getDate()}</span>
                       </button>
                       <span className="day-events">
-                        {dateEvents.slice(0, 2).map((item) => (
+                        {visibleDateEvents.map((item) => (
                           <button
                             className="event-chip project-color-surface"
                             style={getEventProjectStyle(item.project)}
@@ -483,30 +568,42 @@ export default function CalendarPage({
                             {item.allDay ? '종일' : item.startTime} {item.title}
                           </button>
                         ))}
-                        {dateEvents.length < 2 &&
-                          dateSharedEvents
-                            .slice(0, 2 - dateEvents.length)
-                            .map((entry) => (
-                              <button
-                                className="event-chip blue shared"
-                                type="button"
-                                key={`${entry.roomId}-${entry.item.id}`}
-                                onClick={() =>
-                                  entry.canManage
-                                    ? openEditSharedEvent(entry, date)
-                                    : openDayView(date)
-                                }
-                                aria-label={
-                                  entry.canManage
-                                    ? `${entry.item.title} 편집`
-                                    : `${entry.item.title}, 일간 보기에서 열기`
-                                }
-                              >
-                                {entry.item.time ?? '종일'} {entry.item.title}
-                              </button>
-                            ))}
-                        {dateEventCount > 2 && (
-                          <span className="more-events">+{dateEventCount - 2}</span>
+                        {visibleDateTodos.map((todo) => (
+                          <button
+                            className={`event-chip calendar-todo-chip project-color-surface${
+                              todo.done ? ' done' : ''
+                            }`}
+                            style={getEventProjectStyle(todo.project)}
+                            type="button"
+                            key={todo.id}
+                            onClick={() => navigate(`/todos/${todo.id}`)}
+                            aria-label={`${todo.text} 할 일 상세 보기`}
+                          >
+                            <span aria-hidden="true">✓</span>{' '}
+                            {todo.dueTime} {todo.text}
+                          </button>
+                        ))}
+                        {visibleSharedEventsForDate.map((entry) => (
+                          <button
+                            className="event-chip blue shared"
+                            type="button"
+                            key={`${entry.roomId}-${entry.item.id}`}
+                            onClick={() =>
+                              entry.canManage
+                                ? openEditSharedEvent(entry, date)
+                                : openDayView(date)
+                            }
+                            aria-label={
+                              entry.canManage
+                                ? `${entry.item.title} 편집`
+                                : `${entry.item.title}, 일간 보기에서 열기`
+                            }
+                          >
+                            {entry.item.time ?? '종일'} {entry.item.title}
+                          </button>
+                        ))}
+                        {datePlanCount > 3 && (
+                          <span className="more-events">+{datePlanCount - 3}</span>
                         )}
                       </span>
                     </article>

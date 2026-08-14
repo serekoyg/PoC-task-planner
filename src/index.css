@@ -2246,6 +2246,26 @@ fieldset {
   color: color-mix(in srgb, var(--project-color) 78%, #171714);
 }
 
+.calendar-todo-schedule {
+  border-style: dashed;
+}
+
+.calendar-todo-schedule .schedule-dot.todo {
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--project-color);
+  border-radius: 3px;
+  background: transparent;
+}
+
+.calendar-todo-schedule.done {
+  opacity: 0.68;
+}
+
+.calendar-todo-schedule.done h3 {
+  text-decoration: line-through;
+}
+
 .schedule-time-block strong,
 .schedule-time-block small {
   display: block;
@@ -2476,6 +2496,19 @@ fieldset {
   color: color-mix(in srgb, var(--project-color) 65%, #62635f);
 }
 
+.week-event.calendar-todo-card {
+  border-left-style: dashed;
+  background: color-mix(in srgb, var(--project-color) 7%, white);
+}
+
+.week-event.calendar-todo-card.done {
+  opacity: 0.62;
+}
+
+.week-event.calendar-todo-card.done strong {
+  text-decoration: line-through;
+}
+
 .week-event.coral {
   border-left-color: #d65c4a;
   background: #fff1ee;
@@ -2663,6 +2696,18 @@ button.event-chip:hover {
 .event-chip.project-color-surface {
   color: color-mix(in srgb, var(--project-color) 82%, #171714);
   background: color-mix(in srgb, var(--project-color) 14%, white);
+}
+
+.event-chip.calendar-todo-chip {
+  padding-left: 6px;
+  border-left: 2px dashed var(--project-color);
+  border-radius: 2px 4px 4px 2px;
+  background: color-mix(in srgb, var(--project-color) 8%, white);
+}
+
+.event-chip.calendar-todo-chip.done {
+  opacity: 0.62;
+  text-decoration: line-through;
 }
 
 /* Todos */
@@ -4193,6 +4238,62 @@ button.event-chip:hover {
   color: var(--muted);
   font-size: 0.7rem;
   font-style: normal;
+}
+
+.project-calendar-todo-toggle {
+  width: fit-content;
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.project-calendar-todo-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.project-calendar-todo-toggle > span {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface-subtle);
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.project-calendar-todo-toggle > span::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.project-calendar-todo-toggle input:checked + span {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.project-calendar-todo-toggle input:checked + span::after {
+  background: #fff;
+  transform: translateX(12px);
+}
+
+.project-calendar-todo-toggle input:focus-visible + span {
+  outline: 3px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  outline-offset: 2px;
 }
 
 .project-row-actions,
