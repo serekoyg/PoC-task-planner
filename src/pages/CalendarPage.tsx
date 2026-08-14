@@ -1,5 +1,6 @@
-import { type CSSProperties, useMemo, useState } from 'react'
+import { type CSSProperties, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import DateJumpDialog from '../components/DateJumpDialog'
 import ProjectSidebar, {
   type PlanCollection,
   type ProjectFilter,
@@ -97,11 +98,13 @@ export default function CalendarPage({
   const [selectedProjectId, setSelectedProjectId] =
     useState<ProjectFilter>('all')
   const [calendarView, setCalendarView] = useState<CalendarView>('month')
+  const [isDateJumpOpen, setIsDateJumpOpen] = useState(false)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [editorDate, setEditorDate] = useState(selectedDate)
   const [editingEvent, setEditingEvent] = useState<CalendarEvent>()
   const [editingSharedEvent, setEditingSharedEvent] =
     useState<StudySharedItemEntry>()
+  const dateJumpTriggerRef = useRef<HTMLButtonElement>(null)
   const selectedKey = toDateKey(selectedDate)
   const todayKey = toDateKey(today)
   const calendarDays = useMemo(
@@ -173,6 +176,16 @@ export default function CalendarPage({
     onSelectDate(
       moveDate(selectedDate, calendarView === 'week' ? amount * 7 : amount),
     )
+  }
+
+  const closeDateJump = () => {
+    setIsDateJumpOpen(false)
+    window.requestAnimationFrame(() => dateJumpTriggerRef.current?.focus())
+  }
+
+  const jumpToDate = (date: Date) => {
+    onSelectDate(date)
+    closeDateJump()
   }
 
   const openDayView = (date: Date) => {
@@ -255,7 +268,19 @@ export default function CalendarPage({
           <header className="calendar-view-toolbar">
             <div>
               <p className="eyebrow">{selectedProjectName}</p>
-              <h1>{periodTitle}</h1>
+              <h1>
+                <button
+                  className="calendar-period-trigger"
+                  type="button"
+                  ref={dateJumpTriggerRef}
+                  aria-haspopup="dialog"
+                  aria-expanded={isDateJumpOpen}
+                  onClick={() => setIsDateJumpOpen(true)}
+                >
+                  {periodTitle}
+                  <span aria-hidden="true">⌄</span>
+                </button>
+              </h1>
             </div>
             <div className="calendar-view-actions">
               <div className="calendar-view-tabs" aria-label="캘린더 보기 선택">
@@ -489,6 +514,15 @@ export default function CalendarPage({
                 })}
               </div>
             </section>
+          )}
+
+          {isDateJumpOpen && (
+            <DateJumpDialog
+              initialDate={selectedDate}
+              today={today}
+              onClose={closeDateJump}
+              onSelect={jumpToDate}
+            />
           )}
         </div>
       </div>

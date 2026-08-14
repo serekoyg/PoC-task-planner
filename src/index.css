@@ -1990,6 +1990,176 @@ fieldset {
   font-size: 1.45rem;
 }
 
+.calendar-period-trigger {
+  min-height: 36px;
+  margin: -5px -8px;
+  padding: 5px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.calendar-period-trigger:hover,
+.calendar-period-trigger[aria-expanded='true'] {
+  background: var(--surface-subtle);
+}
+
+.calendar-period-trigger span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.date-jump-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  padding: 20px;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  background: rgba(24, 24, 22, 0.46);
+}
+
+.date-jump-dialog {
+  width: min(440px, 100%);
+  max-height: calc(100dvh - 40px);
+  padding: 22px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 20px 55px rgba(24, 24, 22, 0.2);
+}
+
+.date-jump-heading {
+  margin-bottom: 18px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.date-jump-heading h2 {
+  margin: 0 0 4px;
+}
+
+.date-jump-heading p:last-child,
+.date-jump-selection {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.date-jump-heading > button {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  background: var(--surface-subtle);
+}
+
+.date-jump-navigation {
+  margin-bottom: 14px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-jump-navigation > button {
+  min-width: 36px;
+  padding: 0;
+}
+
+.date-jump-selectors {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.date-jump-selectors select {
+  width: 100%;
+  min-height: 38px;
+}
+
+.date-jump-weekdays,
+.date-jump-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.date-jump-weekdays {
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+.date-jump-grid {
+  gap: 4px;
+}
+
+.date-jump-grid button {
+  min-width: 0;
+  min-height: 38px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
+.date-jump-grid button:hover {
+  border-color: var(--line);
+  background: var(--surface-subtle);
+}
+
+.date-jump-grid button.outside-month {
+  color: #aaaba6;
+}
+
+.date-jump-grid button[aria-current='date'] {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+}
+
+.date-jump-grid button.selected {
+  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.date-jump-selection {
+  min-height: 42px;
+  margin-top: 14px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  background: var(--surface-subtle);
+}
+
+.date-jump-selection strong {
+  margin-left: 5px;
+  color: var(--text);
+}
+
+.date-jump-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.date-jump-actions button:first-child {
+  margin-right: auto;
+}
+
+.date-jump-actions button:last-child {
+  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
 .calendar-view-actions,
 .calendar-period-navigation,
 .calendar-view-tabs {
