@@ -259,13 +259,6 @@ export default function StudyRoomDetailPage({
           </div>
           <h1>{room.name}</h1>
           <p>{room.description}</p>
-          <div className="study-detail-goal">
-            <span aria-hidden="true">◎</span>
-            <div>
-              <small>우리의 공동 목표</small>
-              <strong>{room.goal}</strong>
-            </div>
-          </div>
         </div>
 
         <div className="study-detail-summary" aria-label="모임 현황">

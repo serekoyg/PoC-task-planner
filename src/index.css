@@ -5210,24 +5210,6 @@ button.event-chip:hover {
   color: var(--muted);
 }
 
-.study-detail-goal {
-  padding: 10px;
-  display: flex;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--surface-subtle);
-}
-
-.study-detail-goal small,
-.study-detail-goal strong {
-  display: block;
-}
-
-.study-detail-goal small {
-  color: var(--muted);
-}
-
 .study-detail-summary {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -8585,7 +8567,6 @@ footer a {
   }
 
   .study-detail-page:not(.tab-home) .study-detail-hero > div:first-child > p,
-  .study-detail-page:not(.tab-home) .study-detail-goal,
   .study-detail-page:not(.tab-home) .study-detail-summary {
     display: none;
   }
