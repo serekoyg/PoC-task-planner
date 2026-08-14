@@ -1,6 +1,6 @@
 import { type CSSProperties, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import type { CalendarEvent } from '../data/initialData'
+import type { CalendarEvent, Todo } from '../data/initialData'
 import {
   BACKLOG_PROJECT_NAME,
   getProjectColorByName,
@@ -8,12 +8,17 @@ import {
 } from '../data/projects'
 import { toDateKey } from '../data/initialData'
 import type { StudySharedItemEntry } from '../data/studyRooms'
-import { formatSelectedDate, isCalendarEventOnDate } from '../lib/date'
+import {
+  formatSelectedDate,
+  isCalendarEventOnDate,
+  isTodoOnDate,
+} from '../lib/date'
 import { getSharedRepeatLabel, isSharedItemOnDate } from '../lib/studyShared'
 
 type SchedulePanelProps = {
   selectedDate: Date
   events: CalendarEvent[]
+  todos: Todo[]
   projects: PlannerProject[]
   sharedItems: StudySharedItemEntry[]
   onCreateEvent: () => void
@@ -54,6 +59,7 @@ const formatDuration = (minutes: number) => {
 export default function SchedulePanel({
   selectedDate,
   events,
+  todos,
   projects,
   sharedItems,
   onCreateEvent,
@@ -71,6 +77,15 @@ export default function SchedulePanel({
           return a.startTime.localeCompare(b.startTime)
         }),
     [events, selectedKey],
+  )
+  const selectedTodos = useMemo(
+    () =>
+      todos
+        .filter((todo) => isTodoOnDate(todo, selectedKey))
+        .sort((first, second) =>
+          first.dueTime.localeCompare(second.dueTime),
+        ),
+    [selectedKey, todos],
   )
   const selectedSharedEvents = useMemo(
     () =>
@@ -90,6 +105,7 @@ export default function SchedulePanel({
   }, 0)
   const nextReminder = selectedEvents.find((event) => event.reminder !== 'none')
   const totalEventCount = selectedEvents.length + selectedSharedEvents.length
+  const totalPlanCount = totalEventCount + selectedTodos.length
 
   return (
     <aside
@@ -101,15 +117,15 @@ export default function SchedulePanel({
           <p className="eyebrow">선택한 날짜</p>
           <h2 id="selected-date-title">{formatSelectedDate(selectedDate)}</h2>
           <p className="schedule-heading-summary">
-            {totalEventCount
-              ? `${totalEventCount}개의 일정이 있어요.`
-              : '아직 등록된 일정이 없어요.'}
+            {totalPlanCount
+              ? `일정 ${totalEventCount}개와 할 일 ${selectedTodos.length}개가 있어요.`
+              : '아직 등록된 일정이나 할 일이 없어요.'}
           </p>
         </div>
       </div>
 
-      <div className="schedule-list" aria-label="선택한 날짜의 일정">
-        {totalEventCount ? (
+      <div className="schedule-list" aria-label="선택한 날짜의 일정과 할 일">
+        {totalPlanCount ? (
           <>
             {selectedEvents.map((item) => (
               <article
@@ -154,6 +170,41 @@ export default function SchedulePanel({
               >
                 편집
               </button>
+              </article>
+            ))}
+            {selectedTodos.map((todo) => (
+              <article
+                className={`schedule-item calendar-todo-schedule project-color-surface${
+                  todo.done ? ' done' : ''
+                }`}
+                style={{
+                  '--project-color': getProjectColorByName(
+                    projects,
+                    todo.project,
+                  ),
+                } as CSSProperties}
+                key={todo.id}
+              >
+                <div className="schedule-time-block">
+                  <strong>{todo.dueTime || '시간 미정'}</strong>
+                  <span>할 일</span>
+                </div>
+                <span className="schedule-dot todo" aria-hidden="true" />
+                <div className="schedule-item-copy">
+                  <div className="schedule-item-title">
+                    <h3>{todo.text}</h3>
+                    <span>{todo.project ?? BACKLOG_PROJECT_NAME} · 할 일</span>
+                    {todo.done && <span>완료</span>}
+                  </div>
+                  {todo.note && <p>{todo.note}</p>}
+                </div>
+                <Link
+                  className="edit-event-button"
+                  to={`/todos/${todo.id}`}
+                  aria-label={`${todo.text} 상세 보기`}
+                >
+                  상세
+                </Link>
               </article>
             ))}
             {selectedSharedEvents.map((entry) => {
@@ -218,6 +269,10 @@ export default function SchedulePanel({
           <div>
             <span>등록된 일정</span>
             <strong>{totalEventCount}개</strong>
+          </div>
+          <div>
+            <span>표시된 할 일</span>
+            <strong>{selectedTodos.length}개</strong>
           </div>
           <div>
             <span>예정된 시간</span>

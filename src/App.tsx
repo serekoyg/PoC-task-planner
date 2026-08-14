@@ -26,6 +26,7 @@ import {
   isBacklogProject,
   normalizeBacklogProject,
   normalizeProjects,
+  type CalendarTodoVisibility,
   type PlannerProject,
   type ProjectInput,
 } from './data/projects'
@@ -74,6 +75,8 @@ const STUDY_STORAGE_KEY = 'haru.v2.study-rooms'
 const FOCUS_STORAGE_KEY = 'haru.v2.focus-results'
 const FOCUS_RECORD_STORAGE_KEY = 'haru.v2.focus-records'
 const PROJECT_STORAGE_KEY = 'haru.v2.projects'
+const CALENDAR_TODO_VISIBILITY_STORAGE_KEY =
+  'haru.v2.calendar-todo-visibility'
 const AUTH_STORAGE_KEY = 'haru.demo-authenticated'
 const NOTIFICATION_STORAGE_KEY = 'haru.v2.notification-inbox'
 const TRASH_STORAGE_KEY = 'haru.v2.deleted-plans'
@@ -320,6 +323,13 @@ export default function App() {
   const [todos, setTodos] = useState<Todo[]>(readTodos)
   const [events, setEvents] = useState<CalendarEvent[]>(readEvents)
   const [projects, setProjects] = useState<PlannerProject[]>(readProjects)
+  const [calendarTodoVisibility, setCalendarTodoVisibility] =
+    useState<CalendarTodoVisibility>(() =>
+      readStorage<CalendarTodoVisibility>(
+        CALENDAR_TODO_VISIBILITY_STORAGE_KEY,
+        () => ({}),
+      ),
+    )
   const [notifications, setNotifications] =
     useState<PlannerNotification[]>(readNotifications)
   const [trash, setTrash] = useState<TrashedPlan[]>(readTrash)
@@ -431,6 +441,13 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(projects))
   }, [projects])
+
+  useEffect(() => {
+    localStorage.setItem(
+      CALENDAR_TODO_VISIBILITY_STORAGE_KEY,
+      JSON.stringify(calendarTodoVisibility),
+    )
+  }, [calendarTodoVisibility])
 
   useEffect(() => {
     localStorage.setItem(
@@ -1289,7 +1306,9 @@ export default function App() {
               selectedDate={selectedDate}
               visibleMonth={visibleMonth}
               events={events}
+              todos={todos}
               projects={projects}
+              calendarTodoVisibility={calendarTodoVisibility}
               collectionCounts={collectionCounts}
               studyRooms={joinedStudyRooms}
               sharedItems={sharedItemEntries}
@@ -1447,10 +1466,12 @@ export default function App() {
             <SettingsPage
               projects={projects}
               itemCounts={projectPlanCounts}
+              calendarTodoVisibility={calendarTodoVisibility}
               onCreateProject={createProject}
               onUpdateProject={updateProject}
               onDeleteProject={deleteProject}
               onReorderProjects={reorderProjects}
+              onUpdateCalendarTodoVisibility={setCalendarTodoVisibility}
             />
           }
         />

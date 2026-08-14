@@ -12,6 +12,7 @@ import {
   PROJECT_ACCENT_COLORS,
   getProjectColor,
   isBacklogProject,
+  type CalendarTodoVisibility,
   type PlannerProject,
   type ProjectAccent,
   type ProjectInput,
@@ -24,12 +25,16 @@ const PROJECT_SORT_STORAGE_KEY = 'haru-project-sort-mode'
 type ProjectManagementModalProps = {
   projects: PlannerProject[]
   itemCounts: Record<string, number>
+  calendarTodoVisibility: CalendarTodoVisibility
   embedded?: boolean
   onClose?: () => void
   onCreateProject: (input: ProjectInput) => string
   onUpdateProject: (projectId: string, input: ProjectInput) => void
   onDeleteProject: (projectId: string) => void
   onReorderProjects: (orderedProjectIds: string[]) => void
+  onUpdateCalendarTodoVisibility: (
+    visibility: CalendarTodoVisibility,
+  ) => void
   onDirtyChange?: (isDirty: boolean) => void
 }
 
@@ -163,12 +168,14 @@ const sortProjects = (
 export default function ProjectManagementModal({
   projects,
   itemCounts,
+  calendarTodoVisibility,
   embedded = false,
   onClose,
   onCreateProject,
   onUpdateProject,
   onDeleteProject,
   onReorderProjects,
+  onUpdateCalendarTodoVisibility,
   onDirtyChange,
 }: ProjectManagementModalProps) {
   const [sortMode, setSortMode] = useState<ProjectSortMode>(() => {
@@ -179,6 +186,8 @@ export default function ProjectManagementModal({
   })
   const [savedSortMode, setSavedSortMode] = useState(sortMode)
   const [draftProjects, setDraftProjects] = useState(projects)
+  const [draftCalendarTodoVisibility, setDraftCalendarTodoVisibility] =
+    useState(calendarTodoVisibility)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [pendingNavigation, setPendingNavigation] = useState<string>()
   const allowPageLeaveRef = useRef(false)
@@ -223,8 +232,11 @@ export default function ProjectManagementModal({
   }, [editorMode, onClose])
 
   useEffect(() => {
-    if (!hasUnsavedChanges && !editorMode) setDraftProjects(projects)
-  }, [editorMode, hasUnsavedChanges, projects])
+    if (!hasUnsavedChanges && !editorMode) {
+      setDraftProjects(projects)
+      setDraftCalendarTodoVisibility(calendarTodoVisibility)
+    }
+  }, [calendarTodoVisibility, editorMode, hasUnsavedChanges, projects])
 
   useEffect(() => {
     if (!hasPendingChanges) return
@@ -398,7 +410,17 @@ export default function ProjectManagementModal({
       ...project,
       id: createdIdMap.get(project.id) ?? project.id,
     }))
+    const savedCalendarTodoVisibility: CalendarTodoVisibility = {
+      backlog: Boolean(draftCalendarTodoVisibility.backlog),
+    }
+    draftProjects.forEach((project) => {
+      const savedProjectId = createdIdMap.get(project.id) ?? project.id
+      savedCalendarTodoVisibility[savedProjectId] = Boolean(
+        draftCalendarTodoVisibility[project.id],
+      )
+    })
     onReorderProjects(savedProjects.map((project) => project.id))
+    onUpdateCalendarTodoVisibility(savedCalendarTodoVisibility)
     window.localStorage.setItem(PROJECT_SORT_STORAGE_KEY, sortMode)
     setSavedSortMode(sortMode)
     setDraftProjects(savedProjects)
@@ -407,9 +429,18 @@ export default function ProjectManagementModal({
 
   const discardAllChanges = () => {
     setDraftProjects(projects)
+    setDraftCalendarTodoVisibility(calendarTodoVisibility)
     setSortMode(savedSortMode)
     setHasUnsavedChanges(false)
     closeEditor()
+  }
+
+  const toggleCalendarTodos = (projectId: string) => {
+    setDraftCalendarTodoVisibility((current) => ({
+      ...current,
+      [projectId]: !current[projectId],
+    }))
+    setHasUnsavedChanges(true)
   }
 
   const [red, green, blue] = hexToRgb(color)
@@ -516,7 +547,19 @@ export default function ProjectManagementModal({
         <div className="project-management-list" aria-label="목록 표시 순서">
           <article className="project-management-row fixed">
             <span className="project-management-swatch neutral" aria-hidden="true" />
-            <div><strong>미분류</strong><small>목록을 선택하지 않은 계획</small></div>
+            <div>
+              <strong>미분류</strong>
+              <small>목록을 선택하지 않은 계획</small>
+              <label className="project-calendar-todo-toggle">
+                <input
+                  type="checkbox"
+                  checked={Boolean(draftCalendarTodoVisibility.backlog)}
+                  onChange={() => toggleCalendarTodos('backlog')}
+                />
+                <span aria-hidden="true" />
+                캘린더에 할 일 표시
+              </label>
+            </div>
             <span>{itemCounts.backlog ?? 0}개</span>
             <em>고정</em>
           </article>
@@ -531,7 +574,21 @@ export default function ProjectManagementModal({
                 style={{ backgroundColor: getProjectColor(project) }}
                 aria-hidden="true"
               />
-              <div><strong>{project.name}</strong><small>{itemCounts[project.id] ?? 0}개 항목</small></div>
+              <div>
+                <strong>{project.name}</strong>
+                <small>{itemCounts[project.id] ?? 0}개 항목</small>
+                <label className="project-calendar-todo-toggle">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(
+                      draftCalendarTodoVisibility[project.id],
+                    )}
+                    onChange={() => toggleCalendarTodos(project.id)}
+                  />
+                  <span aria-hidden="true" />
+                  캘린더에 할 일 표시
+                </label>
+              </div>
               <div className="project-row-actions">
                 <button type="button" aria-label={`${project.name} 목록 편집`} onClick={() => openEditEditor(project)}>편집</button>
                 {confirmingDeleteId === project.id ? (
