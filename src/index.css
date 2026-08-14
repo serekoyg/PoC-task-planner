@@ -1673,10 +1673,7 @@ ol {
 .profile-weekly-card,
 .profile-activity-card,
 .profile-rooms,
-.task-detail-card,
-.task-flow-hint,
-.focus-result-hero,
-.focus-next-step {
+.focus-result-card {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -2126,8 +2123,7 @@ fieldset {
 .room-category,
 .room-live-count,
 .study-detail-badges > span,
-.member-status,
-.task-detail-badges > span {
+.member-status {
   width: fit-content;
   padding: 3px 7px;
   border-radius: 999px;
@@ -6412,91 +6408,6 @@ button.event-chip:hover {
   max-width: 920px;
 }
 
-.task-detail-card {
-  padding: 22px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
-  gap: 20px;
-}
-
-.task-detail-badges {
-  display: flex;
-  gap: 6px;
-}
-
-.task-detail-main > .eyebrow {
-  margin-top: 18px;
-}
-
-.task-detail-memo {
-  color: var(--muted);
-}
-
-.task-facts {
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-.task-facts > div {
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-}
-
-.task-facts dt {
-  color: var(--muted);
-  font-size: 0.68rem;
-}
-
-.task-facts dd {
-  margin: 3px 0 0;
-  font-weight: 700;
-}
-
-.task-focus-invitation {
-  padding: 16px;
-  align-self: start;
-  border-left: 1px solid var(--line);
-}
-
-.focus-invitation-icon {
-  display: none;
-}
-
-.task-focus-invitation p {
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-
-.task-focus-invitation a {
-  min-height: 40px;
-  padding: 0 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 7px;
-  color: #fff;
-  background: var(--accent);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.task-flow-hint {
-  padding: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
-.task-flow-hint i {
-  font-style: normal;
-}
-
 .focus-session-page {
   width: min(780px, calc(100% - 32px));
   min-height: calc(100vh - 170px);
@@ -6592,103 +6503,125 @@ button.event-chip:hover {
   text-align: center;
 }
 
-.focus-result-hero,
-.focus-next-step {
-  padding: 22px;
+.focus-result-page {
+  min-height: calc(100dvh - 190px);
+  place-items: center;
+  align-content: center;
 }
 
-.focus-result-hero {
+.focus-result-card {
+  width: min(560px, 100%);
+  padding: 34px;
   text-align: center;
+  box-shadow: 0 18px 50px rgba(24, 24, 22, 0.08);
 }
 
 .result-check {
-  width: 42px;
-  height: 42px;
-  margin: 0 auto 12px;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 16px;
   display: grid;
   place-items: center;
   border-radius: 50%;
   color: #fff;
   background: var(--success);
+  font-size: 1.35rem;
+  box-shadow: 0 8px 20px rgba(47, 125, 90, 0.22);
 }
 
-.focus-result-hero > p:not(.eyebrow) {
+.focus-result-card h1 {
+  margin-bottom: 8px;
+}
+
+.focus-result-description {
+  margin: 0;
   color: var(--muted);
 }
 
-.focus-result-metrics {
-  margin-top: 18px;
+.focus-result-description strong {
+  color: var(--text);
+}
+
+.focus-result-summary {
+  margin-top: 24px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
-.focus-result-metrics > div {
-  padding: 14px;
+.focus-result-summary > div {
+  padding: 16px;
 }
 
-.focus-result-metrics > div + div {
+.focus-result-summary > div + div {
   border-left: 1px solid var(--line);
 }
 
-.focus-result-metrics span,
-.focus-result-metrics strong {
+.focus-result-summary span,
+.focus-result-summary strong {
   display: block;
 }
 
-.focus-result-metrics span {
+.focus-result-summary span {
   color: var(--muted);
   font-size: 0.7rem;
 }
 
-.focus-next-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.focus-next-heading > span {
+.focus-result-comparison {
+  width: fit-content;
+  margin: 12px auto 0;
+  padding: 5px 10px;
+  border-radius: 999px;
   color: var(--muted);
+  background: var(--surface-subtle);
   font-size: 0.72rem;
 }
 
-.focus-next-grid {
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+.focus-result-countdown {
+  margin-top: 26px;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--surface-subtle);
 }
 
-.finish-task-option,
-.reschedule-task-option {
-  padding: 16px;
-  display: grid;
-  gap: 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
-
-.finish-task-option > span,
-.reschedule-task-option > span {
-  display: none;
-}
-
-.finish-task-option p,
-.reschedule-task-option p {
-  margin-bottom: 0;
+.focus-result-countdown > div:first-child {
+  margin-bottom: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: 0.74rem;
 }
 
-.focus-again-link {
-  margin-top: 14px;
+.focus-result-countdown strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.focus-result-progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line);
+}
+
+.focus-result-progress span {
+  height: 100%;
   display: block;
-  color: var(--accent);
-  font-size: 0.78rem;
-  text-align: center;
-  text-decoration: none;
+  border-radius: inherit;
+  background: var(--success);
+  transition: width 50ms linear;
+}
+
+.focus-result-close {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 12px;
+  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent);
 }
 
 /* Settings */
@@ -7172,8 +7105,7 @@ footer a {
   .schedule-panel,
   .study-detail-hero,
   .study-detail-grid,
-  .profile-dashboard,
-  .task-detail-card {
+  .profile-dashboard {
     grid-template-columns: 1fr;
   }
 
@@ -7191,11 +7123,6 @@ footer a {
 
   .project-filter-layout {
     grid-template-columns: 190px minmax(0, 1fr);
-  }
-
-  .task-focus-invitation {
-    border-top: 1px solid var(--line);
-    border-left: 0;
   }
 
   .room-management-header {
@@ -7755,11 +7682,12 @@ footer a {
   .profile-hero,
   .profile-weekly-card,
   .profile-activity-card,
-  .profile-rooms,
-  .task-detail-card,
-  .focus-result-hero,
-  .focus-next-step {
+  .profile-rooms {
     padding: 15px;
+  }
+
+  .focus-result-card {
+    padding: 24px 18px;
   }
 
   .schedule-item {
@@ -7819,20 +7747,12 @@ footer a {
 
   .event-form-row,
   .study-form-row,
-  .profile-room-list,
-  .focus-next-grid,
-  .task-facts,
-  .focus-result-metrics {
+  .profile-room-list {
     grid-template-columns: 1fr;
   }
 
   .personal-plan-fields .study-form-row {
     grid-template-columns: 1fr;
-  }
-
-  .focus-result-metrics > div + div {
-    border-top: 1px solid var(--line);
-    border-left: 0;
   }
 
   .event-form-actions,
