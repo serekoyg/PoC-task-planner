@@ -1186,6 +1186,7 @@ export default function App() {
               onAddTodo={addTodo}
               onUpdateEvent={updateEvent}
               onRemoveEvent={removeEvent}
+              onRemoveTodo={removeTodo}
               onToggleSharedItemStatus={toggleSharedItemStatus}
               onChangeRoom={changeStudyRoom}
             />
