@@ -42,6 +42,7 @@ type PlanEditorModalProps = {
   defaultProjectName?: string
   bulkDateSummary?: string
   bulkDateCount?: number
+  bulkDateKeys?: string[]
   defaultStartTime?: string
   defaultEndTime?: string
   onClose: () => void
@@ -63,6 +64,7 @@ export default function PlanEditorModal({
   defaultProjectName,
   bulkDateSummary,
   bulkDateCount = 0,
+  bulkDateKeys = [],
   defaultStartTime,
   defaultEndTime,
   onClose,
@@ -314,10 +316,47 @@ export default function PlanEditorModal({
           </label>
 
           <div className="study-form-row">
-            <label>
-              <span>{repeat === 'none' ? (type === 'todo' ? '마감일' : '날짜') : '시작일'}</span>
-              <input type="date" value={date} disabled={isBulkCreating} onChange={(event) => setDate(event.target.value)} />
-            </label>
+            {isBulkCreating ? (
+              <div
+                className="bulk-selected-date-field"
+                role="group"
+                aria-labelledby="bulk-selected-date-label"
+              >
+                <span id="bulk-selected-date-label">
+                  {type === 'todo' ? '마감일' : '날짜'}
+                </span>
+                <div className="bulk-selected-date-list">
+                  <strong>{bulkDateCount}개 날짜 선택</strong>
+                  <div role="list" aria-label="선택한 날짜 목록">
+                    {bulkDateKeys.map((dateKey) => {
+                      const selectedBulkDate = new Date(`${dateKey}T00:00:00`)
+                      return (
+                        <span role="listitem" key={dateKey}>
+                          {selectedBulkDate.getMonth() + 1}월{' '}
+                          {selectedBulkDate.getDate()}일 (
+                          {weekdayLabels[selectedBulkDate.getDay()]})
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <label>
+                <span>
+                  {repeat === 'none'
+                    ? type === 'todo'
+                      ? '마감일'
+                      : '날짜'
+                    : '시작일'}
+                </span>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(event) => setDate(event.target.value)}
+                />
+              </label>
+            )}
             <label>
               <span>반복</span>
               <select value={repeat} disabled={isBulkCreating} onChange={(event) => setRepeat(event.target.value as StudySharedRepeat)}>

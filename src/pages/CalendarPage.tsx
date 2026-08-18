@@ -1730,6 +1730,7 @@ export default function CalendarPage({
           item={editingSharedEvent?.item}
           calendarEvent={editingEvent}
           defaultProjectName={selectedProject?.name}
+          bulkDateKeys={bulkCreateDateKeys}
           bulkDateCount={bulkCreateDateKeys.length}
           bulkDateSummary={
             bulkCreateDateKeys.length > 1
