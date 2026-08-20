@@ -14,6 +14,11 @@ import {
   sharedItemTypeLabels,
 } from '../lib/studyShared'
 import { formatFocusTimer, getFocusDurationSeconds } from '../lib/focus'
+import {
+  getActivityLevel,
+  getWeeklyActivitySummary,
+  studyWeekdays,
+} from '../lib/studyActivity'
 
 type StudyRoomDetailPageProps = {
   room?: StudyRoom
@@ -58,6 +63,19 @@ const formatSharedDate = (item: StudySharedItem) => {
   return `${label}까지`
 }
 
+const formatCompletedAt = (completedAt?: string) => {
+  if (!completedAt) return '완료 시간 기록 없음'
+  const date = new Date(completedAt)
+  if (Number.isNaN(date.getTime())) return '완료 시간 기록 없음'
+  return `${new Intl.DateTimeFormat('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(date)} 완료`
+}
+
 type StudyRoomTab = 'home' | 'plans' | 'chat'
 
 export default function StudyRoomDetailPage({
@@ -72,6 +90,7 @@ export default function StudyRoomDetailPage({
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState<StudyRoomTab>('home')
   const [isPlanEditorOpen, setIsPlanEditorOpen] = useState(false)
+  const [viewingStatusItemId, setViewingStatusItemId] = useState<string>()
   const activeRoomFocus = activeFocusRecords.find(
     (record) => record.sourceType === 'study' && record.sourceId === room?.id,
   )
@@ -99,6 +118,15 @@ export default function StudyRoomDetailPage({
     setSearchParams(nextParams, { replace: true })
   }, [activeRoomFocus, onStartFocus, room, searchParams, setSearchParams])
 
+  useEffect(() => {
+    if (!viewingStatusItemId) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setViewingStatusItemId(undefined)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [viewingStatusItemId])
+
   if (!room) {
     return (
       <main className="study-page study-room-missing">
@@ -110,16 +138,36 @@ export default function StudyRoomDetailPage({
     )
   }
 
+  if (!room.joined && room.visibility === 'private') {
+    return (
+      <main className="study-page study-room-private">
+        <Link className="study-back-link" to="/studies">
+          <span aria-hidden="true">←</span> 모임 라운지
+        </Link>
+        <section>
+          <span aria-hidden="true">🔒</span>
+          <div>
+            <p className="eyebrow">비공개 모임</p>
+            <h1>멤버만 모임 정보를 볼 수 있어요.</h1>
+            <p>초대받은 계정으로 참여하면 활동과 공동 계획을 확인할 수 있어요.</p>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
   const liveMembers = room.members.filter(
     (member) => member.status === 'studying',
   ).length
-  const achievedDays = Math.round((room.weeklyProgress / 100) * 7)
   const me = room.members.find((member) => member.isMe)
   const hasManagementRole = Boolean(
     me && (room.ownerId === me.id || room.managerIds.includes(me.id)),
   )
   const canCreatePlan = Boolean(
     room.joined && me && (hasManagementRole || room.allowMemberSharing),
+  )
+  const viewingStatusItem = room.sharedItems.find(
+    (item) => item.id === viewingStatusItemId,
   )
 
   const changeSharedItemStatus = (itemId: string) => {
@@ -135,9 +183,20 @@ export default function StudyRoomDetailPage({
         const nextMemberIds = memberIds.includes(me.id)
           ? memberIds.filter((memberId) => memberId !== me.id)
           : [...memberIds, me.id]
-        return item.type === 'event'
-          ? { ...item, participantMemberIds: nextMemberIds }
-          : { ...item, completedMemberIds: nextMemberIds }
+        if (item.type === 'event') {
+          return { ...item, participantMemberIds: nextMemberIds }
+        }
+        const nextCompletedAtByMember = { ...item.completedAtByMember }
+        if (memberIds.includes(me.id)) {
+          delete nextCompletedAtByMember[me.id]
+        } else {
+          nextCompletedAtByMember[me.id] = new Date().toISOString()
+        }
+        return {
+          ...item,
+          completedMemberIds: nextMemberIds,
+          completedAtByMember: nextCompletedAtByMember,
+        }
       }),
     }))
   }
@@ -152,6 +211,7 @@ export default function StudyRoomDetailPage({
           ...input,
           createdById: me.id,
           completedMemberIds: [],
+          completedAtByMember: {},
           participantMemberIds: [],
         },
         ...current.sharedItems,
@@ -199,13 +259,6 @@ export default function StudyRoomDetailPage({
           </div>
           <h1>{room.name}</h1>
           <p>{room.description}</p>
-          <div className="study-detail-goal">
-            <span aria-hidden="true">◎</span>
-            <div>
-              <small>우리의 공동 목표</small>
-              <strong>{room.goal}</strong>
-            </div>
-          </div>
         </div>
 
         <div className="study-detail-summary" aria-label="모임 현황">
@@ -336,6 +389,15 @@ export default function StudyRoomDetailPage({
                   ? item.participantMemberIds.includes(me.id)
                   : item.completedMemberIds.includes(me.id)),
             )
+            const statusMemberIds =
+              item.type === 'event'
+                ? item.participantMemberIds
+                : item.completedMemberIds
+            const statusMembers = statusMemberIds
+              .map((memberId) =>
+                room.members.find((member) => member.id === memberId),
+              )
+              .filter((member) => member !== undefined)
             return (
               <article className={`study-shared-plan-card ${item.type}`} key={item.id}>
                 <div className="study-shared-plan-card-heading">
@@ -352,11 +414,36 @@ export default function StudyRoomDetailPage({
                 {item.note && <p>{item.note}</p>}
                 <div className="study-shared-plan-footer">
                   <span>{creator?.name ?? '멤버'}님이 작성</span>
-                  <span>
-                    {item.type === 'event'
-                      ? `${item.participantMemberIds.length}명 참여 예정`
-                      : `${item.completedMemberIds.length}/${room.memberCount}명 완료`}
-                  </span>
+                  {statusMembers.length ? (
+                    <button
+                      className="shared-plan-members-button"
+                      type="button"
+                      aria-label={
+                        item.type === 'event'
+                          ? `${statusMembers.length}명의 참여 예정 멤버 보기`
+                          : `${statusMembers.length}명의 완료 멤버 보기`
+                      }
+                      onClick={() => setViewingStatusItemId(item.id)}
+                    >
+                      <span className="shared-plan-member-stack" aria-hidden="true">
+                        {statusMembers.slice(0, 5).map((member) => (
+                          <i key={member.id}>{member.avatar}</i>
+                        ))}
+                        {statusMembers.length > 5 && <i>+{statusMembers.length - 5}</i>}
+                      </span>
+                      <span>
+                        {item.type === 'event'
+                          ? `${statusMembers.length}명 참여 예정`
+                          : `${statusMembers.length}/${room.memberCount}명 완료`}
+                      </span>
+                    </button>
+                  ) : (
+                    <span>
+                      {item.type === 'event'
+                        ? '아직 참여 예정인 멤버 없음'
+                        : `0/${room.memberCount}명 완료`}
+                    </span>
+                  )}
                   {room.joined && me && (
                     <button
                       className={isMineActive ? 'active' : ''}
@@ -385,63 +472,84 @@ export default function StudyRoomDetailPage({
         <section className="study-members-panel" aria-labelledby="members-title">
           <div className="study-panel-heading">
             <div>
-              <p className="eyebrow">오늘 함께한 멤버</p>
-              <h2 id="members-title">오늘도 함께하고 있어요</h2>
+              <p className="eyebrow">멤버 활동</p>
+              <h2 id="members-title">이번 주를 함께 이어가고 있어요</h2>
             </div>
             <span>{room.memberCount}/{room.maxMembers}명</span>
           </div>
 
-          <ol className="study-member-list">
-            {rankedMembers.map((member, index) => (
-              <li key={member.id}>
-                <span className="member-rank">{index + 1}</span>
-                <span className={`study-member-avatar ${member.status}`}>
-                  {member.avatar}
-                  <i aria-hidden="true" />
-                </span>
-                <div className="study-member-copy">
-                  <div>
-                    <strong>
-                      {member.name} {member.isMe && <small>나</small>}
-                    </strong>
-                    <span className={`member-status ${member.status}`}>
-                      {statusLabels[member.status]}
-                    </span>
-                  </div>
-                  <p>{member.focusLabel}</p>
-                </div>
-                <time>{formatMinutes(member.minutes)}</time>
-              </li>
-            ))}
-          </ol>
+          <ul className="study-member-list">
+            {rankedMembers.map((member) => {
+              const weekly = getWeeklyActivitySummary(member)
+              const visibility = member.profileVisibility ?? 'roomMembers'
+              const canViewMemberActivity =
+                member.isMe ||
+                visibility === 'public' ||
+                (visibility === 'roomMembers' && room.joined)
+              return (
+                <li key={member.id}>
+                  <Link
+                    to={`/studies/${room.id}/members/${member.id}`}
+                    aria-label={`${member.name}님의 프로필 보기`}
+                  >
+                    <div className="study-member-card-heading">
+                      <span className={`study-member-avatar ${member.status}`}>
+                        {member.avatar}
+                        <i aria-hidden="true" />
+                      </span>
+                      <div className="study-member-copy">
+                        <div>
+                          <strong>
+                            {member.name} {member.isMe && <small>나</small>}
+                          </strong>
+                          {canViewMemberActivity && (
+                            <span className={`member-status ${member.status}`}>
+                              {statusLabels[member.status]}
+                            </span>
+                          )}
+                        </div>
+                        <p>
+                          {canViewMemberActivity
+                            ? member.focusLabel
+                            : '활동 기록을 공개하지 않았어요.'}
+                        </p>
+                      </div>
+                      <span className="study-member-card-arrow" aria-hidden="true">→</span>
+                    </div>
+
+                    {canViewMemberActivity ? (
+                      <>
+                        <div className="member-weekly-activity" aria-label={`${member.name}님의 이번 주 활동`}>
+                          {studyWeekdays.map((day, index) => {
+                            const minutes = weekly.minutes[index]
+                            return (
+                              <span key={day} aria-label={`${day}요일 ${formatMinutes(minutes)}`}>
+                                <small>{day}</small>
+                                <i className={`level-${getActivityLevel(minutes)}`} aria-hidden="true" />
+                              </span>
+                            )
+                          })}
+                        </div>
+
+                        <div className="study-member-week-summary">
+                          <strong>이번 주 {weekly.activeDays}일</strong>
+                          <span>총 {formatMinutes(weekly.totalMinutes)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="member-activity-private-note">
+                        <span aria-hidden="true">🔒</span>
+                        <strong>주간 활동 비공개</strong>
+                      </div>
+                    )}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
         </section>
 
         <aside className="study-detail-sidebar">
-          <section className="weekly-goal-card" aria-labelledby="weekly-goal-title">
-            <div className="study-panel-heading compact">
-              <div>
-                <p className="eyebrow">이번 주</p>
-                <h2 id="weekly-goal-title">공동 목표</h2>
-              </div>
-              <strong>{room.weeklyProgress}%</strong>
-            </div>
-            <div className="weekly-progress-visual" aria-hidden="true">
-              <span style={{ width: `${room.weeklyProgress}%` }} />
-            </div>
-            <div className="weekly-days" aria-label="주간 체크인 현황">
-              {['월', '화', '수', '목', '금', '토', '일'].map((day, index) => (
-                <span className={index < achievedDays ? 'done' : ''} key={day}>
-                  {index < achievedDays ? '✓' : day}
-                </span>
-              ))}
-            </div>
-            <p>
-              {achievedDays > 0
-                ? `이번 주 ${achievedDays}일 함께 목표를 달성했어요.`
-                : '이번 주 첫 번째 목표 달성을 기다리고 있어요.'}
-            </p>
-          </section>
-
           <section className="study-notice-card" aria-labelledby="notice-title">
             <div className="study-panel-heading compact">
               <div>
@@ -472,6 +580,75 @@ export default function StudyRoomDetailPage({
           onClose={() => setIsPlanEditorOpen(false)}
           onSaveShared={saveSharedItem}
         />
+      )}
+
+      {viewingStatusItem && (
+        <div
+          className="study-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setViewingStatusItemId(undefined)
+            }
+          }}
+        >
+          <section
+            className="shared-plan-member-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="shared-plan-member-dialog-title"
+          >
+            <header>
+              <div>
+                <p className="eyebrow">
+                  {viewingStatusItem.type === 'event' ? '참여 현황' : '완료 현황'}
+                </p>
+                <h2 id="shared-plan-member-dialog-title">{viewingStatusItem.title}</h2>
+              </div>
+              <button
+                type="button"
+                aria-label="세부 내역 닫기"
+                onClick={() => setViewingStatusItemId(undefined)}
+              >
+                ×
+              </button>
+            </header>
+            <p>
+              {viewingStatusItem.type === 'event'
+                ? `${viewingStatusItem.participantMemberIds.length}명이 참여할 예정이에요.`
+                : `${room.memberCount}명 중 ${viewingStatusItem.completedMemberIds.length}명이 완료했어요.`}
+            </p>
+            <ul>
+              {(viewingStatusItem.type === 'event'
+                ? viewingStatusItem.participantMemberIds
+                : viewingStatusItem.completedMemberIds
+              ).map((memberId) => {
+                const member = room.members.find((item) => item.id === memberId)
+                if (!member) return null
+                return (
+                  <li key={member.id}>
+                    <Link to={`/studies/${room.id}/members/${member.id}`}>
+                      <span className={`study-member-avatar ${member.status}`}>
+                        {member.avatar}<i aria-hidden="true" />
+                      </span>
+                      <span>
+                        <strong>{member.name}{member.isMe && <small> 나</small>}</strong>
+                        <small>
+                          {viewingStatusItem.type === 'event'
+                            ? '참여 예정'
+                            : formatCompletedAt(
+                                viewingStatusItem.completedAtByMember?.[member.id],
+                              )}
+                        </small>
+                      </span>
+                      <span aria-hidden="true">→</span>
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        </div>
       )}
     </main>
   )
