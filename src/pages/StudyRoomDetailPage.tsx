@@ -24,7 +24,7 @@ type StudyRoomDetailPageProps = {
   room?: StudyRoom
   activeFocusRecords: FocusRecord[]
   nowMs: number
-  onJoinRoom: (roomId: string) => void
+  onRequestJoin: (roomId: string) => void
   onChangeRoom: (
     roomId: string,
     update: (current: StudyRoom) => StudyRoom,
@@ -82,7 +82,7 @@ export default function StudyRoomDetailPage({
   room,
   activeFocusRecords,
   nowMs,
-  onJoinRoom,
+  onRequestJoin,
   onChangeRoom,
   onStartFocus,
   onStopFocus,
@@ -160,6 +160,9 @@ export default function StudyRoomDetailPage({
     (member) => member.status === 'studying',
   ).length
   const me = room.members.find((member) => member.isMe)
+  const pendingJoinRequest = room.joinRequests.find(
+    (request) => request.applicantId === 'me',
+  )
   const hasManagementRole = Boolean(
     me && (room.ownerId === me.id || room.managerIds.includes(me.id)),
   )
@@ -312,12 +315,34 @@ export default function StudyRoomDetailPage({
           <div>
             <span aria-hidden="true">👋</span>
             <div>
-              <strong>이 모임과 목표가 잘 맞나요?</strong>
-              <p>참여하면 내 활동 시간을 기록하고 멤버 현황을 볼 수 있어요.</p>
+              <strong>
+                {pendingJoinRequest
+                  ? '운영진의 승인을 기다리고 있어요.'
+                  : '이 모임과 목표가 잘 맞나요?'}
+              </strong>
+              <p>
+                {pendingJoinRequest
+                  ? '승인되면 내 활동 시간을 기록하고 멤버 현황을 볼 수 있어요.'
+                  : '가입 요청을 보내면 운영진이 확인한 뒤 참여할 수 있어요.'}
+              </p>
             </div>
           </div>
-          <button type="button" onClick={() => onJoinRoom(room.id)}>
-            모임 참여하기
+          <button
+            type="button"
+            onClick={() => onRequestJoin(room.id)}
+            disabled={
+              Boolean(pendingJoinRequest) ||
+              room.inviteOnly ||
+              room.memberCount >= room.maxMembers
+            }
+          >
+            {pendingJoinRequest
+              ? '승인 대기 중'
+              : room.inviteOnly
+                ? '초대 전용'
+                : room.memberCount >= room.maxMembers
+                  ? '정원 마감'
+                  : '가입 요청 보내기'}
           </button>
         </section>
       ) : (

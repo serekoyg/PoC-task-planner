@@ -36,6 +36,15 @@ const formatPlanDate = (date: string, time?: string) => {
   return time ? `${label} · ${time}` : `${label}까지`
 }
 
+const formatRequestDate = (requestedAt: string) =>
+  new Intl.DateTimeFormat('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  }).format(new Date(requestedAt))
+
 type ToggleRowProps = {
   title: string
   description: string
@@ -78,6 +87,7 @@ export default function StudyRoomManagementPage({
   const [editingSharedItem, setEditingSharedItem] = useState<StudySharedItem>()
   const [deletingSharedItemId, setDeletingSharedItemId] = useState<string>()
   const [delegateMemberId, setDelegateMemberId] = useState<string>()
+  const [removingMemberId, setRemovingMemberId] = useState<string>()
   const [notice, setNotice] = useState('')
   const [roomNotifications, setRoomNotifications] = useState(true)
   const [sharedNotifications, setSharedNotifications] = useState(true)
@@ -101,6 +111,7 @@ export default function StudyRoomManagementPage({
   const isManager = Boolean(
     room && me && room.managerIds.includes(me.id),
   )
+  const canManageMembers = isOwner || isManager
   const canShare = Boolean(room && (isOwner || isManager || room.allowMemberSharing))
 
   const visibleTabs = useMemo<ManagementTab[]>(
@@ -116,17 +127,18 @@ export default function StudyRoomManagementPage({
   }, [activeTab, isOwner])
 
   useEffect(() => {
-    if (!isPlanModalOpen && !delegateMemberId) return
+    if (!isPlanModalOpen && !delegateMemberId && !removingMemberId) return
 
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       setIsPlanModalOpen(false)
       setEditingSharedItem(undefined)
       setDelegateMemberId(undefined)
+      setRemovingMemberId(undefined)
     }
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [delegateMemberId, isPlanModalOpen])
+  }, [delegateMemberId, isPlanModalOpen, removingMemberId])
 
   if (!room) {
     return (
@@ -153,6 +165,9 @@ export default function StudyRoomManagementPage({
   const owner = room.members.find((member) => member.id === room.ownerId)
   const delegateMember = room.members.find(
     (member) => member.id === delegateMemberId,
+  )
+  const removingMember = room.members.find(
+    (member) => member.id === removingMemberId,
   )
   const visiblePlans = room.sharedItems.filter(
     (item) => sharedFilter === 'all' || item.type === sharedFilter,
@@ -206,6 +221,81 @@ export default function StudyRoomManagementPage({
     }))
   }
 
+  const approveJoinRequest = (requestId: string) => {
+    if (!canManageMembers) return
+    const request = room.joinRequests.find((item) => item.id === requestId)
+    if (!request) return
+    if (room.memberCount >= room.maxMembers) {
+      showNotice('정원이 가득 차 가입 요청을 승인할 수 없어요.')
+      return
+    }
+
+    onChangeRoom(room.id, (current) => ({
+      ...current,
+      memberCount: Math.min(current.maxMembers, current.memberCount + 1),
+      joinRequests: current.joinRequests.filter((item) => item.id !== requestId),
+      members: current.members.some((member) => member.id === request.applicantId)
+        ? current.members
+        : [
+            ...current.members,
+            {
+              id: request.applicantId,
+              name: request.name,
+              avatar: request.avatar,
+              minutes: 0,
+              status: 'resting',
+              focusLabel: '첫 활동을 준비 중이에요',
+              weeklyMinutes: [0, 0, 0, 0, 0, 0, 0],
+              profileVisibility: 'roomMembers',
+              bio: `${current.name}에서 새로운 목표를 시작했어요.`,
+            },
+          ],
+    }))
+    showNotice(`${request.name}님의 가입을 승인했어요.`)
+  }
+
+  const rejectJoinRequest = (requestId: string) => {
+    if (!canManageMembers) return
+    const request = room.joinRequests.find((item) => item.id === requestId)
+    if (!request) return
+    onChangeRoom(room.id, (current) => ({
+      ...current,
+      joinRequests: current.joinRequests.filter((item) => item.id !== requestId),
+    }))
+    showNotice(`${request.name}님의 가입 요청을 거절했어요.`)
+  }
+
+  const removeMember = () => {
+    if (!removingMember || !canManageMembers) return
+    if (removingMember.id === room.ownerId || removingMember.isMe) return
+
+    onChangeRoom(room.id, (current) => ({
+      ...current,
+      memberCount: Math.max(1, current.memberCount - 1),
+      managerIds: current.managerIds.filter((id) => id !== removingMember.id),
+      members: current.members.filter((member) => member.id !== removingMember.id),
+      chatMessages: current.chatMessages.filter(
+        (message) => message.memberId !== removingMember.id,
+      ),
+      sharedItems: current.sharedItems.map((item) => {
+        const completedAtByMember = { ...item.completedAtByMember }
+        delete completedAtByMember[removingMember.id]
+        return {
+          ...item,
+          completedMemberIds: item.completedMemberIds.filter(
+            (memberId) => memberId !== removingMember.id,
+          ),
+          completedAtByMember,
+          participantMemberIds: item.participantMemberIds.filter(
+            (memberId) => memberId !== removingMember.id,
+          ),
+        }
+      }),
+    }))
+    setRemovingMemberId(undefined)
+    showNotice(`${removingMember.name}님을 모임에서 내보냈어요.`)
+  }
+
   const delegateOwner = () => {
     if (!delegateMember) return
     onChangeRoom(room.id, (current) => ({
@@ -250,11 +340,12 @@ export default function StudyRoomManagementPage({
         <div>
           <p className="eyebrow">모임 관리</p>
           <h1>{room.name}</h1>
-          <p>함께할 계획과 멤버 권한, 나에게 오는 알림을 관리해요.</p>
+          <p>가입 요청과 멤버 권한, 함께할 계획과 알림을 관리해요.</p>
         </div>
         <div className="room-management-summary" aria-label="관리 요약">
           <span><strong>{room.sharedItems.length}</strong> 공유 계획</span>
           <span><strong>{room.memberCount}</strong> 멤버</span>
+          <span><strong>{room.joinRequests.length}</strong> 가입 요청</span>
           <span><strong>{roomNotifications ? '켜짐' : '꺼짐'}</strong> 내 알림</span>
         </div>
       </header>
@@ -275,6 +366,9 @@ export default function StudyRoomManagementPage({
                 {tab === 'shared' ? '▣' : tab === 'members' ? '◉' : tab === 'notifications' ? '◷' : '⚙'}
               </span>
               {tabLabels[tab]}
+              {tab === 'members' && canManageMembers && room.joinRequests.length > 0 && (
+                <small>{room.joinRequests.length}</small>
+              )}
               {tab === 'settings' && <small>방장</small>}
             </button>
           ))}
@@ -393,12 +487,69 @@ export default function StudyRoomManagementPage({
                   <h2>멤버·권한</h2>
                   <p>
                     {isOwner
-                      ? '운영진을 지정하거나 다른 멤버에게 방장을 위임할 수 있어요.'
-                      : '멤버와 역할을 확인할 수 있어요. 권한 변경은 방장만 가능해요.'}
+                      ? '가입 요청을 처리하고 운영진 지정, 방장 위임, 멤버 내보내기를 관리해요.'
+                      : isManager
+                        ? '가입 요청을 처리하고 일반 멤버를 관리할 수 있어요.'
+                        : '멤버와 역할을 확인할 수 있어요. 권한 변경은 방장만 가능해요.'}
                   </p>
                 </div>
                 {isOwner && <button type="button" onClick={() => showNotice('초대 링크를 복사했어요.')}>초대 링크 복사</button>}
               </div>
+
+              {canManageMembers && (
+                <section
+                  className="room-join-request-section"
+                  aria-labelledby="room-join-request-title"
+                >
+                  <div className="room-join-request-heading">
+                    <div>
+                      <span>가입 요청</span>
+                      <h3 id="room-join-request-title">
+                        승인 대기 {room.joinRequests.length}건
+                      </h3>
+                    </div>
+                    <small>방장과 운영진이 처리할 수 있어요.</small>
+                  </div>
+
+                  {room.joinRequests.length ? (
+                    <div className="room-join-request-list">
+                      {room.joinRequests.map((request) => (
+                        <article key={request.id}>
+                          <span className="room-member-avatar">{request.avatar}</span>
+                          <div>
+                            <strong>{request.name}</strong>
+                            <p>{request.message}</p>
+                            <time dateTime={request.requestedAt}>
+                              {formatRequestDate(request.requestedAt)} 요청
+                            </time>
+                          </div>
+                          <div className="room-join-request-actions">
+                            <button
+                              type="button"
+                              onClick={() => rejectJoinRequest(request.id)}
+                            >
+                              거절
+                            </button>
+                            <button
+                              className="room-primary-button"
+                              type="button"
+                              disabled={room.memberCount >= room.maxMembers}
+                              onClick={() => approveJoinRequest(request.id)}
+                            >
+                              승인
+                            </button>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="room-join-request-empty">
+                      <span aria-hidden="true">✓</span>
+                      <p>대기 중인 가입 요청이 없어요.</p>
+                    </div>
+                  )}
+                </section>
+              )}
 
               <div className="room-owner-card">
                 <span className="room-member-avatar">{owner?.avatar ?? '?'}</span>
@@ -414,6 +565,12 @@ export default function StudyRoomManagementPage({
                 {room.members.map((member) => {
                   const memberIsOwner = member.id === room.ownerId
                   const memberIsManager = room.managerIds.includes(member.id)
+                  const canRemoveMember = Boolean(
+                    canManageMembers &&
+                      !memberIsOwner &&
+                      !member.isMe &&
+                      (isOwner || !memberIsManager),
+                  )
                   return (
                     <article key={member.id}>
                       <span className={`study-member-avatar ${member.status}`}>
@@ -425,14 +582,41 @@ export default function StudyRoomManagementPage({
                           {memberIsOwner ? '방장' : memberIsManager ? '운영진' : '일반 멤버'}
                         </span>
                       </div>
-                      {isOwner && !memberIsOwner && (
+                      {(isOwner && !memberIsOwner) || canRemoveMember ? (
                         <div className="room-member-actions">
-                          <button type="button" onClick={() => toggleManager(member.id)}>
-                            {memberIsManager ? '운영진 해제' : '운영진 지정'}
-                          </button>
-                          <button type="button" onClick={() => setDelegateMemberId(member.id)}>
-                            방장 위임
-                          </button>
+                          {isOwner && !memberIsOwner && (
+                            <>
+                              <button type="button" onClick={() => toggleManager(member.id)}>
+                                {memberIsManager ? '운영진 해제' : '운영진 지정'}
+                              </button>
+                              <button type="button" onClick={() => setDelegateMemberId(member.id)}>
+                                방장 위임
+                              </button>
+                            </>
+                          )}
+                          {canRemoveMember && (
+                            <button
+                              className="danger"
+                              type="button"
+                              onClick={() => setRemovingMemberId(member.id)}
+                            >
+                              내보내기
+                            </button>
+                          )}
+                        </div>
+                      ) : null}
+                      {removingMemberId === member.id && (
+                        <div className="room-member-remove-confirm" role="alert">
+                          <strong>{member.name}님을 모임에서 내보낼까요?</strong>
+                          <span>멤버 권한과 활동 참여 기록이 함께 정리돼요.</span>
+                          <div>
+                            <button type="button" onClick={() => setRemovingMemberId(undefined)}>
+                              취소
+                            </button>
+                            <button className="danger" type="button" onClick={removeMember}>
+                              내보내기
+                            </button>
+                          </div>
                         </div>
                       )}
                     </article>
