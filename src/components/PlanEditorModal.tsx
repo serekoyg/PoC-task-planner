@@ -40,6 +40,11 @@ type PlanEditorModalProps = {
   todo?: Todo
   calendarEvent?: CalendarEvent
   defaultProjectName?: string
+  bulkDateSummary?: string
+  bulkDateCount?: number
+  bulkDateKeys?: string[]
+  defaultStartTime?: string
+  defaultEndTime?: string
   onClose: () => void
   onSaveTodo?: (input: TodoInput) => void
   onSaveEvent?: (input: CalendarEventInput) => void
@@ -57,6 +62,11 @@ export default function PlanEditorModal({
   todo,
   calendarEvent,
   defaultProjectName,
+  bulkDateSummary,
+  bulkDateCount = 0,
+  bulkDateKeys = [],
+  defaultStartTime,
+  defaultEndTime,
   onClose,
   onSaveTodo,
   onSaveEvent,
@@ -85,9 +95,9 @@ export default function PlanEditorModal({
   const [title, setTitle] = useState(item?.title ?? todo?.text ?? calendarEvent?.title ?? '')
   const [date, setDate] = useState(initialDate)
   const [time, setTime] = useState(
-    item?.time ?? todo?.dueTime ?? calendarEvent?.startTime ?? (initialPlanType === 'todo' ? '18:00' : '09:00'),
+    item?.time ?? todo?.dueTime ?? calendarEvent?.startTime ?? defaultStartTime ?? (initialPlanType === 'todo' ? '18:00' : '09:00'),
   )
-  const [endTime, setEndTime] = useState(item?.endTime ?? calendarEvent?.endTime ?? '10:00')
+  const [endTime, setEndTime] = useState(item?.endTime ?? calendarEvent?.endTime ?? defaultEndTime ?? '10:00')
   const [location, setLocation] = useState(item?.location ?? calendarEvent?.location ?? '')
   const [note, setNote] = useState(item?.note ?? personalItem?.note ?? '')
   const [repeat, setRepeat] = useState<StudySharedRepeat>(initialRepeat)
@@ -123,6 +133,7 @@ export default function PlanEditorModal({
   const [error, setError] = useState('')
   const [isDeleteConfirming, setIsDeleteConfirming] = useState(false)
   const isPersonal = !fixedRoom
+  const isBulkCreating = !isEditing && bulkDateCount > 1
   const member = fixedRoom?.members.find((candidate) => candidate.id === memberId)
 
   useEffect(() => {
@@ -243,7 +254,7 @@ export default function PlanEditorModal({
           <div>
             <p className="eyebrow">{fixedRoom ? `${fixedRoom.name}에 공유` : isEditing ? '계획 관리' : '새로운 계획'}</p>
             <h2 id="unified-plan-editor-title">{isEditing ? '계획 편집' : '계획 만들기'}</h2>
-            <p>{fixedRoom ? '저장하면 모든 멤버에게 하나의 공동 계획으로 표시돼요.' : isEditing ? '등록할 때 사용한 항목을 같은 화면에서 수정하세요.' : '할 일과 일정을 같은 흐름에서 간편하게 등록하세요.'}</p>
+            <p>{fixedRoom ? '저장하면 모든 멤버에게 하나의 공동 계획으로 표시돼요.' : isEditing ? '등록할 때 사용한 항목을 같은 화면에서 수정하세요.' : isBulkCreating ? `선택한 ${bulkDateCount}일에 같은 계획을 각각 만들어요.` : '할 일과 일정을 같은 흐름에서 간편하게 등록하세요.'}</p>
           </div>
           <button
             type="button"
@@ -255,6 +266,15 @@ export default function PlanEditorModal({
         </div>
 
         <form className="study-create-form" onSubmit={savePlan}>
+          {isBulkCreating && (
+            <div className="bulk-plan-create-info" role="status">
+              <span aria-hidden="true">⌁</span>
+              <p>
+                <strong>{bulkDateSummary}</strong>
+                <small>각 날짜에 하나씩 생성되며 반복 설정은 사용할 수 없어요.</small>
+              </p>
+            </div>
+          )}
           <fieldset className="shared-plan-type-options">
             <legend>종류</legend>
             {([
@@ -296,13 +316,50 @@ export default function PlanEditorModal({
           </label>
 
           <div className="study-form-row">
-            <label>
-              <span>{repeat === 'none' ? (type === 'todo' ? '마감일' : '날짜') : '시작일'}</span>
-              <input type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-            </label>
+            {isBulkCreating ? (
+              <div
+                className="bulk-selected-date-field"
+                role="group"
+                aria-labelledby="bulk-selected-date-label"
+              >
+                <span id="bulk-selected-date-label">
+                  {type === 'todo' ? '마감일' : '날짜'}
+                </span>
+                <div className="bulk-selected-date-list">
+                  <strong>{bulkDateCount}개 날짜 선택</strong>
+                  <div role="list" aria-label="선택한 날짜 목록">
+                    {bulkDateKeys.map((dateKey) => {
+                      const selectedBulkDate = new Date(`${dateKey}T00:00:00`)
+                      return (
+                        <span role="listitem" key={dateKey}>
+                          {selectedBulkDate.getMonth() + 1}월{' '}
+                          {selectedBulkDate.getDate()}일 (
+                          {weekdayLabels[selectedBulkDate.getDay()]})
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <label>
+                <span>
+                  {repeat === 'none'
+                    ? type === 'todo'
+                      ? '마감일'
+                      : '날짜'
+                    : '시작일'}
+                </span>
+                <input
+                  type="date"
+                  value={date}
+                  onChange={(event) => setDate(event.target.value)}
+                />
+              </label>
+            )}
             <label>
               <span>반복</span>
-              <select value={repeat} onChange={(event) => setRepeat(event.target.value as StudySharedRepeat)}>
+              <select value={repeat} disabled={isBulkCreating} onChange={(event) => setRepeat(event.target.value as StudySharedRepeat)}>
                 <option value="none">반복 안 함</option>
                 <option value="weekly">특정 요일</option>
                 <option value="monthly">매월 특정 날짜</option>
