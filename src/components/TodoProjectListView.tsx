@@ -3,7 +3,7 @@ import type { Todo } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
 import { formatTaskDate, getTaskPriority } from '../lib/task'
 import { getBucketTodos, getTodoProjectBuckets } from '../lib/todoView'
-import type { ProjectFilter } from './ProjectSidebar'
+import type { ProjectFilter } from '../data/projects'
 import TodoPlayLink from './TodoPlayLink'
 
 const PROJECT_BATCH_SIZE = 2

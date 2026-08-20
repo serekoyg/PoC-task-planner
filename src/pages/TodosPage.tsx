@@ -1,16 +1,12 @@
-import { useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import ProjectSidebar, {
-  type PlanCollection,
-  type ProjectFilter,
-} from '../components/ProjectSidebar'
+import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import PlanEditorModal from '../components/PlanEditorModal'
 import TodoDateListView from '../components/TodoDateListView'
 import TodoKanbanView from '../components/TodoKanbanView'
 import TodoProjectListView from '../components/TodoProjectListView'
 import type { CalendarEventInput, Todo, TodoInput } from '../data/initialData'
-import type { PlannerProject } from '../data/projects'
-import { BACKLOG_PROJECT_NAME, isBacklogProject } from '../data/projects'
+import type { PlannerProject, ProjectFilter } from '../data/projects'
+import { BACKLOG_PROJECT_NAME } from '../data/projects'
 import type { StudySharedItemEntry } from '../data/studyRooms'
 
 type TodoView = 'dates' | 'kanban' | 'projects'
@@ -39,7 +35,6 @@ type TodosPageProps = {
   todos: Todo[]
   projects: PlannerProject[]
   sharedItems: StudySharedItemEntry[]
-  collectionCounts: Record<PlanCollection, number>
   onAddTodo: (todo: TodoInput) => void
   onAddEvent: (event: CalendarEventInput) => void
   onUpdateTodo: (todoId: string, todo: TodoInput) => void
@@ -54,7 +49,6 @@ export default function TodosPage({
   todos,
   projects,
   sharedItems,
-  collectionCounts,
   onAddTodo,
   onAddEvent,
   onUpdateTodo,
@@ -62,8 +56,7 @@ export default function TodosPage({
   onRemoveTodo,
   onToggleSharedItemStatus,
 }: TodosPageProps) {
-  const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
   const selectedProjectId = (searchParams.get('project') ??
     'all') as ProjectFilter
   const [todoView, setTodoView] = useState<TodoView>('dates')
@@ -72,25 +65,6 @@ export default function TodosPage({
   const selectedProject = projects.find(
     (project) => project.id === selectedProjectId,
   )
-  const isBacklogTodo = (todo: Todo) => isBacklogProject(todo.project)
-  const projectCounts = useMemo(() => {
-    const openTodos = todos.filter((todo) => !todo.done)
-    const openSharedPlans = sharedItems.filter(({ item, memberId }) =>
-      item.type === 'todo'
-        ? !item.completedMemberIds.includes(memberId)
-        : !item.participantMemberIds.includes(memberId),
-    )
-    const counts: Record<string, number> = {
-      all: openTodos.length + openSharedPlans.length,
-      backlog: openTodos.filter(isBacklogTodo).length,
-    }
-    projects.forEach((project) => {
-      counts[project.id] = openTodos.filter(
-        (todo) => todo.project === project.name,
-      ).length
-    })
-    return counts
-  }, [projects, sharedItems, todos])
   const selectedProjectName =
     selectedProject?.name ??
     (selectedProjectId === 'backlog'
@@ -102,27 +76,9 @@ export default function TodosPage({
     setEditingTodo(undefined)
   }
 
-  const selectProject = (projectId: ProjectFilter) => {
-    if (projectId === 'all') setSearchParams({})
-    else setSearchParams({ project: projectId })
-  }
-
   return (
     <main className="todos-page">
-      <div className="project-filter-layout todo-project-layout">
-        <ProjectSidebar
-          projects={projects}
-          selectedProjectId={selectedProjectId}
-          itemCounts={projectCounts}
-          itemLabel="미완료 할 일"
-          collectionCounts={collectionCounts}
-          onSelectProject={selectProject}
-          onSelectCollection={(collection) =>
-            navigate(`/collections/${collection}`)
-          }
-        />
-
-        <div className="project-filter-content todo-view-content">
+      <div className="project-filter-content todo-view-content">
           <header className="todo-view-toolbar">
             <div>
               <p className="eyebrow">{selectedProjectName}</p>
@@ -188,7 +144,6 @@ export default function TodosPage({
               onEditTodo={setEditingTodo}
             />
           )}
-        </div>
       </div>
 
       {(isCreating || editingTodo) && (

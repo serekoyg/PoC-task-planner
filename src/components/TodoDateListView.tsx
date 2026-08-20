@@ -8,7 +8,7 @@ import type { StudySharedItemEntry } from '../data/studyRooms'
 import { formatSelectedDate } from '../lib/date'
 import { getSharedRepeatLabel } from '../lib/studyShared'
 import { getTaskPriority, getTaskProject } from '../lib/task'
-import type { ProjectFilter } from './ProjectSidebar'
+import type { ProjectFilter } from '../data/projects'
 import TodoPlayLink from './TodoPlayLink'
 
 const DATE_BATCH_SIZE = 2
