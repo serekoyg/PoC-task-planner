@@ -45,7 +45,10 @@ export default function ProfilePage({ todos, rooms }: ProfilePageProps) {
             <p>오늘의 작은 집중이 쌓여 꾸준한 하루를 만들고 있어요.</p>
           </div>
         </div>
-        <Link to="/todos">오늘 할 일 계속하기 <span aria-hidden="true">→</span></Link>
+        <div className="profile-hero-actions">
+          <Link to="/settings?section=account">프로필 설정</Link>
+          <Link to="/todos">오늘 할 일 계속하기 <span aria-hidden="true">→</span></Link>
+        </div>
       </section>
 
       <section className="profile-stats" aria-label="나의 활동 요약">
