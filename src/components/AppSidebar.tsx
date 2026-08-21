@@ -16,6 +16,7 @@ type AppSidebarProps = {
   isProfileMenuOpen: boolean
   isMobileOpen: boolean
   isCollapsed: boolean
+  isFocusAlwaysVisible: boolean
   profileActionMessage: string
   profileMenuRef: RefObject<HTMLDivElement | null>
   onToggleMobile: () => void
@@ -25,6 +26,7 @@ type AppSidebarProps = {
   onSelectToday: () => void
   onToggleNotifications: () => void
   onToggleProfile: () => void
+  onToggleFocusAlwaysVisible: () => void
   onSync: () => void
   onLogout: () => void
 }
@@ -53,6 +55,7 @@ export default function AppSidebar({
   isProfileMenuOpen,
   isMobileOpen,
   isCollapsed,
+  isFocusAlwaysVisible,
   profileActionMessage,
   profileMenuRef,
   onToggleMobile,
@@ -62,6 +65,7 @@ export default function AppSidebar({
   onSelectToday,
   onToggleNotifications,
   onToggleProfile,
+  onToggleFocusAlwaysVisible,
   onSync,
   onLogout,
 }: AppSidebarProps) {
@@ -208,7 +212,15 @@ export default function AppSidebar({
         <section className="sidebar-lists" aria-labelledby="sidebar-list-title">
           <div className="sidebar-section-heading">
             <h2 id="sidebar-list-title">목록</h2>
-            <Link to="/settings?section=lists" aria-label="목록 관리">＋</Link>
+            <Link
+              to="/settings?section=lists"
+              state={{
+                settingsReturnTo: `${location.pathname}${location.search}`,
+              }}
+              aria-label="목록 관리"
+            >
+              ＋
+            </Link>
           </div>
           <nav aria-label="나의 목록">
             <Link
@@ -309,7 +321,13 @@ export default function AppSidebar({
                     내 프로필
                     <i aria-hidden="true">›</i>
                   </Link>
-                  <Link role="menuitem" to="/settings">
+                  <Link
+                    role="menuitem"
+                    to="/settings"
+                    state={{
+                      settingsReturnTo: `${location.pathname}${location.search}`,
+                    }}
+                  >
                     <span aria-hidden="true">⚙</span>
                     설정
                     <i aria-hidden="true">›</i>
@@ -318,6 +336,28 @@ export default function AppSidebar({
                     <span aria-hidden="true">↻</span>
                     지금 동기화
                     <i aria-hidden="true">›</i>
+                  </button>
+                </div>
+                <div className="profile-menu-preferences">
+                  <button
+                    type="button"
+                    role="menuitemcheckbox"
+                    aria-checked={isFocusAlwaysVisible}
+                    onClick={onToggleFocusAlwaysVisible}
+                  >
+                    <span aria-hidden="true">◉</span>
+                    <span>
+                      <strong>LIVE FOCUS 항상 표시</strong>
+                      <small>집중이 없어도 상단에 유지해요.</small>
+                    </span>
+                    <span
+                      className={`sidebar-setting-toggle${
+                        isFocusAlwaysVisible ? ' active' : ''
+                      }`}
+                      aria-hidden="true"
+                    >
+                      <i />
+                    </span>
                   </button>
                 </div>
                 <p className="profile-menu-message" aria-live="polite">

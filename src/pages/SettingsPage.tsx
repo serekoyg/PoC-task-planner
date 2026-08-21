@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import ProjectManagementModal, {
   UnsavedChangesDialog,
 } from '../components/ProjectManagementModal'
@@ -241,6 +241,8 @@ export default function SettingsPage({
   profileVisibility,
   onUpdateProfileVisibility,
 }: SettingsPageProps) {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedSection = searchParams.get('section') as SettingsSection | null
   const [selectedSection, setSelectedSection] =
@@ -255,6 +257,11 @@ export default function SettingsPage({
   const [connectedServices, setConnectedServices] = useState<string[]>([])
   const [isListManagementDirty, setIsListManagementDirty] = useState(false)
   const [pendingSection, setPendingSection] = useState<SettingsSection>()
+  const [isClosePending, setIsClosePending] = useState(false)
+  const selectedMobileTabRef = useRef<HTMLButtonElement>(null)
+  const returnTo =
+    (location.state as { settingsReturnTo?: string } | null)
+      ?.settingsReturnTo ?? '/calendar'
 
   useEffect(() => {
     if (
@@ -265,6 +272,15 @@ export default function SettingsPage({
       setSelectedSection(requestedSection)
     }
   }, [requestedSection, selectedSection])
+
+  useEffect(() => {
+    if (!window.matchMedia('(max-width: 720px)').matches) return
+    selectedMobileTabRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center',
+    })
+  }, [selectedSection])
 
   const selected = sections.find((section) => section.id === selectedSection)!
   const filteredSections = useMemo(() => {
@@ -297,6 +313,44 @@ export default function SettingsPage({
         : `${service} 연결을 목업으로 완료했어요.`,
     )
   }
+
+  const selectSection = (sectionId: SettingsSection) => {
+    if (
+      selectedSection === 'lists' &&
+      sectionId !== 'lists' &&
+      isListManagementDirty
+    ) {
+      setPendingSection(sectionId)
+      return
+    }
+    setSelectedSection(sectionId)
+    setSearchParams(
+      { section: sectionId },
+      { replace: true, state: location.state },
+    )
+  }
+
+  const requestClose = () => {
+    if (selectedSection === 'lists' && isListManagementDirty) {
+      setIsClosePending(true)
+      return
+    }
+    navigate(returnTo, { replace: true })
+  }
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      if (selectedSection === 'lists' && isListManagementDirty) {
+        setIsClosePending(true)
+        return
+      }
+      navigate(returnTo, { replace: true })
+    }
+
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [isListManagementDirty, navigate, returnTo, selectedSection])
 
   const renderSettings = () => {
     switch (selectedSection) {
@@ -563,7 +617,27 @@ export default function SettingsPage({
   }
 
   return (
-    <main className="settings-page">
+    <div
+      className="settings-modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) requestClose()
+      }}
+    >
+    <main
+      className="settings-page"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settings-title"
+    >
+      <button
+        className="settings-modal-close"
+        type="button"
+        aria-label="설정 닫기"
+        onClick={requestClose}
+        autoFocus
+      >
+        ×
+      </button>
       <div className="settings-layout">
         <aside className="settings-sidebar" aria-label="설정 카테고리">
           <label className="settings-search">
@@ -575,21 +649,15 @@ export default function SettingsPage({
             {filteredSections.map((section) => (
               <button
                 key={section.id}
+                ref={
+                  selectedSection === section.id
+                    ? selectedMobileTabRef
+                    : undefined
+                }
                 type="button"
                 className={selectedSection === section.id ? 'active' : ''}
                 aria-current={selectedSection === section.id ? 'page' : undefined}
-                onClick={() => {
-                  if (
-                    selectedSection === 'lists' &&
-                    section.id !== 'lists' &&
-                    isListManagementDirty
-                  ) {
-                    setPendingSection(section.id)
-                    return
-                  }
-                  setSelectedSection(section.id)
-                  setSearchParams({ section: section.id })
-                }}
+                onClick={() => selectSection(section.id)}
               >
                 <span aria-hidden="true">{section.icon}</span>
                 {section.title}
@@ -627,12 +695,26 @@ export default function SettingsPage({
           onContinue={() => setPendingSection(undefined)}
           onLeave={() => {
             setSelectedSection(pendingSection)
-            setSearchParams({ section: pendingSection })
+            setSearchParams(
+              { section: pendingSection },
+              { replace: true, state: location.state },
+            )
             setPendingSection(undefined)
             setIsListManagementDirty(false)
           }}
         />
       )}
+      {isClosePending && (
+        <UnsavedChangesDialog
+          onContinue={() => setIsClosePending(false)}
+          onLeave={() => {
+            setIsListManagementDirty(false)
+            setIsClosePending(false)
+            navigate(returnTo, { replace: true })
+          }}
+        />
+      )}
     </main>
+    </div>
   )
 }
