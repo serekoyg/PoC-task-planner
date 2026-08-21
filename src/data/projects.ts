@@ -15,6 +15,9 @@ export type PlannerProject = {
   createdAt?: string
 }
 
+export type ProjectFilter = 'all' | 'backlog' | string
+export type PlanCollection = 'completed' | 'trash'
+
 export type CalendarTodoVisibility = Record<string, boolean>
 
 export type ProjectInput = {

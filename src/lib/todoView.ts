@@ -6,7 +6,7 @@ import {
   getProjectColor,
   isBacklogProject,
 } from '../data/projects'
-import type { ProjectFilter } from '../components/ProjectSidebar'
+import type { ProjectFilter } from '../data/projects'
 
 export type TodoProjectBucket = {
   id: string

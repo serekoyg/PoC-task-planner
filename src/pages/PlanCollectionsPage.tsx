@@ -1,14 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import ProjectSidebar, {
-  type PlanCollection,
-  type ProjectFilter,
-} from '../components/ProjectSidebar'
-import type { CalendarEvent, Todo } from '../data/initialData'
+import { Link } from 'react-router-dom'
+import type { Todo } from '../data/initialData'
 import {
   BACKLOG_PROJECT_NAME,
-  isBacklogProject,
-  type PlannerProject,
+  type PlanCollection,
 } from '../data/projects'
 import type { TrashedPlan } from '../data/trash'
 import { formatTaskDate, getTaskProject } from '../lib/task'
@@ -18,8 +13,6 @@ type TrashFilter = 'all' | 'todo' | 'event'
 type PlanCollectionsPageProps = {
   collection: PlanCollection
   todos: Todo[]
-  events: CalendarEvent[]
-  projects: PlannerProject[]
   trash: TrashedPlan[]
   collectionCounts: Record<PlanCollection, number>
   onToggleTodo: (todoId: string) => void
@@ -40,8 +33,6 @@ const formatDeletedAt = (deletedAt: string) =>
 export default function PlanCollectionsPage({
   collection,
   todos,
-  events,
-  projects,
   trash,
   collectionCounts,
   onToggleTodo,
@@ -50,7 +41,6 @@ export default function PlanCollectionsPage({
   onDeleteTrash,
   onEmptyTrash,
 }: PlanCollectionsPageProps) {
-  const navigate = useNavigate()
   const [trashFilter, setTrashFilter] = useState<TrashFilter>('all')
   const [confirmingTrashId, setConfirmingTrashId] = useState<string>()
   const [isEmptyConfirming, setIsEmptyConfirming] = useState(false)
@@ -65,43 +55,9 @@ export default function PlanCollectionsPage({
     trashFilter === 'all'
       ? trash
       : trash.filter((entry) => entry.type === trashFilter)
-  const openTodos = todos.filter((todo) => !todo.done)
-  const projectCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      all: openTodos.length + events.length,
-      backlog:
-        openTodos.filter((todo) => isBacklogProject(todo.project)).length +
-        events.filter((event) => isBacklogProject(event.project)).length,
-    }
-    projects.forEach((project) => {
-      counts[project.id] =
-        openTodos.filter((todo) => todo.project === project.name).length +
-        events.filter((event) => event.project === project.name).length
-    })
-    return counts
-  }, [events, openTodos, projects])
-
-  const selectProject = (projectId: ProjectFilter) => {
-    navigate(projectId === 'all' ? '/todos' : `/todos?project=${projectId}`)
-  }
-
   return (
     <main className="todos-page plan-collections-page">
-      <div className="project-filter-layout todo-project-layout">
-        <ProjectSidebar
-          projects={projects}
-          selectedProjectId="all"
-          selectedCollection={collection}
-          itemCounts={projectCounts}
-          itemLabel="활성 계획"
-          collectionCounts={collectionCounts}
-          onSelectProject={selectProject}
-          onSelectCollection={(nextCollection) =>
-            navigate(`/collections/${nextCollection}`)
-          }
-        />
-
-        <div className="project-filter-content plan-collection-content">
+      <div className="project-filter-content plan-collection-content">
           <header className="plan-collection-hero">
             <div>
               <p className="eyebrow">계획 보관함</p>
@@ -297,7 +253,6 @@ export default function PlanCollectionsPage({
               )}
             </section>
           )}
-        </div>
       </div>
     </main>
   )

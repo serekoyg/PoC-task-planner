@@ -7,13 +7,9 @@ import {
   useRef,
   useState,
 } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import DateJumpDialog from '../components/DateJumpDialog'
 import CalendarTimeGrid from '../components/CalendarTimeGrid'
-import ProjectSidebar, {
-  type PlanCollection,
-  type ProjectFilter,
-} from '../components/ProjectSidebar'
 import PlanEditorModal from '../components/PlanEditorModal'
 import type {
   CalendarEvent,
@@ -28,6 +24,7 @@ import {
   isBacklogProject,
   type CalendarTodoVisibility,
   type PlannerProject,
+  type ProjectFilter,
 } from '../data/projects'
 import type {
   StudyRoom,
@@ -184,7 +181,6 @@ type CalendarPageProps = {
   calendarTodoVisibility: CalendarTodoVisibility
   studyRooms: StudyRoom[]
   sharedItems: StudySharedItemEntry[]
-  collectionCounts: Record<PlanCollection, number>
   onSelectDate: (date: Date) => void
   onMoveMonth: (amount: number) => void
   onSelectToday: () => void
@@ -210,7 +206,6 @@ export default function CalendarPage({
   calendarTodoVisibility,
   studyRooms,
   sharedItems,
-  collectionCounts,
   onSelectDate,
   onMoveMonth,
   onSelectToday,
@@ -222,8 +217,9 @@ export default function CalendarPage({
   onChangeRoom,
 }: CalendarPageProps) {
   const navigate = useNavigate()
-  const [selectedProjectId, setSelectedProjectId] =
-    useState<ProjectFilter>('all')
+  const [searchParams] = useSearchParams()
+  const selectedProjectId = (searchParams.get('project') ??
+    'all') as ProjectFilter
   const [calendarView, setCalendarView] = useState<CalendarView>('month')
   const [isDateJumpOpen, setIsDateJumpOpen] = useState(false)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
@@ -359,27 +355,6 @@ export default function CalendarPage({
         : [],
     [participatingSharedEvents, selectedProjectId],
   )
-  const projectCounts = useMemo(() => {
-    const counts: Record<string, number> = {
-      all:
-        events.length +
-        enabledCalendarTodos.length +
-        participatingSharedEvents.length,
-      backlog:
-        events.filter(isBacklogEvent).length +
-        enabledCalendarTodos.filter((todo) =>
-          isBacklogProject(todo.project),
-        ).length,
-    }
-    projects.forEach((project) => {
-      counts[project.id] = events.filter(
-        (event) => event.project === project.name,
-      ).length + enabledCalendarTodos.filter(
-        (todo) => todo.project === project.name,
-      ).length
-    })
-    return counts
-  }, [enabledCalendarTodos, events, participatingSharedEvents, projects])
   const selectedProjectName =
     selectedProject?.name ??
     (selectedProjectId === 'backlog'
@@ -1167,20 +1142,7 @@ export default function CalendarPage({
         selectedRange || calendarClipboard ? ' range-mode-active' : ''
       }`}
     >
-      <div className="project-filter-layout">
-        <ProjectSidebar
-          projects={projects}
-          selectedProjectId={selectedProjectId}
-          itemCounts={projectCounts}
-          itemLabel="일정과 할 일"
-          collectionCounts={collectionCounts}
-          onSelectProject={setSelectedProjectId}
-          onSelectCollection={(collection) =>
-            navigate(`/collections/${collection}`)
-          }
-        />
-
-        <div className="project-filter-content calendar-view-content">
+      <div className="project-filter-content calendar-view-content">
           <header className="calendar-view-toolbar">
             <div>
               <p className="eyebrow">{selectedProjectName}</p>
@@ -1720,7 +1682,6 @@ export default function CalendarPage({
                 )}
               </aside>
             )}
-        </div>
       </div>
 
       {isEditorOpen && (

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Link,
   Navigate,
-  NavLink,
   Route,
   Routes,
   useLocation,
@@ -12,6 +11,7 @@ import {
 import GlobalSearch from './components/GlobalSearch'
 import NotificationInbox from './components/NotificationInbox'
 import ActiveFocusPopover from './components/ActiveFocusPopover'
+import AppSidebar from './components/AppSidebar'
 import {
   type CalendarEvent,
   type CalendarEventInput,
@@ -48,7 +48,6 @@ import {
   type FocusRecord,
   type FocusSourceType,
 } from './data/focusRecords'
-import { formatHeaderDate } from './lib/date'
 import {
   getFocusDurationSeconds,
   getFocusSegments,
@@ -303,6 +302,8 @@ export default function App() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isNotificationInboxOpen, setIsNotificationInboxOpen] = useState(false)
   const [isFocusPopoverOpen, setIsFocusPopoverOpen] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [profileActionMessage, setProfileActionMessage] = useState(
     '오늘 오후 9:27에 동기화됨',
   )
@@ -462,7 +463,8 @@ export default function App() {
     setIsSearchOpen(false)
     setIsNotificationInboxOpen(false)
     setIsFocusPopoverOpen(false)
-  }, [location.pathname])
+    setIsSidebarOpen(false)
+  }, [location.pathname, location.search])
 
   useEffect(() => {
     const openGlobalSearch = (event: KeyboardEvent) => {
@@ -1046,65 +1048,53 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
-      <header className="topbar">
-        <Link className="brand" to="/calendar" aria-label="하루 홈">
-          <span className="brand-mark" aria-hidden="true">
-            H
-          </span>
-          <span>하루</span>
-        </Link>
+    <div
+      className={`app-shell${activeFocusRecords.length ? ' focus-active' : ''}${
+        isSidebarCollapsed ? ' sidebar-collapsed' : ''
+      }`}
+    >
+      <AppSidebar
+        projects={projects}
+        itemCounts={projectPlanCounts}
+        collectionCounts={collectionCounts}
+        today={today}
+        unreadNotificationCount={unreadNotificationCount}
+        isNotificationInboxOpen={isNotificationInboxOpen}
+        isProfileMenuOpen={isProfileMenuOpen}
+        isMobileOpen={isSidebarOpen}
+        isCollapsed={isSidebarCollapsed}
+        profileActionMessage={profileActionMessage}
+        profileMenuRef={profileMenuRef}
+        onToggleMobile={() => setIsSidebarOpen((current) => !current)}
+        onToggleCollapsed={() => {
+          setIsNotificationInboxOpen(false)
+          setIsProfileMenuOpen(false)
+          setIsSidebarCollapsed((current) => !current)
+        }}
+        onCloseMobile={() => setIsSidebarOpen(false)}
+        onSearch={() => {
+          setIsSidebarOpen(false)
+          openSearch()
+        }}
+        onSelectToday={selectToday}
+        onToggleNotifications={() => {
+          setIsSidebarOpen(false)
+          toggleNotificationInbox()
+        }}
+        onToggleProfile={() => {
+          setIsSearchOpen(false)
+          setIsNotificationInboxOpen(false)
+          setIsFocusPopoverOpen(false)
+          setIsProfileMenuOpen((current) => !current)
+        }}
+        onSync={() =>
+          setProfileActionMessage('방금 모든 데이터를 동기화했어요')
+        }
+        onLogout={logout}
+      />
 
-        <nav className="primary-nav" aria-label="주요 메뉴">
-          <NavLink to="/calendar">
-            <span aria-hidden="true">▦</span>
-            <span className="nav-label">캘린더</span>
-          </NavLink>
-          <NavLink to="/todos">
-            <span aria-hidden="true">✓</span>
-            <span className="nav-label">할 일</span>
-          </NavLink>
-          <NavLink to="/studies">
-            <span aria-hidden="true">◉</span>
-            <span className="nav-label">모임</span>
-          </NavLink>
-        </nav>
-
-        <div className="header-meta">
-          <p className="today-label">{formatHeaderDate(today)}</p>
-          <div className="header-utilities">
-            <button
-              className="header-utility-button"
-              type="button"
-              aria-label="통합 검색 열기"
-              onClick={openSearch}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="11" cy="11" r="6" />
-                <path d="m16 16 4 4" />
-              </svg>
-              <span className="header-shortcut">⌘K</span>
-            </button>
-            <button
-              className={`header-utility-button notification-button${
-                isNotificationInboxOpen ? ' active' : ''
-              }`}
-              type="button"
-              aria-label={`알림 수신함, 읽지 않은 알림 ${unreadNotificationCount}개`}
-              aria-expanded={isNotificationInboxOpen}
-              onClick={toggleNotificationInbox}
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 8h18c0-1-3-1-3-8" />
-                <path d="M10 21h4" />
-              </svg>
-              {unreadNotificationCount > 0 && (
-                <span className="notification-badge">
-                  {unreadNotificationCount}
-                </span>
-              )}
-            </button>
-          </div>
+      {activeFocusRecords.length > 0 && (
+        <div className="focus-island">
           <ActiveFocusPopover
             records={unfinishedFocusRecords}
             nowMs={focusNowMs}
@@ -1128,76 +1118,8 @@ export default function App() {
             }}
             onPauseAll={pauseAllFocus}
           />
-          <div className="profile-menu" ref={profileMenuRef}>
-            <button
-              className={`avatar${isProfileMenuOpen ? ' active' : ''}`}
-              type="button"
-              aria-label="사용자 메뉴"
-              aria-controls="profile-menu-popover"
-              aria-expanded={isProfileMenuOpen}
-              onClick={() => {
-                setIsSearchOpen(false)
-                setIsNotificationInboxOpen(false)
-                setIsFocusPopoverOpen(false)
-                setIsProfileMenuOpen((current) => !current)
-              }}
-            >
-              민
-            </button>
-
-            {isProfileMenuOpen && (
-              <div
-                className="profile-menu-popover"
-                id="profile-menu-popover"
-                role="menu"
-              >
-                <div className="profile-menu-user">
-                  <span aria-hidden="true">민</span>
-                  <div>
-                    <strong>민서</strong>
-                    <small>오늘도 한 걸음씩</small>
-                  </div>
-                </div>
-                <div className="profile-menu-links">
-                  <Link role="menuitem" to="/profile">
-                    <span aria-hidden="true">◯</span>
-                    내 프로필
-                    <i aria-hidden="true">›</i>
-                  </Link>
-                  <Link role="menuitem" to="/settings">
-                    <span aria-hidden="true">⚙</span>
-                    설정
-                    <i aria-hidden="true">›</i>
-                  </Link>
-                  <button
-                    role="menuitem"
-                    type="button"
-                    onClick={() =>
-                      setProfileActionMessage('방금 모든 데이터를 동기화했어요')
-                    }
-                  >
-                    <span aria-hidden="true">↻</span>
-                    지금 동기화
-                    <i aria-hidden="true">›</i>
-                  </button>
-                </div>
-                <p className="profile-menu-message" aria-live="polite">
-                  <span aria-hidden="true">●</span> {profileActionMessage}
-                </p>
-                <button
-                  className="profile-menu-logout"
-                  role="menuitem"
-                  type="button"
-                  onClick={logout}
-                >
-                  <span aria-hidden="true">↪</span>
-                  로그아웃
-                </button>
-              </div>
-            )}
-          </div>
         </div>
-      </header>
+      )}
 
       {isSearchOpen && (
         <GlobalSearch
@@ -1231,7 +1153,6 @@ export default function App() {
               todos={todos}
               projects={projects}
               calendarTodoVisibility={calendarTodoVisibility}
-              collectionCounts={collectionCounts}
               studyRooms={joinedStudyRooms}
               sharedItems={sharedItemEntries}
               onSelectDate={selectDate}
@@ -1264,7 +1185,6 @@ export default function App() {
               selectedDate={selectedDate}
               todos={todos}
               projects={projects}
-              collectionCounts={collectionCounts}
               sharedItems={sharedItemEntries}
               onAddTodo={addTodo}
               onAddEvent={addEvent}
@@ -1285,8 +1205,6 @@ export default function App() {
             <PlanCollectionsPage
               collection="completed"
               todos={todos}
-              events={events}
-              projects={projects}
               trash={trash}
               collectionCounts={collectionCounts}
               onToggleTodo={toggleTodo}
@@ -1303,8 +1221,6 @@ export default function App() {
             <PlanCollectionsPage
               collection="trash"
               todos={todos}
-              events={events}
-              projects={projects}
               trash={trash}
               collectionCounts={collectionCounts}
               onToggleTodo={toggleTodo}

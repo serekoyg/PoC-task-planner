@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import type { Todo } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
-import type { ProjectFilter } from './ProjectSidebar'
+import type { ProjectFilter } from '../data/projects'
 import { formatTaskDate, getTaskPriority } from '../lib/task'
 import { getBucketTodos, getTodoProjectBuckets } from '../lib/todoView'
 import TodoPlayLink from './TodoPlayLink'
