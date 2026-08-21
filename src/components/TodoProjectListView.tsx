@@ -4,24 +4,40 @@ import type { PlannerProject } from '../data/projects'
 import { formatTaskDate, getTaskPriority } from '../lib/task'
 import { getBucketTodos, getTodoProjectBuckets } from '../lib/todoView'
 import type { ProjectFilter } from '../data/projects'
-import TodoPlayLink from './TodoPlayLink'
+import type {
+  FocusRecord,
+  FocusRecordContext,
+  FocusSourceType,
+} from '../data/focusRecords'
+import FocusToggleButton from './FocusToggleButton'
 
 const PROJECT_BATCH_SIZE = 2
 
 type TodoProjectListViewProps = {
   todos: Todo[]
   projects: PlannerProject[]
+  focusRecords: FocusRecord[]
   selectedProjectId: ProjectFilter
   onToggleTodo: (todoId: string) => void
   onEditTodo: (todo: Todo) => void
+  onStartFocus: (
+    sourceType: FocusSourceType,
+    sourceId: string,
+    title: string,
+    context?: FocusRecordContext,
+  ) => void
+  onPauseFocus: (recordId: string) => void
 }
 
 export default function TodoProjectListView({
   todos,
   projects,
+  focusRecords,
   selectedProjectId,
   onToggleTodo,
   onEditTodo,
+  onStartFocus,
+  onPauseFocus,
 }: TodoProjectListViewProps) {
   const buckets = useMemo(
     () => getTodoProjectBuckets(projects, selectedProjectId),
@@ -72,8 +88,13 @@ export default function TodoProjectListView({
             </header>
 
             <div className="todo-project-rows">
-              {bucketTodos.map((todo) => (
-                <article
+              {bucketTodos.map((todo) => {
+                const focusRecord = focusRecords.find(
+                  (record) =>
+                    record.sourceType === 'todo' && record.sourceId === todo.id,
+                )
+                return (
+                  <article
                   className={`todo-project-row${todo.done ? ' completed' : ''}`}
                   key={todo.id}
                 >
@@ -102,12 +123,15 @@ export default function TodoProjectListView({
                       {todo.dueTime ? ` · 마감 ${todo.dueTime}` : ''}
                     </span>
                   </div>
-                  <TodoPlayLink
-                    to={`/todos/${todo.id}/focus`}
-                    label={`${todo.text} 집중 시작`}
+                  <FocusToggleButton
+                    label={`${todo.text} 집중`}
+                    record={focusRecord}
+                    onStart={() => onStartFocus('todo', todo.id, todo.text)}
+                    onPause={onPauseFocus}
                   />
                 </article>
-              ))}
+                )
+              })}
 
               {!bucketTodos.length && (
                 <p className="todo-project-empty">아직 등록된 할 일이 없어요.</p>

@@ -46,6 +46,7 @@ import { createInitialTrash, type TrashedPlan } from './data/trash'
 import {
   createInitialFocusRecords,
   type FocusRecord,
+  type FocusRecordContext,
   type FocusSourceType,
 } from './data/focusRecords'
 import {
@@ -146,7 +147,7 @@ const readFocusRecords = () =>
 
 type StudyRoomRouteProps = {
   rooms: StudyRoom[]
-  activeFocusRecords: FocusRecord[]
+  focusRecords: FocusRecord[]
   nowMs: number
   onRequestJoin: (roomId: string) => void
   onChangeRoom: (
@@ -157,29 +158,30 @@ type StudyRoomRouteProps = {
     sourceType: FocusSourceType,
     sourceId: string,
     title: string,
+    context?: FocusRecordContext,
   ) => void
-  onStopFocus: (recordId: string) => void
+  onPauseFocus: (recordId: string) => void
 }
 
 function StudyRoomRoute({
   rooms,
-  activeFocusRecords,
+  focusRecords,
   nowMs,
   onRequestJoin,
   onChangeRoom,
   onStartFocus,
-  onStopFocus,
+  onPauseFocus,
 }: StudyRoomRouteProps) {
   const { roomId } = useParams()
   return (
     <StudyRoomDetailPage
       room={rooms.find((room) => room.id === roomId)}
-      activeFocusRecords={activeFocusRecords}
+      focusRecords={focusRecords}
       nowMs={nowMs}
       onRequestJoin={onRequestJoin}
       onChangeRoom={onChangeRoom}
       onStartFocus={onStartFocus}
-      onStopFocus={onStopFocus}
+      onPauseFocus={onPauseFocus}
     />
   )
 }
@@ -798,6 +800,7 @@ export default function App() {
     sourceType: FocusSourceType,
     sourceId: string,
     title: string,
+    context: FocusRecordContext = {},
   ) => {
     setFocusRecords((current) => {
       const existing = current.find(
@@ -813,6 +816,7 @@ export default function App() {
           record.id === existing.id
             ? {
                 ...record,
+                ...context,
                 segments: [...getFocusSegments(record), { startedAt }],
               }
             : record,
@@ -826,6 +830,7 @@ export default function App() {
           sourceType,
           sourceId,
           title,
+          ...context,
           startedAt,
           segments: [{ startedAt }],
         },
@@ -913,8 +918,8 @@ export default function App() {
   const openFocusSource = (record: FocusRecord) => {
     navigate(
       record.sourceType === 'todo'
-        ? `/todos/${record.sourceId}/focus`
-        : `/studies/${record.sourceId}`,
+        ? '/todos'
+        : `/studies/${record.roomId ?? record.sourceId}?tab=plans`,
     )
     setIsFocusPopoverOpen(false)
   }
@@ -1131,7 +1136,9 @@ export default function App() {
                 (candidate) => candidate.id === recordId,
               )
               if (record) {
-                startFocus(record.sourceType, record.sourceId, record.title)
+                startFocus(record.sourceType, record.sourceId, record.title, {
+                  roomId: record.roomId,
+                })
               }
             }}
             onPauseAll={pauseAllFocus}
@@ -1204,12 +1211,15 @@ export default function App() {
               todos={todos}
               projects={projects}
               sharedItems={sharedItemEntries}
+              focusRecords={unfinishedFocusRecords}
               onAddTodo={addTodo}
               onAddEvent={addEvent}
               onUpdateTodo={updateTodo}
               onToggleTodo={toggleTodo}
               onRemoveTodo={removeTodo}
               onToggleSharedItemStatus={toggleSharedItemStatus}
+              onStartFocus={startFocus}
+              onPauseFocus={pauseFocus}
             />
           }
         />
@@ -1303,12 +1313,12 @@ export default function App() {
           element={
             <StudyRoomRoute
               rooms={studyRooms}
-              activeFocusRecords={activeFocusRecords}
+              focusRecords={unfinishedFocusRecords}
               nowMs={focusNowMs}
               onRequestJoin={requestStudyRoomJoin}
               onChangeRoom={changeStudyRoom}
               onStartFocus={startFocus}
-              onStopFocus={finishFocus}
+              onPauseFocus={pauseFocus}
             />
           }
         />

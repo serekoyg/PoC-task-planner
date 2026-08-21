@@ -5,11 +5,16 @@ import { toDateKey } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
 import { getProjectColorByName, isBacklogProject } from '../data/projects'
 import type { StudySharedItemEntry } from '../data/studyRooms'
+import type {
+  FocusRecord,
+  FocusRecordContext,
+  FocusSourceType,
+} from '../data/focusRecords'
 import { formatSelectedDate } from '../lib/date'
 import { getSharedRepeatLabel } from '../lib/studyShared'
 import { getTaskPriority, getTaskProject } from '../lib/task'
 import type { ProjectFilter } from '../data/projects'
-import TodoPlayLink from './TodoPlayLink'
+import FocusToggleButton from './FocusToggleButton'
 
 const DATE_BATCH_SIZE = 2
 
@@ -24,11 +29,19 @@ type TodoDateListViewProps = {
   todos: Todo[]
   projects: PlannerProject[]
   sharedItems: StudySharedItemEntry[]
+  focusRecords: FocusRecord[]
   selectedProjectId: ProjectFilter
   onToggleTodo: (todoId: string) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
   onEditTodo: (todo: Todo) => void
   onCreateTodo: () => void
+  onStartFocus: (
+    sourceType: FocusSourceType,
+    sourceId: string,
+    title: string,
+    context?: FocusRecordContext,
+  ) => void
+  onPauseFocus: (recordId: string) => void
 }
 
 const isBacklogTodo = (todo: Todo) => isBacklogProject(todo.project)
@@ -38,11 +51,14 @@ export default function TodoDateListView({
   todos,
   projects,
   sharedItems,
+  focusRecords,
   selectedProjectId,
   onToggleTodo,
   onToggleSharedItemStatus,
   onEditTodo,
   onCreateTodo,
+  onStartFocus,
+  onPauseFocus,
 }: TodoDateListViewProps) {
   const dateGroups = useMemo<TodoDateGroup[]>(() => {
     const selectedProject = projects.find(
@@ -146,6 +162,10 @@ export default function TodoDateListView({
             <div className="todo-date-rows">
               {group.todos.map((todo) => {
                 const projectColor = getProjectColorByName(projects, todo.project)
+                const focusRecord = focusRecords.find(
+                  (record) =>
+                    record.sourceType === 'todo' && record.sourceId === todo.id,
+                )
                 return (
                 <article
                   className={`todo-date-row project-color-surface${todo.done ? ' completed' : ''}`}
@@ -180,9 +200,11 @@ export default function TodoDateListView({
                       {todo.estimatedMinutes ? ` · 예상 ${todo.estimatedMinutes}분` : ''}
                     </p>
                   </div>
-                  <TodoPlayLink
-                    to={`/todos/${todo.id}/focus`}
-                    label={`${todo.text} 집중 시작`}
+                  <FocusToggleButton
+                    label={`${todo.text} 집중`}
+                    record={focusRecord}
+                    onStart={() => onStartFocus('todo', todo.id, todo.text)}
+                    onPause={onPauseFocus}
                   />
                 </article>
                 )
@@ -200,6 +222,12 @@ export default function TodoDateListView({
                   item.type === 'todo'
                     ? `${item.completedMemberIds.length}명 완료`
                     : `${item.participantMemberIds.length}명 참여`
+                const focusRecord = focusRecords.find(
+                  (record) =>
+                    record.sourceType === 'study' &&
+                    record.sourceId === item.id &&
+                    record.roomId === roomId,
+                )
                 return (
                   <article
                     className={`todo-date-row color-blue shared-todo-item${isCompleted ? ' completed' : ''}`}
@@ -242,10 +270,13 @@ export default function TodoDateListView({
                           : `${getSharedRepeatLabel(item)} · ${statusLabel}`}
                       </p>
                     </div>
-                    <TodoPlayLink
-                      to={`/studies/${roomId}?startActivity=${item.id}`}
-                      label={`${roomName}에서 ${item.title} 활동 시작`}
-                      shared
+                    <FocusToggleButton
+                      label={`${roomName}에서 ${item.title} 활동`}
+                      record={focusRecord}
+                      onStart={() =>
+                        onStartFocus('study', item.id, item.title, { roomId })
+                      }
+                      onPause={onPauseFocus}
                     />
                   </article>
                 )

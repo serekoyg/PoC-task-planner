@@ -5,7 +5,11 @@ export type FocusSegment = {
   endedAt?: string
 }
 
-export type FocusRecord = {
+export type FocusRecordContext = {
+  roomId?: string
+}
+
+export type FocusRecord = FocusRecordContext & {
   id: string
   sourceType: FocusSourceType
   sourceId: string
