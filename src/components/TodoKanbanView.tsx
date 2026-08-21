@@ -2,24 +2,40 @@ import type { CSSProperties } from 'react'
 import type { Todo } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
 import type { ProjectFilter } from '../data/projects'
+import type {
+  FocusRecord,
+  FocusRecordContext,
+  FocusSourceType,
+} from '../data/focusRecords'
 import { formatTaskDate, getTaskPriority } from '../lib/task'
 import { getBucketTodos, getTodoProjectBuckets } from '../lib/todoView'
-import TodoPlayLink from './TodoPlayLink'
+import FocusToggleButton from './FocusToggleButton'
 
 type TodoKanbanViewProps = {
   todos: Todo[]
   projects: PlannerProject[]
+  focusRecords: FocusRecord[]
   selectedProjectId: ProjectFilter
   onToggleTodo: (todoId: string) => void
   onEditTodo: (todo: Todo) => void
+  onStartFocus: (
+    sourceType: FocusSourceType,
+    sourceId: string,
+    title: string,
+    context?: FocusRecordContext,
+  ) => void
+  onPauseFocus: (recordId: string) => void
 }
 
 export default function TodoKanbanView({
   todos,
   projects,
+  focusRecords,
   selectedProjectId,
   onToggleTodo,
   onEditTodo,
+  onStartFocus,
+  onPauseFocus,
 }: TodoKanbanViewProps) {
   const buckets = getTodoProjectBuckets(projects, selectedProjectId)
 
@@ -43,8 +59,13 @@ export default function TodoKanbanView({
               </header>
 
               <div className="todo-kanban-cards">
-                {bucketTodos.map((todo) => (
-                  <article
+                {bucketTodos.map((todo) => {
+                  const focusRecord = focusRecords.find(
+                    (record) =>
+                      record.sourceType === 'todo' && record.sourceId === todo.id,
+                  )
+                  return (
+                    <article
                     className={`todo-kanban-card${todo.done ? ' completed' : ''}`}
                     key={todo.id}
                   >
@@ -74,13 +95,16 @@ export default function TodoKanbanView({
                     <time dateTime={todo.date}>{formatTaskDate(todo.date)}</time>
                     <div>
                       {todo.dueTime && <span>마감 {todo.dueTime}</span>}
-                      <TodoPlayLink
-                        to={`/todos/${todo.id}/focus`}
-                        label={`${todo.text} 집중 시작`}
+                      <FocusToggleButton
+                        label={`${todo.text} 집중`}
+                        record={focusRecord}
+                        onStart={() => onStartFocus('todo', todo.id, todo.text)}
+                        onPause={onPauseFocus}
                       />
                     </div>
                   </article>
-                ))}
+                  )
+                })}
 
                 {!bucketTodos.length && (
                   <div className="todo-kanban-empty">

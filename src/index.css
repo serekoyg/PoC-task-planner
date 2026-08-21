@@ -4463,6 +4463,9 @@ button.event-chip:hover {
 .todo-play-button {
   width: 34px;
   height: 34px;
+  min-height: 34px;
+  padding: 0;
+  flex: 0 0 34px;
   display: inline-grid;
   place-items: center;
   border: 1px solid #cdd8f4;
@@ -4472,14 +4475,22 @@ button.event-chip:hover {
   text-decoration: none;
 }
 
-.todo-play-button span {
-  margin-left: 2px;
-  font-size: 0.7rem;
-}
-
 .todo-play-button:hover {
   border-color: var(--accent);
   background: #e1e9ff;
+}
+
+.todo-play-button.paused {
+  color: #4665b7;
+  border-color: #bcc9eb;
+  background: #f3f6ff;
+}
+
+.todo-play-button.running,
+.todo-play-button.running:hover {
+  color: #fff;
+  border-color: var(--danger);
+  background: var(--danger);
 }
 
 .todo-play-button.shared {
@@ -6187,64 +6198,144 @@ button.event-chip:hover {
   font-size: 0.72rem;
 }
 
-.study-shared-plan-list {
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.study-shared-plan-card {
-  min-width: 0;
-  padding: 14px;
-  display: grid;
-  align-content: start;
-  gap: 7px;
+.study-shared-plan-filters {
+  width: fit-content;
+  margin-top: 15px;
+  padding: 3px;
+  display: inline-flex;
+  gap: 2px;
   border: 1px solid var(--line);
-  border-top: 3px solid var(--accent);
   border-radius: 8px;
+  background: var(--surface-subtle);
 }
 
-.study-shared-plan-card.routine {
-  border-top-color: var(--success);
+.study-shared-plan-filters button {
+  min-height: 30px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  border-color: transparent;
+  background: transparent;
+  font-size: 0.68rem;
 }
 
-.study-shared-plan-card.event {
-  border-top-color: #d65c4a;
+.study-shared-plan-filters button.active {
+  color: var(--text);
+  border-color: var(--line);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(31, 32, 30, 0.06);
 }
 
-.study-shared-plan-card-heading {
+.study-shared-plan-groups {
+  margin-top: 16px;
+  display: grid;
+  gap: 19px;
+}
+
+.study-shared-plan-group > header {
+  margin-bottom: 7px;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
+  gap: 7px;
+}
+
+.study-shared-plan-group > header h3 {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.study-shared-plan-group > header span {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--surface-subtle);
+  font-size: 0.62rem;
+  font-weight: 750;
+}
+
+.study-shared-plan-group.now > header h3,
+.study-shared-plan-group.now > header span {
+  color: var(--danger);
+}
+
+.study-shared-plan-group.now > header span {
+  background: #fff0ee;
+}
+
+.study-shared-plan-list {
+  display: grid;
   gap: 8px;
 }
 
-.study-shared-plan-card-heading > div:first-child {
-  display: flex;
-  flex-wrap: wrap;
+.study-shared-plan-row {
+  min-width: 0;
+  padding: 12px 13px 12px 10px;
+  position: relative;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 34px;
   align-items: center;
-  gap: 5px;
+  gap: 11px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--success);
+  border-radius: 8px;
+  background: var(--surface);
 }
 
-.shared-plan-kind,
-.study-shared-plan-card-heading time,
-.study-shared-plan-card-heading > div:first-child > span:last-child {
+.study-shared-plan-row.event {
+  border-left-color: #d65c4a;
+}
+
+.study-shared-plan-row.running {
+  border-color: #df7c70;
+  border-left-color: var(--danger);
+  background: #fff9f8;
+  box-shadow: 0 0 0 1px rgba(194, 65, 59, 0.06);
+}
+
+.study-shared-plan-row.paused {
+  background: #fbfbfa;
+}
+
+.study-shared-plan-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--success);
+  background: #eff8f2;
+}
+
+.study-shared-plan-row.event .study-shared-plan-icon {
+  color: #b8493b;
+  background: #fff0ee;
+}
+
+.study-shared-plan-copy {
+  min-width: 0;
+}
+
+.study-shared-plan-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px 7px;
   color: var(--muted);
   font-size: 0.64rem;
 }
 
 .shared-plan-kind {
-  padding: 2px 5px;
-  color: var(--accent);
-  border-radius: 4px;
-  background: var(--accent-soft);
-  font-weight: 750;
-}
-
-.shared-plan-kind.routine {
+  padding: 2px 6px;
   color: var(--success);
+  border-radius: 4px;
   background: #eff8f2;
+  font-weight: 750;
 }
 
 .shared-plan-kind.event {
@@ -6252,58 +6343,81 @@ button.event-chip:hover {
   background: #fff1ee;
 }
 
-.study-shared-plan-card h3 {
-  margin: 3px 0 0;
-  font-size: 0.94rem;
+.study-shared-plan-meta > strong {
+  padding: 2px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 750;
 }
 
-.study-shared-plan-card > p {
-  margin: 0;
+.study-shared-plan-meta > strong.running {
+  color: var(--danger);
+  background: #fff0ee;
+}
+
+.study-shared-plan-meta > strong.paused {
+  color: #5c6270;
+  background: #eef0f4;
+}
+
+.study-shared-plan-meta > strong time {
+  font-variant-numeric: tabular-nums;
+}
+
+.study-shared-plan-copy > h3 {
+  margin: 5px 0 0;
+  overflow: hidden;
+  font-size: 0.86rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.study-shared-plan-copy > p {
+  margin: 4px 0 0;
+  overflow: hidden;
   color: var(--muted);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .shared-plan-location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   color: var(--text) !important;
 }
 
-.study-shared-plan-actions {
-  display: flex;
-  gap: 4px;
-}
-
-.study-shared-plan-actions button {
-  min-height: 28px;
-  padding: 0 7px;
-  color: var(--muted);
-  border-color: transparent;
-  background: var(--surface-subtle);
-  font-size: 0.64rem;
-}
-
 .study-shared-plan-footer {
-  margin-top: 5px;
-  padding-top: 10px;
+  margin-top: 8px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 10px;
-  border-top: 1px solid var(--line);
+  gap: 6px 8px;
 }
 
 .study-shared-plan-footer > span {
   color: var(--muted);
-  font-size: 0.65rem;
+  font-size: 0.63rem;
 }
 
 .study-shared-plan-footer > button {
-  min-height: 30px;
-  margin-left: auto;
-  padding: 0 8px;
-  font-size: 0.66rem;
+  min-height: 27px;
+  padding: 0 7px;
+  font-size: 0.63rem;
 }
 
-.study-shared-plan-footer > button.active {
+.study-shared-plan-footer > .shared-plan-status-toggle {
+  color: var(--muted);
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+.study-shared-plan-footer > .shared-plan-status-toggle.active {
   color: var(--success);
   border-color: #b8d8c5;
   background: #eff8f2;
@@ -6311,7 +6425,6 @@ button.event-chip:hover {
 
 .study-shared-plan-footer > .shared-plan-members-button {
   min-height: 32px;
-  margin-left: 0;
   padding: 3px 8px 3px 3px;
   display: inline-flex;
   align-items: center;
@@ -9158,6 +9271,35 @@ footer a {
 
   .study-shared-plan-list {
     grid-template-columns: 1fr;
+  }
+
+  .study-shared-plan-filters {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .study-shared-plan-row {
+    padding: 11px 10px 11px 8px;
+    grid-template-columns: 36px minmax(0, 1fr) 34px;
+    gap: 9px;
+  }
+
+  .study-shared-plan-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+  }
+
+  .study-shared-plan-copy > p:not(.shared-plan-location) {
+    white-space: normal;
+  }
+
+  .study-shared-plan-footer > span:first-child {
+    display: none;
+  }
+
+  .study-shared-plan-footer > .shared-plan-members-button > span:last-child {
+    display: none;
   }
 
   .shared-plan-card {

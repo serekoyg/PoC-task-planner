@@ -1,19 +1,37 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import {
+  ArrowRight,
+  CalendarBlank,
+  CheckSquare,
+  ListChecks,
+  MapPin,
+} from '@phosphor-icons/react'
+import FocusToggleButton from '../components/FocusToggleButton'
 import PlanEditorModal from '../components/PlanEditorModal'
 import StudyRoomChat from '../components/StudyRoomChat'
-import type { FocusRecord, FocusSourceType } from '../data/focusRecords'
+import type {
+  FocusRecord,
+  FocusRecordContext,
+  FocusSourceType,
+} from '../data/focusRecords'
+import { toDateKey } from '../data/initialData'
 import type {
   StudyMemberStatus,
   StudyRoom,
   StudySharedItem,
   StudySharedItemInput,
+  StudySharedItemType,
 } from '../data/studyRooms'
 import {
   getSharedRepeatLabel,
   sharedItemTypeLabels,
 } from '../lib/studyShared'
-import { formatFocusTimer, getFocusDurationSeconds } from '../lib/focus'
+import {
+  formatFocusTimer,
+  getFocusDurationSeconds,
+  isFocusRecordRunning,
+} from '../lib/focus'
 import {
   getActivityLevel,
   getWeeklyActivitySummary,
@@ -22,7 +40,7 @@ import {
 
 type StudyRoomDetailPageProps = {
   room?: StudyRoom
-  activeFocusRecords: FocusRecord[]
+  focusRecords: FocusRecord[]
   nowMs: number
   onRequestJoin: (roomId: string) => void
   onChangeRoom: (
@@ -33,8 +51,9 @@ type StudyRoomDetailPageProps = {
     sourceType: FocusSourceType,
     sourceId: string,
     title: string,
+    context?: FocusRecordContext,
   ) => void
-  onStopFocus: (recordId: string) => void
+  onPauseFocus: (recordId: string) => void
 }
 
 const formatMinutes = (minutes: number) => {
@@ -77,46 +96,116 @@ const formatCompletedAt = (completedAt?: string) => {
 }
 
 type StudyRoomTab = 'home' | 'plans' | 'chat'
+type SharedPlanFilter = 'all' | StudySharedItemType
+type SharedPlanGroupKey = 'now' | 'today' | 'week' | 'upcoming' | 'past'
+
+const sharedPlanFilters: Array<{
+  value: SharedPlanFilter
+  label: string
+}> = [
+  { value: 'all', label: '전체' },
+  { value: 'event', label: '일정' },
+  { value: 'todo', label: '할 일' },
+]
+
+const sharedPlanGroupLabels: Record<SharedPlanGroupKey, string> = {
+  now: '지금',
+  today: '오늘',
+  week: '이번 주',
+  upcoming: '예정',
+  past: '지난 계획',
+}
+
+const sharedPlanGroupOrder: SharedPlanGroupKey[] = [
+  'now',
+  'today',
+  'week',
+  'upcoming',
+  'past',
+]
 
 export default function StudyRoomDetailPage({
   room,
-  activeFocusRecords,
+  focusRecords,
   nowMs,
   onRequestJoin,
   onChangeRoom,
   onStartFocus,
-  onStopFocus,
+  onPauseFocus,
 }: StudyRoomDetailPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState<StudyRoomTab>('home')
+  const [planFilter, setPlanFilter] = useState<SharedPlanFilter>('all')
   const [isPlanEditorOpen, setIsPlanEditorOpen] = useState(false)
   const [viewingStatusItemId, setViewingStatusItemId] = useState<string>()
-  const activeRoomFocus = activeFocusRecords.find(
-    (record) => record.sourceType === 'study' && record.sourceId === room?.id,
+  const roomFocusRecords = useMemo(
+    () =>
+      focusRecords.filter(
+        (record) =>
+          record.sourceType === 'study' &&
+          (record.roomId === room?.id || record.sourceId === room?.id),
+      ),
+    [focusRecords, room?.id],
+  )
+  const activeRoomFocus = roomFocusRecords.find(
+    (record) => isFocusRecordRunning(record),
   )
   const rankedMembers = useMemo(
     () => [...(room?.members ?? [])].sort((a, b) => b.minutes - a.minutes),
     [room],
   )
+  const todayKey = toDateKey(new Date(nowMs))
+  const sharedPlanGroups = useMemo(() => {
+    const weekEnd = new Date(`${todayKey}T00:00:00`)
+    weekEnd.setDate(weekEnd.getDate() + 7)
+    const weekEndKey = toDateKey(weekEnd)
+    const groups = new Map<SharedPlanGroupKey, StudySharedItem[]>()
+
+    ;(room?.sharedItems ?? [])
+      .filter((item) => planFilter === 'all' || item.type === planFilter)
+      .sort((first, second) => {
+        const dateOrder = first.date.localeCompare(second.date)
+        if (dateOrder) return dateOrder
+        return (first.time ?? '23:59').localeCompare(second.time ?? '23:59')
+      })
+      .forEach((item) => {
+        const focusRecord = roomFocusRecords.find(
+          (record) => record.sourceId === item.id,
+        )
+        let groupKey: SharedPlanGroupKey
+        if (focusRecord && isFocusRecordRunning(focusRecord)) {
+          groupKey = 'now'
+        } else if (item.date === todayKey || (item.repeat !== 'none' && item.date < todayKey)) {
+          groupKey = 'today'
+        } else if (item.date > todayKey && item.date <= weekEndKey) {
+          groupKey = 'week'
+        } else if (item.date > weekEndKey) {
+          groupKey = 'upcoming'
+        } else {
+          groupKey = 'past'
+        }
+        groups.set(groupKey, [...(groups.get(groupKey) ?? []), item])
+      })
+
+    return sharedPlanGroupOrder
+      .map((key) => ({ key, items: groups.get(key) ?? [] }))
+      .filter((group) => group.items.length > 0)
+  }, [planFilter, room?.sharedItems, roomFocusRecords, todayKey])
 
   useEffect(() => {
-    const activityId = searchParams.get('startActivity')
-    if (!activityId || !room) return
+    const shouldOpenPlans =
+      searchParams.get('tab') === 'plans' || searchParams.has('startActivity')
+    if (!shouldOpenPlans) return
 
-    const activity = room.sharedItems.find((item) => item.id === activityId)
-    setActiveTab('home')
-    if (!activeRoomFocus) {
-      onStartFocus(
-        'study',
-        room.id,
-        activity?.title ?? `${room.name} 활동`,
-      )
+    setActiveTab('plans')
+
+    if (searchParams.has('startActivity')) {
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.delete('startActivity')
+      nextParams.set('tab', 'plans')
+      setSearchParams(nextParams, { replace: true })
     }
-
-    const nextParams = new URLSearchParams(searchParams)
-    nextParams.delete('startActivity')
-    setSearchParams(nextParams, { replace: true })
-  }, [activeRoomFocus, onStartFocus, room, searchParams, setSearchParams])
+  }, [searchParams, setSearchParams])
 
   useEffect(() => {
     if (!viewingStatusItemId) return
@@ -355,30 +444,23 @@ export default function StudyRoomDetailPage({
               <p id="focus-console-title">
                 {activeRoomFocus
                   ? `‘${activeRoomFocus.title}’ 활동 중이에요`
-                  : '오늘의 활동을 시작해 볼까요?'}
+                  : '오늘 함께할 계획을 골라 시작해보세요.'}
               </p>
               <strong>
-                {formatFocusTimer(
-                  activeRoomFocus
-                    ? getFocusDurationSeconds(activeRoomFocus, nowMs)
-                    : 0,
-                )}
+                {activeRoomFocus
+                  ? formatFocusTimer(
+                      getFocusDurationSeconds(activeRoomFocus, nowMs),
+                    )
+                  : '일정과 할 일에서 직접 시작할 수 있어요.'}
               </strong>
             </div>
           </div>
           <button
-            className={activeRoomFocus ? 'stop' : ''}
             type="button"
-            onClick={() => {
-              if (activeRoomFocus) {
-                onStopFocus(activeRoomFocus.id)
-              } else {
-                onStartFocus('study', room.id, `${room.name} 활동`)
-              }
-            }}
+            onClick={() => setActiveTab('plans')}
           >
-            <span aria-hidden="true">{activeRoomFocus ? '■' : '▶'}</span>
-            {activeRoomFocus ? '활동 마치기' : '활동 시작'}
+            {activeRoomFocus ? '계획에서 보기' : '활동 시작'}
+            <ArrowRight size={16} weight="bold" aria-hidden="true" />
           </button>
         </section>
       )}
@@ -403,87 +485,180 @@ export default function StudyRoomDetailPage({
           )}
         </div>
 
-        <div className="study-shared-plan-list">
-          {room.sharedItems.map((item) => {
-            const creator = room.members.find(
-              (member) => member.id === item.createdById,
-            )
-            const isMineActive = Boolean(
-              me &&
-                (item.type === 'event'
-                  ? item.participantMemberIds.includes(me.id)
-                  : item.completedMemberIds.includes(me.id)),
-            )
-            const statusMemberIds =
-              item.type === 'event'
-                ? item.participantMemberIds
-                : item.completedMemberIds
-            const statusMembers = statusMemberIds
-              .map((memberId) =>
-                room.members.find((member) => member.id === memberId),
-              )
-              .filter((member) => member !== undefined)
-            return (
-              <article className={`study-shared-plan-card ${item.type}`} key={item.id}>
-                <div className="study-shared-plan-card-heading">
-                  <div>
-                    <span className={`shared-plan-kind ${item.type}`}>
-                      {sharedItemTypeLabels[item.type]}
-                    </span>
-                    <time>{formatSharedDate(item)}</time>
-                    <span>{getSharedRepeatLabel(item)}</span>
-                  </div>
-                </div>
-                <h3>{item.title}</h3>
-                {item.location && <p className="shared-plan-location">⌖ {item.location}</p>}
-                {item.note && <p>{item.note}</p>}
-                <div className="study-shared-plan-footer">
-                  <span>{creator?.name ?? '멤버'}님이 작성</span>
-                  {statusMembers.length ? (
-                    <button
-                      className="shared-plan-members-button"
-                      type="button"
-                      aria-label={
-                        item.type === 'event'
-                          ? `${statusMembers.length}명의 참여 예정 멤버 보기`
-                          : `${statusMembers.length}명의 완료 멤버 보기`
-                      }
-                      onClick={() => setViewingStatusItemId(item.id)}
+        {!!room.sharedItems.length && (
+          <div className="study-shared-plan-filters" aria-label="함께할 계획 유형">
+            {sharedPlanFilters.map((filter) => (
+              <button
+                className={planFilter === filter.value ? 'active' : ''}
+                type="button"
+                key={filter.value}
+                aria-pressed={planFilter === filter.value}
+                onClick={() => setPlanFilter(filter.value)}
+              >
+                {filter.value === 'all' ? (
+                  <ListChecks size={15} aria-hidden="true" />
+                ) : filter.value === 'event' ? (
+                  <CalendarBlank size={15} aria-hidden="true" />
+                ) : (
+                  <CheckSquare size={15} aria-hidden="true" />
+                )}
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="study-shared-plan-groups">
+          {sharedPlanGroups.map((group) => (
+            <section className={`study-shared-plan-group ${group.key}`} key={group.key}>
+              <header>
+                <h3>{sharedPlanGroupLabels[group.key]}</h3>
+                <span>{group.items.length}</span>
+              </header>
+              <div className="study-shared-plan-list">
+                {group.items.map((item) => {
+                  const creator = room.members.find(
+                    (member) => member.id === item.createdById,
+                  )
+                  const isMineActive = Boolean(
+                    me &&
+                      (item.type === 'event'
+                        ? item.participantMemberIds.includes(me.id)
+                        : item.completedMemberIds.includes(me.id)),
+                  )
+                  const statusMemberIds =
+                    item.type === 'event'
+                      ? item.participantMemberIds
+                      : item.completedMemberIds
+                  const statusMembers = statusMemberIds
+                    .map((memberId) =>
+                      room.members.find((member) => member.id === memberId),
+                    )
+                    .filter((member) => member !== undefined)
+                  const focusRecord = roomFocusRecords.find(
+                    (record) => record.sourceId === item.id,
+                  )
+                  const isRunning = Boolean(
+                    focusRecord && isFocusRecordRunning(focusRecord),
+                  )
+
+                  return (
+                    <article
+                      className={`study-shared-plan-row ${item.type}${isRunning ? ' running' : focusRecord ? ' paused' : ''}`}
+                      key={item.id}
                     >
-                      <span className="shared-plan-member-stack" aria-hidden="true">
-                        {statusMembers.slice(0, 5).map((member) => (
-                          <i key={member.id}>{member.avatar}</i>
-                        ))}
-                        {statusMembers.length > 5 && <i>+{statusMembers.length - 5}</i>}
+                      <span className="study-shared-plan-icon" aria-hidden="true">
+                        {item.type === 'event' ? (
+                          <CalendarBlank size={21} weight="bold" />
+                        ) : (
+                          <CheckSquare size={21} weight="bold" />
+                        )}
                       </span>
-                      <span>
-                        {item.type === 'event'
-                          ? `${statusMembers.length}명 참여 예정`
-                          : `${statusMembers.length}/${room.memberCount}명 완료`}
-                      </span>
-                    </button>
-                  ) : (
-                    <span>
-                      {item.type === 'event'
-                        ? '아직 참여 예정인 멤버 없음'
-                        : `0/${room.memberCount}명 완료`}
-                    </span>
-                  )}
-                  {room.joined && me && (
-                    <button
-                      className={isMineActive ? 'active' : ''}
-                      type="button"
-                      onClick={() => changeSharedItemStatus(item.id)}
-                    >
-                      {item.type === 'event'
-                        ? isMineActive ? '✓ 참여함' : '참여할게요'
-                        : isMineActive ? '✓ 완료함' : '내 완료 체크'}
-                    </button>
-                  )}
-                </div>
-              </article>
-            )
-          })}
+
+                      <div className="study-shared-plan-copy">
+                        <div className="study-shared-plan-meta">
+                          <span className={`shared-plan-kind ${item.type}`}>
+                            {sharedItemTypeLabels[item.type]}
+                          </span>
+                          <time dateTime={item.date}>{formatSharedDate(item)}</time>
+                          <span>{getSharedRepeatLabel(item)}</span>
+                          {focusRecord && (
+                            <strong className={isRunning ? 'running' : 'paused'}>
+                              {isRunning ? '진행 중' : '일시정지'}
+                              <time>
+                                {formatFocusTimer(
+                                  getFocusDurationSeconds(focusRecord, nowMs),
+                                )}
+                              </time>
+                            </strong>
+                          )}
+                        </div>
+
+                        <h3>{item.title}</h3>
+                        {item.location && (
+                          <p className="shared-plan-location">
+                            <MapPin size={14} weight="fill" aria-hidden="true" />
+                            {item.location}
+                          </p>
+                        )}
+                        {item.note && <p>{item.note}</p>}
+
+                        <div className="study-shared-plan-footer">
+                          <span>{creator?.name ?? '멤버'}님이 작성</span>
+                          {statusMembers.length ? (
+                            <button
+                              className="shared-plan-members-button"
+                              type="button"
+                              aria-label={
+                                item.type === 'event'
+                                  ? `${statusMembers.length}명의 참여 예정 멤버 보기`
+                                  : `${statusMembers.length}명의 완료 멤버 보기`
+                              }
+                              onClick={() => setViewingStatusItemId(item.id)}
+                            >
+                              <span className="shared-plan-member-stack" aria-hidden="true">
+                                {statusMembers.slice(0, 5).map((member) => (
+                                  <i key={member.id}>{member.avatar}</i>
+                                ))}
+                                {statusMembers.length > 5 && (
+                                  <i>+{statusMembers.length - 5}</i>
+                                )}
+                              </span>
+                              <span>
+                                {item.type === 'event'
+                                  ? `${statusMembers.length}명 참여 예정`
+                                  : `${statusMembers.length}/${room.memberCount}명 완료`}
+                              </span>
+                            </button>
+                          ) : (
+                            <span>
+                              {item.type === 'event'
+                                ? '아직 참여 예정인 멤버 없음'
+                                : `0/${room.memberCount}명 완료`}
+                            </span>
+                          )}
+                          {room.joined && me && (
+                            <button
+                              className={`shared-plan-status-toggle${isMineActive ? ' active' : ''}`}
+                              type="button"
+                              onClick={() => changeSharedItemStatus(item.id)}
+                            >
+                              {item.type === 'event'
+                                ? isMineActive
+                                  ? '참여 중'
+                                  : '참여할게요'
+                                : isMineActive
+                                  ? '완료함'
+                                  : '내 완료 체크'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {room.joined && me && (
+                        <FocusToggleButton
+                          label={`${item.title} 활동`}
+                          record={focusRecord}
+                          onStart={() =>
+                            onStartFocus('study', item.id, item.title, {
+                              roomId: room.id,
+                            })
+                          }
+                          onPause={onPauseFocus}
+                        />
+                      )}
+                    </article>
+                  )
+                })}
+              </div>
+            </section>
+          ))}
+
+          {!sharedPlanGroups.length && room.sharedItems.length > 0 && (
+            <div className="study-shared-plan-empty compact">
+              <strong>이 유형의 계획은 아직 없어요.</strong>
+            </div>
+          )}
           {!room.sharedItems.length && (
             <div className="study-shared-plan-empty">
               <span aria-hidden="true">＋</span>

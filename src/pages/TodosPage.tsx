@@ -8,6 +8,11 @@ import type { CalendarEventInput, Todo, TodoInput } from '../data/initialData'
 import type { PlannerProject, ProjectFilter } from '../data/projects'
 import { BACKLOG_PROJECT_NAME } from '../data/projects'
 import type { StudySharedItemEntry } from '../data/studyRooms'
+import type {
+  FocusRecord,
+  FocusRecordContext,
+  FocusSourceType,
+} from '../data/focusRecords'
 
 type TodoView = 'dates' | 'kanban' | 'projects'
 
@@ -35,12 +40,20 @@ type TodosPageProps = {
   todos: Todo[]
   projects: PlannerProject[]
   sharedItems: StudySharedItemEntry[]
+  focusRecords: FocusRecord[]
   onAddTodo: (todo: TodoInput) => void
   onAddEvent: (event: CalendarEventInput) => void
   onUpdateTodo: (todoId: string, todo: TodoInput) => void
   onToggleTodo: (todoId: string) => void
   onRemoveTodo: (todoId: string) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
+  onStartFocus: (
+    sourceType: FocusSourceType,
+    sourceId: string,
+    title: string,
+    context?: FocusRecordContext,
+  ) => void
+  onPauseFocus: (recordId: string) => void
 }
 
 export default function TodosPage({
@@ -49,12 +62,15 @@ export default function TodosPage({
   todos,
   projects,
   sharedItems,
+  focusRecords,
   onAddTodo,
   onAddEvent,
   onUpdateTodo,
   onToggleTodo,
   onRemoveTodo,
   onToggleSharedItemStatus,
+  onStartFocus,
+  onPauseFocus,
 }: TodosPageProps) {
   const [searchParams] = useSearchParams()
   const selectedProjectId = (searchParams.get('project') ??
@@ -117,11 +133,14 @@ export default function TodosPage({
               todos={todos}
               projects={projects}
               sharedItems={sharedItems}
+              focusRecords={focusRecords}
               selectedProjectId={selectedProjectId}
               onToggleTodo={onToggleTodo}
               onToggleSharedItemStatus={onToggleSharedItemStatus}
               onEditTodo={setEditingTodo}
               onCreateTodo={() => setIsCreating(true)}
+              onStartFocus={onStartFocus}
+              onPauseFocus={onPauseFocus}
             />
           )}
 
@@ -129,9 +148,12 @@ export default function TodosPage({
             <TodoKanbanView
               todos={todos}
               projects={projects}
+              focusRecords={focusRecords}
               selectedProjectId={selectedProjectId}
               onToggleTodo={onToggleTodo}
               onEditTodo={setEditingTodo}
+              onStartFocus={onStartFocus}
+              onPauseFocus={onPauseFocus}
             />
           )}
 
@@ -139,9 +161,12 @@ export default function TodosPage({
             <TodoProjectListView
               todos={todos}
               projects={projects}
+              focusRecords={focusRecords}
               selectedProjectId={selectedProjectId}
               onToggleTodo={onToggleTodo}
               onEditTodo={setEditingTodo}
+              onStartFocus={onStartFocus}
+              onPauseFocus={onPauseFocus}
             />
           )}
       </div>
