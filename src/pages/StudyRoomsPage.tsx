@@ -4,7 +4,7 @@ import type { StudyRoom, StudyRoomCreateInput } from '../data/studyRooms'
 
 type StudyRoomsPageProps = {
   rooms: StudyRoom[]
-  onJoinRoom: (roomId: string) => void
+  onRequestJoin: (roomId: string) => void
   onCreateRoom: (input: StudyRoomCreateInput) => string
 }
 
@@ -25,7 +25,7 @@ const initialForm: StudyRoomCreateInput = {
 
 export default function StudyRoomsPage({
   rooms,
-  onJoinRoom,
+  onRequestJoin,
   onCreateRoom,
 }: StudyRoomsPageProps) {
   const navigate = useNavigate()
@@ -61,8 +61,8 @@ export default function StudyRoomsPage({
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [isCreateOpen])
 
-  const joinRoom = (roomId: string) => {
-    onJoinRoom(roomId)
+  const requestJoin = (roomId: string) => {
+    onRequestJoin(roomId)
     navigate(`/studies/${roomId}`)
   }
 
@@ -171,6 +171,9 @@ export default function StudyRoomsPage({
             const liveMembers = room.members.filter(
               (member) => member.status === 'studying',
             ).length
+            const hasPendingRequest = room.joinRequests.some(
+              (request) => request.applicantId === 'me',
+            )
 
             return (
               <article className={`study-room-card ${room.accent}`} key={room.id}>
@@ -221,10 +224,20 @@ export default function StudyRoomsPage({
                     <button
                       className="room-join-button"
                       type="button"
-                      onClick={() => joinRoom(room.id)}
-                      disabled={room.memberCount >= room.maxMembers || room.inviteOnly}
+                      onClick={() => requestJoin(room.id)}
+                      disabled={
+                        room.memberCount >= room.maxMembers ||
+                        room.inviteOnly ||
+                        hasPendingRequest
+                      }
                     >
-                      {room.inviteOnly ? '초대 전용' : '참여하기'}
+                      {hasPendingRequest
+                        ? '승인 대기 중'
+                        : room.inviteOnly
+                          ? '초대 전용'
+                          : room.memberCount >= room.maxMembers
+                            ? '정원 마감'
+                            : '가입 요청'}
                     </button>
                   )}
                 </div>

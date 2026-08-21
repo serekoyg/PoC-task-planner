@@ -147,7 +147,7 @@ type StudyRoomRouteProps = {
   rooms: StudyRoom[]
   activeFocusRecords: FocusRecord[]
   nowMs: number
-  onJoinRoom: (roomId: string) => void
+  onRequestJoin: (roomId: string) => void
   onChangeRoom: (
     roomId: string,
     update: (current: StudyRoom) => StudyRoom,
@@ -164,7 +164,7 @@ function StudyRoomRoute({
   rooms,
   activeFocusRecords,
   nowMs,
-  onJoinRoom,
+  onRequestJoin,
   onChangeRoom,
   onStartFocus,
   onStopFocus,
@@ -175,7 +175,7 @@ function StudyRoomRoute({
       room={rooms.find((room) => room.id === roomId)}
       activeFocusRecords={activeFocusRecords}
       nowMs={nowMs}
-      onJoinRoom={onJoinRoom}
+      onRequestJoin={onRequestJoin}
       onChangeRoom={onChangeRoom}
       onStartFocus={onStartFocus}
       onStopFocus={onStopFocus}
@@ -903,28 +903,30 @@ export default function App() {
     setIsFocusPopoverOpen(false)
   }
 
-  const joinStudyRoom = (roomId: string) => {
+  const requestStudyRoomJoin = (roomId: string) => {
     setStudyRooms((current) =>
       current.map((room) => {
-        if (room.id !== roomId || room.joined) return room
+        if (
+          room.id !== roomId ||
+          room.joined ||
+          room.inviteOnly ||
+          room.memberCount >= room.maxMembers ||
+          room.joinRequests.some((request) => request.applicantId === 'me')
+        ) {
+          return room
+        }
 
         return {
           ...room,
-          joined: true,
-          memberCount: room.memberCount + 1,
-          members: [
-            ...room.members,
+          joinRequests: [
+            ...room.joinRequests,
             {
-              id: 'me',
+              id: `request-${crypto.randomUUID()}`,
+              applicantId: 'me',
               name: '민서',
               avatar: '민',
-              minutes: 0,
-              status: 'resting',
-              focusLabel: '오늘의 활동을 준비 중이에요',
-              isMe: true,
-              weeklyMinutes: [0, 0, 0, 0, 0, 0, 0],
-              profileVisibility: myProfileVisibility,
-              bio: '매일 조금씩 꾸준하게 이어가고 있어요.',
+              message: `${room.goal} 목표를 함께 이어가고 싶어요.`,
+              requestedAt: new Date().toISOString(),
             },
           ],
         }
@@ -1008,6 +1010,8 @@ export default function App() {
         ownerId: 'me',
         managerIds: [],
         allowMemberSharing: true,
+        membershipManagementVersion: 1,
+        joinRequests: [],
         sharedItems: [],
         chatMessages: [],
         members: [
@@ -1342,7 +1346,7 @@ export default function App() {
           element={
             <StudyRoomsPage
               rooms={studyRooms}
-              onJoinRoom={joinStudyRoom}
+              onRequestJoin={requestStudyRoomJoin}
               onCreateRoom={createStudyRoom}
             />
           }
@@ -1367,7 +1371,7 @@ export default function App() {
               rooms={studyRooms}
               activeFocusRecords={activeFocusRecords}
               nowMs={focusNowMs}
-              onJoinRoom={joinStudyRoom}
+              onRequestJoin={requestStudyRoomJoin}
               onChangeRoom={changeStudyRoom}
               onStartFocus={startFocus}
               onStopFocus={finishFocus}

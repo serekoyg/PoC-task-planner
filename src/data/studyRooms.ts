@@ -15,6 +15,15 @@ export type StudyMember = {
   bio?: string
 }
 
+export type StudyJoinRequest = {
+  id: string
+  applicantId: string
+  name: string
+  avatar: string
+  message: string
+  requestedAt: string
+}
+
 export type StudySharedItemType = 'todo' | 'event'
 export type StudySharedRepeat =
   | 'none'
@@ -91,6 +100,8 @@ export type StudyRoom = {
   ownerId: string
   managerIds: string[]
   allowMemberSharing: boolean
+  membershipManagementVersion: number
+  joinRequests: StudyJoinRequest[]
   sharedItems: StudySharedItem[]
   chatMessages: StudyChatMessage[]
   members: StudyMember[]
@@ -120,6 +131,25 @@ const createCompletionTimestamp = (
   ).toISOString()
 }
 
+const initialMorningJoinRequests: StudyJoinRequest[] = [
+  {
+    id: 'request-morning-1',
+    applicantId: 'applicant-jiu',
+    name: '지우',
+    avatar: '지',
+    message: '출근 전에 자격증 공부를 꾸준히 이어가고 싶어요.',
+    requestedAt: '2026-08-20T08:12:00+09:00',
+  },
+  {
+    id: 'request-morning-2',
+    applicantId: 'applicant-seojun',
+    name: '서준',
+    avatar: '서',
+    message: '정보처리기사 실기 준비 중입니다. 평일 아침마다 참여할게요.',
+    requestedAt: '2026-08-19T21:34:00+09:00',
+  },
+]
+
 export const normalizeStudyRooms = (rooms: StudyRoom[]): StudyRoom[] =>
   rooms.map((room, roomIndex) => ({
     ...room,
@@ -127,6 +157,13 @@ export const normalizeStudyRooms = (rooms: StudyRoom[]): StudyRoom[] =>
     ownerId: room.ownerId ?? room.members?.[0]?.id ?? '',
     managerIds: room.managerIds ?? [],
     allowMemberSharing: room.allowMemberSharing ?? true,
+    membershipManagementVersion: 1,
+    joinRequests:
+      room.membershipManagementVersion === 1
+        ? (room.joinRequests ?? [])
+        : room.id === 'morning-license'
+          ? initialMorningJoinRequests.map((request) => ({ ...request }))
+          : (room.joinRequests ?? []),
     sharedItems: (room.sharedItems ?? []).map((item, itemIndex) => ({
       ...item,
       completedAtByMember: item.completedMemberIds.reduce<Record<string, string>>(
@@ -186,6 +223,8 @@ export const createInitialStudyRooms = (): StudyRoom[] => [
     ownerId: 'me',
     managerIds: ['member-1'],
     allowMemberSharing: true,
+    membershipManagementVersion: 1,
+    joinRequests: initialMorningJoinRequests,
     sharedItems: [
       {
         id: 'shared-morning-1',
@@ -319,6 +358,8 @@ export const createInitialStudyRooms = (): StudyRoom[] => [
     ownerId: 'job-1',
     managerIds: ['job-2'],
     allowMemberSharing: true,
+    membershipManagementVersion: 1,
+    joinRequests: [],
     sharedItems: [],
     chatMessages: [],
     members: [
@@ -365,6 +406,8 @@ export const createInitialStudyRooms = (): StudyRoom[] => [
     ownerId: 'side-1',
     managerIds: [],
     allowMemberSharing: true,
+    membershipManagementVersion: 1,
+    joinRequests: [],
     sharedItems: [
       {
         id: 'shared-side-1',
@@ -424,6 +467,8 @@ export const createInitialStudyRooms = (): StudyRoom[] => [
     ownerId: 'english-1',
     managerIds: [],
     allowMemberSharing: true,
+    membershipManagementVersion: 1,
+    joinRequests: [],
     sharedItems: [],
     chatMessages: [],
     members: [
