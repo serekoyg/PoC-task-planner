@@ -81,6 +81,8 @@ const AUTH_STORAGE_KEY = 'haru.demo-authenticated'
 const NOTIFICATION_STORAGE_KEY = 'haru.v2.notification-inbox'
 const TRASH_STORAGE_KEY = 'haru.v2.deleted-plans'
 const AUTH_METHOD_STORAGE_KEY = 'haru.demo-auth-method'
+const LIVE_FOCUS_ALWAYS_VISIBLE_STORAGE_KEY =
+  'haru.v2.live-focus-always-visible'
 
 const readStorage = <T,>(key: string, fallback: () => T): T => {
   try {
@@ -304,6 +306,9 @@ export default function App() {
   const [isFocusPopoverOpen, setIsFocusPopoverOpen] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isFocusAlwaysVisible, setIsFocusAlwaysVisible] = useState(() =>
+    readStorage<boolean>(LIVE_FOCUS_ALWAYS_VISIBLE_STORAGE_KEY, () => false),
+  )
   const [profileActionMessage, setProfileActionMessage] = useState(
     '오늘 오후 9:27에 동기화됨',
   )
@@ -341,6 +346,8 @@ export default function App() {
     () => unfinishedFocusRecords.filter(isFocusRecordRunning),
     [unfinishedFocusRecords],
   )
+  const shouldShowFocusIsland =
+    unfinishedFocusRecords.length > 0 || isFocusAlwaysVisible
   const joinedStudyRooms = useMemo(
     () => studyRooms.filter((room) => room.joined),
     [studyRooms],
@@ -427,6 +434,13 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(FOCUS_RECORD_STORAGE_KEY, JSON.stringify(focusRecords))
   }, [focusRecords])
+
+  useEffect(() => {
+    localStorage.setItem(
+      LIVE_FOCUS_ALWAYS_VISIBLE_STORAGE_KEY,
+      JSON.stringify(isFocusAlwaysVisible),
+    )
+  }, [isFocusAlwaysVisible])
 
   useEffect(() => {
     if (!activeFocusRecords.length) return
@@ -1049,7 +1063,7 @@ export default function App() {
 
   return (
     <div
-      className={`app-shell${activeFocusRecords.length ? ' focus-active' : ''}${
+      className={`app-shell${shouldShowFocusIsland ? ' focus-active' : ''}${
         isSidebarCollapsed ? ' sidebar-collapsed' : ''
       }`}
     >
@@ -1063,6 +1077,7 @@ export default function App() {
         isProfileMenuOpen={isProfileMenuOpen}
         isMobileOpen={isSidebarOpen}
         isCollapsed={isSidebarCollapsed}
+        isFocusAlwaysVisible={isFocusAlwaysVisible}
         profileActionMessage={profileActionMessage}
         profileMenuRef={profileMenuRef}
         onToggleMobile={() => setIsSidebarOpen((current) => !current)}
@@ -1087,13 +1102,16 @@ export default function App() {
           setIsFocusPopoverOpen(false)
           setIsProfileMenuOpen((current) => !current)
         }}
+        onToggleFocusAlwaysVisible={() =>
+          setIsFocusAlwaysVisible((current) => !current)
+        }
         onSync={() =>
           setProfileActionMessage('방금 모든 데이터를 동기화했어요')
         }
         onLogout={logout}
       />
 
-      {activeFocusRecords.length > 0 && (
+      {shouldShowFocusIsland && (
         <div className="focus-island">
           <ActiveFocusPopover
             records={unfinishedFocusRecords}

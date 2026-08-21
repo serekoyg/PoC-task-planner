@@ -2116,6 +2116,75 @@ ol {
   font-style: normal;
 }
 
+.profile-menu-preferences {
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
+}
+
+.profile-menu-preferences > button {
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 8px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text);
+  background: transparent;
+  text-align: left;
+}
+
+.profile-menu-preferences > button:hover {
+  background: var(--surface-subtle);
+}
+
+.profile-menu-preferences > button > span:nth-child(2),
+.profile-menu-preferences strong,
+.profile-menu-preferences small {
+  min-width: 0;
+  display: block;
+}
+
+.profile-menu-preferences strong {
+  font-size: 0.72rem;
+}
+
+.profile-menu-preferences small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.6rem;
+}
+
+.sidebar-setting-toggle {
+  width: 32px;
+  height: 18px;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #c9ccc6;
+  transition: background 160ms ease;
+}
+
+.sidebar-setting-toggle i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(20, 22, 20, 0.22);
+  transition: transform 160ms ease;
+}
+
+.sidebar-setting-toggle.active {
+  background: var(--accent);
+}
+
+.sidebar-setting-toggle.active i {
+  transform: translateX(14px);
+}
+
 .profile-menu-message {
   margin: 0;
   padding: 8px;
@@ -8067,6 +8136,63 @@ button.event-chip:hover {
   --settings-accent-soft: #fff0e9;
 }
 
+.settings-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 85;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  background: rgba(24, 27, 24, 0.46);
+}
+
+.settings-modal-backdrop .settings-page {
+  position: relative;
+  width: min(1080px, 100%);
+  height: min(760px, calc(100dvh - 48px));
+  margin: 0;
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 24px 64px rgba(20, 23, 20, 0.22);
+}
+
+.settings-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  color: var(--muted);
+  background: var(--surface-subtle);
+  font-size: 1.15rem;
+}
+
+.settings-modal-backdrop .settings-layout {
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.settings-modal-backdrop .settings-sidebar,
+.settings-modal-backdrop .settings-content {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.settings-modal-backdrop .settings-content-header {
+  padding-right: 42px;
+}
+
 .settings-layout {
   min-height: 690px;
   display: grid;
@@ -8739,6 +8865,81 @@ footer a {
     width: auto;
     min-width: max-content;
     grid-template-columns: 20px auto;
+  }
+
+  .settings-modal-backdrop {
+    padding: 16px;
+  }
+
+  .settings-modal-backdrop .settings-page {
+    width: 100%;
+    height: min(760px, calc(100dvh - 32px));
+    border-radius: 16px;
+  }
+
+  .settings-modal-backdrop .settings-layout {
+    height: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .settings-modal-backdrop .settings-sidebar {
+    padding: 10px 56px 10px 12px;
+    overflow: visible;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+  }
+
+  .settings-modal-backdrop .settings-search,
+  .settings-modal-backdrop .settings-search-empty {
+    display: none;
+  }
+
+  .settings-modal-backdrop .settings-sidebar nav {
+    gap: 4px;
+    overscroll-behavior-inline: contain;
+    scroll-padding-inline: 12px;
+  }
+
+  .settings-modal-backdrop .settings-sidebar nav button {
+    width: auto;
+    min-width: max-content;
+    min-height: 38px;
+    padding: 0 12px;
+    display: block;
+  }
+
+  .settings-modal-backdrop .settings-sidebar nav button > span {
+    display: none;
+  }
+
+  .settings-modal-backdrop .settings-content {
+    padding: 22px 14px 28px;
+    overflow-y: auto;
+  }
+
+  .settings-modal-backdrop .settings-content-header {
+    padding-right: 0;
+  }
+
+  .settings-modal-backdrop .settings-content-header h1 {
+    font-size: 1.35rem;
+  }
+
+  .settings-modal-backdrop .settings-account-profile {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .settings-modal-backdrop .settings-account-profile > button {
+    grid-column: 1 / -1;
+  }
+
+  .settings-modal-backdrop .sync-status-card {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .settings-content {
@@ -9987,7 +10188,7 @@ footer a {
   left: 50%;
 }
 
-.focus-island .active-focus-trigger {
+.focus-island .active-focus-trigger:not(.idle) {
   min-height: 44px;
   padding: 0 15px;
   border-color: rgba(255, 255, 255, 0.08);
@@ -9996,14 +10197,14 @@ footer a {
   box-shadow: 0 10px 28px rgba(16, 18, 16, 0.24);
 }
 
-.focus-island .active-focus-trigger:hover,
-.focus-island .active-focus-trigger.active {
+.focus-island .active-focus-trigger:not(.idle):hover,
+.focus-island .active-focus-trigger:not(.idle).active {
   border-color: rgba(255, 255, 255, 0.18);
   color: #fff;
   background: #222422;
 }
 
-.focus-island .active-focus-trigger strong {
+.focus-island .active-focus-trigger:not(.idle) strong {
   border-left-color: rgba(255, 255, 255, 0.18);
 }
 
@@ -10103,13 +10304,27 @@ footer a {
 
   .focus-island .active-focus-trigger {
     width: auto;
+    max-width: calc(100vw - 112px);
     min-width: 42px;
     height: 42px;
+    padding: 0 10px;
+    gap: 5px;
   }
 
   .focus-island .active-focus-trigger span,
   .focus-island .active-focus-trigger strong {
-    display: inline;
+    min-width: 0;
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .focus-island .active-focus-trigger.idle {
+    min-width: 0;
+  }
+
+  .focus-island .active-focus-trigger.idle strong {
+    display: none;
   }
 
   .focus-island .active-focus-popover {

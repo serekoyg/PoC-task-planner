@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import type { Todo } from '../data/initialData'
 import type { StudyRoom } from '../data/studyRooms'
 
@@ -24,6 +24,7 @@ const formatMinutes = (minutes: number) => {
 }
 
 export default function ProfilePage({ todos, rooms }: ProfilePageProps) {
+  const location = useLocation()
   const allTodos = todos
   const completedTodos = allTodos.filter((todo) => todo.done).length
   const joinedRooms = rooms.filter((room) => room.joined)
@@ -46,7 +47,14 @@ export default function ProfilePage({ todos, rooms }: ProfilePageProps) {
           </div>
         </div>
         <div className="profile-hero-actions">
-          <Link to="/settings?section=account">프로필 설정</Link>
+          <Link
+            to="/settings?section=account"
+            state={{
+              settingsReturnTo: `${location.pathname}${location.search}`,
+            }}
+          >
+            프로필 설정
+          </Link>
           <Link to="/todos">오늘 할 일 계속하기 <span aria-hidden="true">→</span></Link>
         </div>
       </section>

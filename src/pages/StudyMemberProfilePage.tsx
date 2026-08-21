@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import type {
   StudyMember,
   StudyMemberStatus,
@@ -39,6 +39,7 @@ export default function StudyMemberProfilePage({
   room,
   member,
 }: StudyMemberProfilePageProps) {
+  const location = useLocation()
   useEffect(() => {
     window.scrollTo({ top: 0 })
   }, [member?.id])
@@ -92,7 +93,13 @@ export default function StudyMemberProfilePage({
           <span aria-hidden="true">←</span> {room.name}
         </Link>
         {member.isMe && (
-          <Link className="study-manage-link" to="/settings?section=account">
+          <Link
+            className="study-manage-link"
+            to="/settings?section=account"
+            state={{
+              settingsReturnTo: `${location.pathname}${location.search}`,
+            }}
+          >
             프로필 설정
           </Link>
         )}
