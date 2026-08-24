@@ -189,7 +189,6 @@ type CalendarPageProps = {
   onUpdateEvent: (eventId: string, event: CalendarEventInput) => void
   onRemoveEvent: (eventId: string) => void
   onRemoveTodo: (todoId: string) => void
-  onToggleSharedItemStatus: (roomId: string, itemId: string) => void
   onChangeRoom: (
     roomId: string,
     update: (current: StudyRoom) => StudyRoom,
