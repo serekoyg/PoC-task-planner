@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Plus } from '@phosphor-icons/react'
 import { useSearchParams } from 'react-router-dom'
 import PlanEditorModal from '../components/PlanEditorModal'
 import TodoDateListView from '../components/TodoDateListView'
@@ -8,6 +9,7 @@ import type { CalendarEventInput, Todo, TodoInput } from '../data/initialData'
 import type { PlannerProject, ProjectFilter } from '../data/projects'
 import { BACKLOG_PROJECT_NAME } from '../data/projects'
 import type { StudySharedItemEntry } from '../data/studyRooms'
+import { Button, PageToolbar, SegmentedControl } from '../design-system'
 import type {
   FocusRecord,
   FocusRecordContext,
@@ -95,37 +97,35 @@ export default function TodosPage({
   return (
     <main className="todos-page">
       <div className="project-filter-content todo-view-content">
-          <header className="todo-view-toolbar">
-            <div>
-              <p className="eyebrow">{selectedProjectName}</p>
-              <h1>{viewTitles[todoView]}</h1>
-              <p>{viewDescriptions[todoView]}</p>
-            </div>
-            <div className="todo-view-actions">
-              <div className="todo-view-tabs" aria-label="할 일 보기 선택">
-                {(Object.keys(viewLabels) as TodoView[]).map((view) => (
-                  <button
-                    className={todoView === view ? 'active' : ''}
-                    type="button"
-                    key={view}
-                    onClick={() => setTodoView(view)}
-                    aria-pressed={todoView === view}
-                  >
-                    {viewLabels[view]}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                className="add-todo-button"
-                type="button"
-                onClick={() => setIsCreating(true)}
-              >
-                <span aria-hidden="true">＋</span>
-                새 계획
-              </button>
-            </div>
-          </header>
+          <PageToolbar
+            className="todo-view-toolbar"
+            eyebrow={selectedProjectName}
+            title={viewTitles[todoView]}
+            description={viewDescriptions[todoView]}
+            actionsClassName="todo-view-actions"
+            actions={(
+              <>
+                <SegmentedControl
+                  ariaLabel="할 일 보기 선택"
+                  className="todo-view-tabs"
+                  items={(Object.keys(viewLabels) as TodoView[]).map((view) => ({
+                    value: view,
+                    label: viewLabels[view],
+                  }))}
+                  value={todoView}
+                  onChange={setTodoView}
+                />
+                <Button
+                  className="add-todo-button"
+                  variant="primary"
+                  startIcon={<Plus size={16} weight="bold" />}
+                  onClick={() => setIsCreating(true)}
+                >
+                  새 계획
+                </Button>
+              </>
+            )}
+          />
 
           {todoView === 'dates' && (
             <TodoDateListView

@@ -6,6 +6,7 @@ import {
   type PlanCollection,
 } from '../data/projects'
 import type { TrashedPlan } from '../data/trash'
+import { PageToolbar } from '../design-system'
 import { formatTaskDate, getTaskProject } from '../lib/task'
 
 type TrashFilter = 'all' | 'todo' | 'event'
@@ -58,31 +59,35 @@ export default function PlanCollectionsPage({
   return (
     <main className="todos-page plan-collections-page">
       <div className="project-filter-content plan-collection-content">
-          <header className="plan-collection-hero">
-            <div>
-              <p className="eyebrow">계획 보관함</p>
-              <h1>{collection === 'completed' ? '완료 모음' : '쓰레기통'}</h1>
-              <p>
-                {collection === 'completed'
-                  ? '완료한 할 일을 다시 확인하거나 필요한 항목을 되돌릴 수 있어요.'
-                  : '삭제한 일정과 할 일을 복원하거나 영구적으로 정리할 수 있어요.'}
-              </p>
-            </div>
-            <div className="plan-collection-switch" aria-label="계획 보관함 선택">
-              <Link
-                className={collection === 'completed' ? 'active' : ''}
-                to="/collections/completed"
+          <PageToolbar
+            className="plan-collection-hero"
+            eyebrow="계획 보관함"
+            title={collection === 'completed' ? '완료 모음' : '쓰레기통'}
+            description={
+              collection === 'completed'
+                ? '완료한 할 일을 다시 확인하거나 필요한 항목을 되돌릴 수 있어요.'
+                : '삭제한 일정과 할 일을 복원하거나 영구적으로 정리할 수 있어요.'
+            }
+            actions={(
+              <div
+                className="plan-collection-switch"
+                aria-label="계획 보관함 선택"
               >
-                완료 모음 <span>{collectionCounts.completed}</span>
-              </Link>
-              <Link
-                className={collection === 'trash' ? 'active' : ''}
-                to="/collections/trash"
-              >
-                쓰레기통 <span>{collectionCounts.trash}</span>
-              </Link>
-            </div>
-          </header>
+                <Link
+                  className={collection === 'completed' ? 'active' : ''}
+                  to="/collections/completed"
+                >
+                  완료 모음 <span>{collectionCounts.completed}</span>
+                </Link>
+                <Link
+                  className={collection === 'trash' ? 'active' : ''}
+                  to="/collections/trash"
+                >
+                  쓰레기통 <span>{collectionCounts.trash}</span>
+                </Link>
+              </div>
+            )}
+          />
 
           {collection === 'completed' ? (
             <section className="plan-collection-card" aria-label="완료한 할 일">

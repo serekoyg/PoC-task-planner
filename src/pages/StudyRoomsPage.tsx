@@ -1,6 +1,13 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { ArrowRight, Plus } from '@phosphor-icons/react'
+import { useNavigate } from 'react-router-dom'
 import type { StudyRoom, StudyRoomCreateInput } from '../data/studyRooms'
+import {
+  Button,
+  ButtonLink,
+  SegmentedControl,
+  Surface,
+} from '../design-system'
 
 type StudyRoomsPageProps = {
   rooms: StudyRoom[]
@@ -95,20 +102,28 @@ export default function StudyRoomsPage({
             활동과 실천을 가볍게 나눠보세요.
           </p>
           <div className="study-hero-actions">
-            <button type="button" onClick={() => setIsCreateOpen(true)}>
-              <span aria-hidden="true">＋</span> 모임 만들기
-            </button>
-            <button
+            <Button
+              variant="primary"
+              startIcon={<Plus size={16} weight="bold" />}
+              onClick={() => setIsCreateOpen(true)}
+            >
+              모임 만들기
+            </Button>
+            <Button
               className="study-secondary-button"
-              type="button"
               onClick={() => setView('all')}
             >
               공개 모임 둘러보기
-            </button>
+            </Button>
           </div>
         </div>
 
-        <div className="study-hero-board" aria-label="나의 모임 요약">
+        <Surface
+          as="div"
+          className="study-hero-board"
+          tone="elevated"
+          aria-label="나의 모임 요약"
+        >
           <div className="live-study-label">
             <span aria-hidden="true" /> 지금 {studyingCount}명이 활동 중
           </div>
@@ -137,7 +152,7 @@ export default function StudyRoomsPage({
               ))}
             <small>함께 실천하면 더 오래가요</small>
           </div>
-        </div>
+        </Surface>
       </section>
 
       <section className="study-room-section" aria-labelledby="room-list-title">
@@ -148,22 +163,16 @@ export default function StudyRoomsPage({
               {view === 'mine' ? '내가 참여한 모임' : '함께할 모임을 찾아보세요'}
             </h2>
           </div>
-          <div className="study-view-tabs" aria-label="모임 보기">
-            <button
-              className={view === 'all' ? 'active' : ''}
-              type="button"
-              onClick={() => setView('all')}
-            >
-              전체
-            </button>
-            <button
-              className={view === 'mine' ? 'active' : ''}
-              type="button"
-              onClick={() => setView('mine')}
-            >
-              내 모임 {joinedRooms.length}
-            </button>
-          </div>
+          <SegmentedControl
+            ariaLabel="모임 보기"
+            className="study-view-tabs"
+            items={[
+              { value: 'all', label: '전체' },
+              { value: 'mine', label: `내 모임 ${joinedRooms.length}` },
+            ]}
+            value={view}
+            onChange={setView}
+          />
         </div>
 
         <div className="study-room-grid">
@@ -176,7 +185,11 @@ export default function StudyRoomsPage({
             )
 
             return (
-              <article className={`study-room-card ${room.accent}`} key={room.id}>
+              <Surface
+                as="article"
+                className={`study-room-card ${room.accent}`}
+                key={room.id}
+              >
                 <div className="room-card-topline">
                   <div>
                     <span className="room-category">분류 · {room.category}</span>
@@ -217,13 +230,19 @@ export default function StudyRoomsPage({
                     </small>
                   </div>
                   {room.joined ? (
-                    <Link className="room-enter-link" to={`/studies/${room.id}`}>
-                      입장하기 <span aria-hidden="true">→</span>
-                    </Link>
+                    <ButtonLink
+                      className="room-enter-link"
+                      size="small"
+                      endIcon={<ArrowRight size={14} weight="bold" />}
+                      to={`/studies/${room.id}`}
+                    >
+                      입장하기
+                    </ButtonLink>
                   ) : (
-                    <button
+                    <Button
                       className="room-join-button"
-                      type="button"
+                      size="small"
+                      variant="primary"
                       onClick={() => requestJoin(room.id)}
                       disabled={
                         room.memberCount >= room.maxMembers ||
@@ -238,10 +257,10 @@ export default function StudyRoomsPage({
                           : room.memberCount >= room.maxMembers
                             ? '정원 마감'
                             : '가입 요청'}
-                    </button>
+                    </Button>
                   )}
                 </div>
-              </article>
+              </Surface>
             )
           })}
 
@@ -365,12 +384,16 @@ export default function StudyRoomsPage({
                 </div>
               </label>
               <div className="study-form-actions">
-                <button type="button" onClick={() => setIsCreateOpen(false)}>
+                <Button onClick={() => setIsCreateOpen(false)}>
                   취소
-                </button>
-                <button className="study-submit-button" type="submit">
+                </Button>
+                <Button
+                  className="study-submit-button"
+                  variant="primary"
+                  type="submit"
+                >
                   모임 만들기
-                </button>
+                </Button>
               </div>
             </form>
           </section>
