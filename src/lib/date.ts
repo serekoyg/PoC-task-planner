@@ -31,14 +31,6 @@ export const formatSelectedDate = (date: Date) =>
     weekday: 'long',
   }).format(date)
 
-export const formatHeaderDate = (date: Date) =>
-  new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short',
-  }).format(date)
-
 export const moveDate = (date: Date, amount: number) => {
   const nextDate = new Date(date)
   nextDate.setDate(nextDate.getDate() + amount)

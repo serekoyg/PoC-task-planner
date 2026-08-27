@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { CaretLeft, CaretRight, Plus } from '@phosphor-icons/react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import DateJumpDialog from '../components/DateJumpDialog'
 import CalendarTimeGrid from '../components/CalendarTimeGrid'
@@ -31,6 +32,7 @@ import type {
   StudySharedItemEntry,
   StudySharedItemInput,
 } from '../data/studyRooms'
+import { Button, PageToolbar, SegmentedControl } from '../design-system'
 import {
   formatSelectedDate,
   getCalendarDays,
@@ -189,7 +191,6 @@ type CalendarPageProps = {
   onUpdateEvent: (eventId: string, event: CalendarEventInput) => void
   onRemoveEvent: (eventId: string) => void
   onRemoveTodo: (todoId: string) => void
-  onToggleSharedItemStatus: (roomId: string, itemId: string) => void
   onChangeRoom: (
     roomId: string,
     update: (current: StudyRoom) => StudyRoom,
@@ -1143,85 +1144,84 @@ export default function CalendarPage({
       }`}
     >
       <div className="project-filter-content calendar-view-content">
-          <header className="calendar-view-toolbar">
-            <div>
-              <p className="eyebrow">{selectedProjectName}</p>
-              <h1>
-                <button
-                  className="calendar-period-trigger"
-                  type="button"
-                  ref={dateJumpTriggerRef}
-                  aria-haspopup="dialog"
-                  aria-expanded={isDateJumpOpen}
-                  onClick={() => setIsDateJumpOpen(true)}
-                >
-                  {periodTitle}
-                  <span aria-hidden="true">⌄</span>
-                </button>
-              </h1>
-            </div>
-            <div className="calendar-view-actions">
-              <div className="calendar-view-tabs" aria-label="캘린더 보기 선택">
-                {(Object.keys(viewLabels) as CalendarView[]).map((view) => (
-                  <button
-                    className={calendarView === view ? 'active' : ''}
-                    type="button"
-                    key={view}
-                    onClick={() => {
-                      if (view !== calendarView) {
-                        setRangeNotice(
-                          calendarClipboard
-                            ? '붙여넣을 날짜 또는 시간 영역을 선택하세요.'
-                            : isBlockSelectionMode
-                              ? '선택 모드가 유지되고 있어요.'
-                              : '',
-                        )
-                      }
-                      setCalendarView(view)
-                    }}
-                    aria-pressed={calendarView === view}
-                  >
-                    {viewLabels[view]}
-                  </button>
-                ))}
-              </div>
+          <PageToolbar
+            className="calendar-view-toolbar"
+            eyebrow={selectedProjectName}
+            title={(
               <button
-                className="add-event-button calendar-toolbar-add"
+                className="calendar-period-trigger"
                 type="button"
-                onClick={() => openNewEvent()}
+                ref={dateJumpTriggerRef}
+                aria-haspopup="dialog"
+                aria-expanded={isDateJumpOpen}
+                onClick={() => setIsDateJumpOpen(true)}
               >
-                <span aria-hidden="true">＋</span> 새 일정
+                {periodTitle}
+                <span aria-hidden="true">⌄</span>
               </button>
-              <div className="calendar-period-navigation">
-                <button
-                  className="today-button"
-                  type="button"
-                  onClick={onSelectToday}
+            )}
+            actionsClassName="calendar-view-actions"
+            actions={(
+              <>
+                <SegmentedControl
+                  ariaLabel="캘린더 보기 선택"
+                  className="calendar-view-tabs"
+                  items={(Object.keys(viewLabels) as CalendarView[]).map((view) => ({
+                    value: view,
+                    label: viewLabels[view],
+                  }))}
+                  value={calendarView}
+                  onChange={(view) => {
+                    if (view !== calendarView) {
+                      setRangeNotice(
+                        calendarClipboard
+                          ? '붙여넣을 날짜 또는 시간 영역을 선택하세요.'
+                          : isBlockSelectionMode
+                            ? '선택 모드가 유지되고 있어요.'
+                            : '',
+                      )
+                    }
+                    setCalendarView(view)
+                  }}
+                />
+                <Button
+                  className="add-event-button calendar-toolbar-add"
+                  variant="primary"
+                  startIcon={<Plus size={16} weight="bold" />}
+                  onClick={() => openNewEvent()}
                 >
-                  오늘
-                </button>
-                <div
-                  className="month-navigation"
-                  aria-label={`${viewLabels[calendarView]} 이동`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => movePeriod(-1)}
-                    aria-label={`이전 ${viewLabels[calendarView]}`}
+                  새 일정
+                </Button>
+                <div className="calendar-period-navigation">
+                  <Button
+                    className="today-button"
+                    onClick={onSelectToday}
                   >
-                    ‹
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => movePeriod(1)}
-                    aria-label={`다음 ${viewLabels[calendarView]}`}
+                    오늘
+                  </Button>
+                  <div
+                    className="month-navigation"
+                    aria-label={`${viewLabels[calendarView]} 이동`}
                   >
-                    ›
-                  </button>
+                    <Button
+                      size="icon"
+                      onClick={() => movePeriod(-1)}
+                      aria-label={`이전 ${viewLabels[calendarView]}`}
+                    >
+                      <CaretLeft size={16} weight="bold" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      onClick={() => movePeriod(1)}
+                      aria-label={`다음 ${viewLabels[calendarView]}`}
+                    >
+                      <CaretRight size={16} weight="bold" aria-hidden="true" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </header>
+              </>
+            )}
+          />
 
           {calendarView === 'day' && (
             <CalendarTimeGrid

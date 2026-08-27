@@ -1,0 +1,180 @@
+.ds-surface {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.ds-surface--elevated {
+  box-shadow: var(--shadow-sm);
+}
+
+.ds-page-toolbar {
+  min-height: 114px;
+  padding: var(--space-5) var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.ds-page-toolbar h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(1.35rem, 2vw, 1.65rem);
+  letter-spacing: -0.035em;
+}
+
+.ds-page-toolbar__copy {
+  min-width: 0;
+}
+
+.ds-page-toolbar__description {
+  max-width: 620px;
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.ds-page-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.ds-segmented-control {
+  min-height: var(--control-height-md);
+  padding: 3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-subtle);
+}
+
+.ds-segmented-control button {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.76rem;
+  font-weight: 700;
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.ds-segmented-control button:hover {
+  color: var(--text);
+  border-color: transparent;
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+}
+
+.ds-segmented-control button.active,
+.ds-segmented-control button[aria-pressed='true'] {
+  color: var(--accent);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.ds-button {
+  min-height: var(--control-height-md);
+  padding: 0 var(--space-4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 720;
+  line-height: 1;
+  text-decoration: none;
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.ds-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.ds-button--primary {
+  color: var(--color-white);
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.ds-button--primary:hover:not(:disabled) {
+  color: var(--color-white);
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.ds-button--secondary {
+  color: var(--text);
+  border-color: var(--line-strong);
+  background: var(--surface);
+  box-shadow: var(--shadow-xs);
+}
+
+.ds-button--secondary:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--line-strong) 70%, var(--text));
+  background: var(--surface-raised);
+}
+
+.ds-button--small {
+  min-height: var(--control-height-sm);
+  padding-inline: var(--space-3);
+  font-size: 0.75rem;
+}
+
+.ds-button--icon {
+  width: var(--control-height-md);
+  min-width: var(--control-height-md);
+  padding: 0;
+}
+
+.ds-button:focus-visible,
+.ds-segmented-control button:focus-visible {
+  outline: 0;
+  box-shadow: var(--focus-ring);
+}
+
+.ds-button__icon {
+  display: inline-grid;
+  place-items: center;
+  font-size: 1.05em;
+}
+
+@media (max-width: 720px) {
+  .ds-page-toolbar {
+    min-height: 0;
+    padding: var(--space-4);
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .ds-page-toolbar__actions {
+    width: 100%;
+    align-items: stretch;
+    justify-content: stretch;
+    flex-direction: column;
+  }
+}
