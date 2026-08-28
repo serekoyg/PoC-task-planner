@@ -31,6 +31,7 @@ type TodoDateListViewProps = {
   sharedItems: StudySharedItemEntry[]
   focusRecords: FocusRecord[]
   selectedProjectId: ProjectFilter
+  focusedTodoId?: string
   onToggleTodo: (todoId: string) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
   onEditTodo: (todo: Todo) => void
@@ -53,6 +54,7 @@ export default function TodoDateListView({
   sharedItems,
   focusRecords,
   selectedProjectId,
+  focusedTodoId,
   onToggleTodo,
   onToggleSharedItemStatus,
   onEditTodo,
@@ -99,12 +101,36 @@ export default function TodoDateListView({
   }, [projects, selectedProjectId, sharedItems, todos])
   const [visibleDateCount, setVisibleDateCount] = useState(DATE_BATCH_SIZE)
   const loadMoreRef = useRef<HTMLDivElement>(null)
-  const hasMore = visibleDateCount < dateGroups.length
+  const focusedTodoRef = useRef<HTMLElement>(null)
+  const focusedGroupIndex = dateGroups.findIndex((group) =>
+    group.todos.some((todo) => todo.id === focusedTodoId),
+  )
+  const renderedDateCount = Math.max(
+    visibleDateCount,
+    focusedGroupIndex >= 0 ? focusedGroupIndex + 1 : 0,
+  )
+  const hasMore = renderedDateCount < dateGroups.length
   const todayKey = toDateKey(today)
 
   useEffect(() => {
     setVisibleDateCount(DATE_BATCH_SIZE)
   }, [dateGroups.length, selectedProjectId])
+
+  useEffect(() => {
+    if (focusedGroupIndex < 0) return
+    setVisibleDateCount((current) => Math.max(current, focusedGroupIndex + 1))
+  }, [focusedGroupIndex])
+
+  useEffect(() => {
+    if (!focusedTodoId || !focusedTodoRef.current) return
+    const frame = window.requestAnimationFrame(() => {
+      focusedTodoRef.current?.scrollIntoView({
+        block: 'center',
+        inline: 'nearest',
+      })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [focusedTodoId, renderedDateCount])
 
   useEffect(() => {
     const target = loadMoreRef.current
@@ -134,7 +160,7 @@ export default function TodoDateListView({
 
   return (
     <section className="todo-date-list" aria-label="날짜별 할 일">
-      {dateGroups.slice(0, visibleDateCount).map((group) => {
+      {dateGroups.slice(0, renderedDateCount).map((group) => {
         const completedSharedCount = group.sharedItems.filter(
           ({ item, memberId }) =>
             (item.type === 'todo'
@@ -162,15 +188,18 @@ export default function TodoDateListView({
             <div className="todo-date-rows">
               {group.todos.map((todo) => {
                 const projectColor = getProjectColorByName(projects, todo.project)
+                const isFocused = todo.id === focusedTodoId
                 const focusRecord = focusRecords.find(
                   (record) =>
                     record.sourceType === 'todo' && record.sourceId === todo.id,
                 )
                 return (
                 <article
-                  className={`todo-date-row project-color-surface${todo.done ? ' completed' : ''}`}
+                  className={`todo-date-row project-color-surface${todo.done ? ' completed' : ''}${isFocused ? ' calendar-origin-focused' : ''}`}
                   style={{ '--project-color': projectColor } as CSSProperties}
                   key={todo.id}
+                  ref={isFocused ? focusedTodoRef : undefined}
+                  aria-current={isFocused ? 'true' : undefined}
                 >
                   <label className="todo-check-control">
                     <input

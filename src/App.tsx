@@ -1202,7 +1202,7 @@ export default function App() {
           }
         />
         <Route
-          path="/todos"
+          path="/todos/:todoId?"
           element={
             <TodosPage
               today={today}
@@ -1257,10 +1257,6 @@ export default function App() {
               onEmptyTrash={() => setTrash([])}
             />
           }
-        />
-        <Route
-          path="/todos/:todoId"
-          element={<Navigate to="/todos" replace />}
         />
         <Route
           path="/todos/:todoId/focus"

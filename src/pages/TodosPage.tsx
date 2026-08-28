@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus } from '@phosphor-icons/react'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import PlanEditorModal from '../components/PlanEditorModal'
 import TodoDateListView from '../components/TodoDateListView'
 import TodoKanbanView from '../components/TodoKanbanView'
@@ -75,6 +75,9 @@ export default function TodosPage({
   onPauseFocus,
 }: TodosPageProps) {
   const [searchParams] = useSearchParams()
+  const { todoId } = useParams<{ todoId?: string }>()
+  const location = useLocation()
+  const navigate = useNavigate()
   const selectedProjectId = (searchParams.get('project') ??
     'all') as ProjectFilter
   const [todoView, setTodoView] = useState<TodoView>('dates')
@@ -89,9 +92,23 @@ export default function TodosPage({
       ? BACKLOG_PROJECT_NAME
       : '모든 목록')
 
+  useEffect(() => {
+    if (!todoId) return
+    const targetTodo = todos.find((todo) => todo.id === todoId)
+    if (!targetTodo) {
+      navigate({ pathname: '/todos', search: location.search }, { replace: true })
+      return
+    }
+    setTodoView('dates')
+    setEditingTodo(targetTodo)
+  }, [location.search, navigate, todoId, todos])
+
   const closeEditor = () => {
     setIsCreating(false)
     setEditingTodo(undefined)
+    if (todoId) {
+      navigate({ pathname: '/todos', search: location.search }, { replace: true })
+    }
   }
 
   return (
@@ -135,6 +152,7 @@ export default function TodosPage({
               sharedItems={sharedItems}
               focusRecords={focusRecords}
               selectedProjectId={selectedProjectId}
+              focusedTodoId={todoId}
               onToggleTodo={onToggleTodo}
               onToggleSharedItemStatus={onToggleSharedItemStatus}
               onEditTodo={setEditingTodo}
