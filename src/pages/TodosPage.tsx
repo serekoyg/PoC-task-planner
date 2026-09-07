@@ -56,6 +56,7 @@ type TodosPageProps = {
     context?: FocusRecordContext,
   ) => void
   onPauseFocus: (recordId: string) => void
+  onFinishFocus: (recordId: string) => void
 }
 
 export default function TodosPage({
@@ -73,6 +74,7 @@ export default function TodosPage({
   onToggleSharedItemStatus,
   onStartFocus,
   onPauseFocus,
+  onFinishFocus,
 }: TodosPageProps) {
   const [searchParams] = useSearchParams()
   const { todoId } = useParams<{ todoId?: string }>()
@@ -203,6 +205,10 @@ export default function TodosPage({
           selectedDate={selectedDate}
           projects={projects}
           todo={editingTodo}
+          focusRecord={focusRecords.find((record) =>
+            record.sourceType === 'todo' && record.sourceId === editingTodo?.id && !record.endedAt,
+          )}
+          onFinishFocus={onFinishFocus}
           defaultProjectName={selectedProject?.name}
           onClose={closeEditor}
           onSaveTodo={(input) => {

@@ -146,6 +146,7 @@ const readFocusRecords = () =>
   )
 
 type StudyRoomRouteProps = {
+  onFinishFocus: (recordId: string) => void
   rooms: StudyRoom[]
   focusRecords: FocusRecord[]
   nowMs: number
@@ -164,6 +165,7 @@ type StudyRoomRouteProps = {
 }
 
 function StudyRoomRoute({
+  onFinishFocus,
   rooms,
   focusRecords,
   nowMs,
@@ -175,6 +177,7 @@ function StudyRoomRoute({
   const { roomId } = useParams()
   return (
     <StudyRoomDetailPage
+      onFinishFocus={onFinishFocus}
       room={rooms.find((room) => room.id === roomId)}
       focusRecords={focusRecords}
       nowMs={nowMs}
@@ -188,6 +191,8 @@ function StudyRoomRoute({
 
 type StudyRoomManagementRouteProps = {
   rooms: StudyRoom[]
+  focusRecords: FocusRecord[]
+  onFinishFocus: (recordId: string) => void
   onChangeRoom: (
     roomId: string,
     update: (current: StudyRoom) => StudyRoom,
@@ -197,12 +202,16 @@ type StudyRoomManagementRouteProps = {
 function StudyRoomManagementRoute({
   rooms,
   onChangeRoom,
+  focusRecords,
+  onFinishFocus,
 }: StudyRoomManagementRouteProps) {
   const { roomId } = useParams()
   return (
     <StudyRoomManagementPage
       room={rooms.find((room) => room.id === roomId)}
       onChangeRoom={onChangeRoom}
+      focusRecords={focusRecords}
+      onFinishFocus={onFinishFocus}
     />
   )
 }
@@ -1179,6 +1188,8 @@ export default function App() {
               projects={projects}
               calendarTodoVisibility={calendarTodoVisibility}
               studyRooms={joinedStudyRooms}
+              focusRecords={unfinishedFocusRecords}
+              onFinishFocus={finishFocus}
               sharedItems={sharedItemEntries}
               onSelectDate={selectDate}
               onMoveMonth={(amount) =>
@@ -1219,6 +1230,7 @@ export default function App() {
               onToggleSharedItemStatus={toggleSharedItemStatus}
               onStartFocus={startFocus}
               onPauseFocus={pauseFocus}
+              onFinishFocus={finishFocus}
             />
           }
         />
@@ -1296,6 +1308,8 @@ export default function App() {
             <StudyRoomManagementRoute
               rooms={studyRooms}
               onChangeRoom={changeStudyRoom}
+              focusRecords={unfinishedFocusRecords}
+              onFinishFocus={finishFocus}
             />
           }
         />
@@ -1307,6 +1321,7 @@ export default function App() {
           path="/studies/:roomId"
           element={
             <StudyRoomRoute
+              onFinishFocus={finishFocus}
               rooms={studyRooms}
               focusRecords={unfinishedFocusRecords}
               nowMs={focusNowMs}

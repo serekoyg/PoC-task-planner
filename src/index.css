@@ -3421,7 +3421,8 @@ button.event-chip:hover {
   color: color-mix(in srgb, var(--project-color) 78%, #171714);
 }
 
-.todo-date-row.calendar-origin-focused {
+.todo-date-row.calendar-origin-focused,
+.study-shared-plan-row[aria-current='true'] {
   z-index: 1;
   scroll-margin-block: 96px;
   outline: 2px solid var(--accent);
@@ -9212,6 +9213,50 @@ footer a {
   padding: 24px 30px 38px;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+.plan-editor-activity {
+  margin-bottom: 20px;
+  padding: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--accent-soft);
+}
+
+.plan-editor-fields {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.plan-readonly-notice {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.plan-readonly-note {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.plan-editor-fields:disabled input,
+.plan-editor-fields:disabled select {
+  opacity: 1;
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+}
+
+.plan-editor-activity p {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 650;
 }
 
 .plan-type-switch {

@@ -323,7 +323,7 @@ export default function TodoDateListView({
                           {typeLabel}
                         </span>
                       </div>
-                      <Link to={`/studies/${roomId}`}>{item.title}</Link>
+                      <Link to={`/studies/${roomId}?tab=plans&plan=${encodeURIComponent(item.id)}`}>{item.title}</Link>
                       <p>
                         {item.time ? `${item.time} · ` : ''}
                         {item.repeat === 'none'

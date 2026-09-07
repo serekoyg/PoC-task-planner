@@ -22,6 +22,8 @@ import {
   weekdayLabels,
 } from '../lib/studyShared'
 import MarkdownEditor from './MarkdownEditor'
+import type { FocusRecord } from '../data/focusRecords'
+import { isFocusRecordRunning } from '../lib/focus'
 
 type PlanType = 'todo' | 'event'
 type RepeatEnd = 'never' | 'count' | 'date'
@@ -33,6 +35,7 @@ const getDefaultRepeatEndDate = (date: string) => {
 }
 
 type PlanEditorModalProps = {
+  readOnly?: boolean
   initialType: PlanType
   selectedDate: Date
   projects?: PlannerProject[]
@@ -52,9 +55,12 @@ type PlanEditorModalProps = {
   onSaveEvent?: (input: CalendarEventInput) => void
   onSaveShared?: (input: StudySharedItemInput) => void
   onDelete?: () => void
+  focusRecord?: FocusRecord
+  onFinishFocus?: (recordId: string) => void
 }
 
 export default function PlanEditorModal({
+  readOnly = false,
   initialType,
   selectedDate,
   projects = [],
@@ -74,6 +80,8 @@ export default function PlanEditorModal({
   onSaveEvent,
   onSaveShared,
   onDelete,
+  focusRecord,
+  onFinishFocus,
 }: PlanEditorModalProps) {
   const personalItem = todo ?? calendarEvent
   const isEditing = Boolean(item || personalItem)
@@ -136,6 +144,7 @@ export default function PlanEditorModal({
   const [isDeleteConfirming, setIsDeleteConfirming] = useState(false)
   const [isCloseConfirming, setIsCloseConfirming] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
+  const [hasFinishedActivity, setHasFinishedActivity] = useState(false)
   const [isRepeatDetailsOpen, setIsRepeatDetailsOpen] = useState(
     storedRepeat !== 'none',
   )
@@ -238,6 +247,7 @@ export default function PlanEditorModal({
 
   const savePlan = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (readOnly) return
     if (!title.trim()) {
       setError('계획 제목을 입력해 주세요.')
       titleInputRef.current?.focus()
@@ -325,12 +335,12 @@ export default function PlanEditorModal({
                   : '새로운 계획'}
             </p>
             <h2 id="unified-plan-editor-title">
-              {isEditing ? '계획 편집' : '계획 만들기'}
+              {readOnly ? '계획 상세 · 읽기 전용' : isEditing ? '계획 편집' : '계획 만들기'}
             </h2>
           </div>
           <button
             type="button"
-            aria-label={`${isEditing ? '계획 편집' : '계획 만들기'} 패널 닫기`}
+            aria-label={`${readOnly ? '계획 상세' : isEditing ? '계획 편집' : '계획 만들기'} 패널 닫기`}
             onClick={requestClose}
           >
             ×
@@ -341,12 +351,33 @@ export default function PlanEditorModal({
           className="plan-editor-form"
           ref={formRef}
           onChange={() => {
+            if (readOnly) return
             setIsDirty(true)
             setIsCloseConfirming(false)
           }}
           onSubmit={savePlan}
         >
           <div className="plan-editor-scroll">
+            {(todo || item) && (focusRecord || hasFinishedActivity) && (
+              <div className="plan-editor-activity">
+                <p role="status">
+                  {focusRecord
+                    ? isFocusRecordRunning(focusRecord) ? '● 활동 진행 중' : '활동 일시정지 중'
+                    : '활동을 마쳤어요. 활동 시간이 기록됐어요.'}
+                </p>
+                {focusRecord && onFinishFocus && (
+                  <button type="button" onClick={() => {
+                    onFinishFocus(focusRecord.id)
+                    setHasFinishedActivity(true)
+                  }}>
+                    활동 마치기
+                  </button>
+                )}
+              </div>
+            )}
+            {readOnly && <p className="plan-readonly-notice">이 계획은 읽기 전용이에요. 작성자·방장·매니저가 수정할 수 있어요.</p>}
+            <fieldset className="plan-editor-fields" disabled={readOnly}>
+            <legend className="visually-hidden">계획 내용</legend>
             <fieldset className="plan-type-switch">
               <legend className="visually-hidden">종류</legend>
               {([
@@ -835,7 +866,7 @@ export default function PlanEditorModal({
                 <h3 id="plan-document-title">내용</h3>
                 <small>메모, 링크, 체크리스트를 한곳에 정리하세요.</small>
               </div>
-              <MarkdownEditor
+              {readOnly ? <div className="plan-readonly-note">{note || '등록된 메모가 없어요.'}</div> : <MarkdownEditor
                 value={note}
                 maxLength={16000}
                 placeholder={
@@ -849,8 +880,9 @@ export default function PlanEditorModal({
                   setIsCloseConfirming(false)
                 }}
                 onSaveShortcut={() => formRef.current?.requestSubmit()}
-              />
+              />}
             </section>
+            </fieldset>
           </div>
 
           <footer className="plan-editor-footer">
@@ -874,7 +906,7 @@ export default function PlanEditorModal({
             {!isCloseConfirming && (
               <div className="plan-editor-actions">
                 <div>
-                  {isPersonalEditing && onDelete && !isDeleteConfirming && (
+                  {!readOnly && isPersonalEditing && onDelete && !isDeleteConfirming && (
                     <button
                       className="event-delete-button"
                       type="button"
@@ -883,7 +915,7 @@ export default function PlanEditorModal({
                       계획 삭제
                     </button>
                   )}
-                  {isPersonalEditing && onDelete && isDeleteConfirming && (
+                  {!readOnly && isPersonalEditing && onDelete && isDeleteConfirming && (
                     <div className="event-delete-confirm" role="alert">
                       <span>정말 삭제할까요?</span>
                       <button type="button" onClick={() => setIsDeleteConfirming(false)}>
@@ -894,14 +926,14 @@ export default function PlanEditorModal({
                   )}
                 </div>
                 <div>
-                  <button type="button" onClick={requestClose}>취소</button>
-                  <button className="study-submit-button" type="submit">
+                  <button type="button" onClick={requestClose}>{readOnly ? '닫기' : '취소'}</button>
+                  {!readOnly && <button className="study-submit-button" type="submit">
                     {isEditing
                       ? '변경 저장'
                       : fixedRoom
                         ? '모임에 공유'
                         : '계획 저장'}
-                  </button>
+                  </button>}
                 </div>
               </div>
             )}

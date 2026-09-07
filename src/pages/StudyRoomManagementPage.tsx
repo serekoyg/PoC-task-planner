@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import PlanEditorModal from '../components/PlanEditorModal'
+import type { FocusRecord } from '../data/focusRecords'
 import type {
   StudyRoom,
   StudySharedItem,
@@ -13,6 +14,8 @@ type SharedFilter = 'all' | StudySharedItem['type']
 
 type StudyRoomManagementPageProps = {
   room?: StudyRoom
+  focusRecords: FocusRecord[]
+  onFinishFocus: (recordId: string) => void
   onChangeRoom: (
     roomId: string,
     update: (current: StudyRoom) => StudyRoom,
@@ -80,6 +83,8 @@ function ToggleRow({
 export default function StudyRoomManagementPage({
   room,
   onChangeRoom,
+  focusRecords,
+  onFinishFocus,
 }: StudyRoomManagementPageProps) {
   const [activeTab, setActiveTab] = useState<ManagementTab>('shared')
   const [sharedFilter, setSharedFilter] = useState<SharedFilter>('all')
@@ -834,6 +839,11 @@ export default function StudyRoomManagementPage({
           fixedRoom={room}
           memberId={me.id}
           item={editingSharedItem}
+          focusRecord={focusRecords.find((record) =>
+            record.sourceType === 'study' && record.roomId === room.id &&
+            record.sourceId === editingSharedItem?.id && !record.endedAt,
+          )}
+          onFinishFocus={onFinishFocus}
           onClose={() => {
             setEditingSharedItem(undefined)
             setIsPlanModalOpen(false)
