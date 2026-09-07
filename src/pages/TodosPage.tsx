@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Plus } from '@phosphor-icons/react'
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import PlanEditorModal from '../components/PlanEditorModal'
@@ -100,8 +100,15 @@ export default function TodosPage({
       return
     }
     setTodoView('dates')
-    setEditingTodo(targetTodo)
+    setEditingTodo(undefined)
   }, [location.search, navigate, todoId, todos])
+
+  const openFocusedTodoEditor = useCallback(
+    (todo: Todo) => {
+      if (todo.id === todoId) setEditingTodo(todo)
+    },
+    [todoId],
+  )
 
   const closeEditor = () => {
     setIsCreating(false)
@@ -153,6 +160,7 @@ export default function TodosPage({
               focusRecords={focusRecords}
               selectedProjectId={selectedProjectId}
               focusedTodoId={todoId}
+              onFocusedTodoReady={openFocusedTodoEditor}
               onToggleTodo={onToggleTodo}
               onToggleSharedItemStatus={onToggleSharedItemStatus}
               onEditTodo={setEditingTodo}

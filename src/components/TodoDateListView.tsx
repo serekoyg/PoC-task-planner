@@ -32,6 +32,7 @@ type TodoDateListViewProps = {
   focusRecords: FocusRecord[]
   selectedProjectId: ProjectFilter
   focusedTodoId?: string
+  onFocusedTodoReady?: (todo: Todo) => void
   onToggleTodo: (todoId: string) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
   onEditTodo: (todo: Todo) => void
@@ -55,6 +56,7 @@ export default function TodoDateListView({
   focusRecords,
   selectedProjectId,
   focusedTodoId,
+  onFocusedTodoReady,
   onToggleTodo,
   onToggleSharedItemStatus,
   onEditTodo,
@@ -102,6 +104,7 @@ export default function TodoDateListView({
   const [visibleDateCount, setVisibleDateCount] = useState(DATE_BATCH_SIZE)
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const focusedTodoRef = useRef<HTMLElement>(null)
+  const focusedTodo = todos.find((todo) => todo.id === focusedTodoId)
   const focusedGroupIndex = dateGroups.findIndex((group) =>
     group.todos.some((todo) => todo.id === focusedTodoId),
   )
@@ -122,15 +125,44 @@ export default function TodoDateListView({
   }, [focusedGroupIndex])
 
   useEffect(() => {
-    if (!focusedTodoId || !focusedTodoRef.current) return
+    const target = focusedTodoRef.current
+    if (!focusedTodoId || !focusedTodo || !target || !onFocusedTodoReady) return
+    const prefersReducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+    const targetRect = target.getBoundingClientRect()
+    const needsScroll =
+      targetRect.top < 96 || targetRect.bottom > window.innerHeight - 96
+    let isFinished = false
+    let fallbackTimer: number | undefined
+
+    const finish = () => {
+      if (isFinished) return
+      isFinished = true
+      if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer)
+      window.removeEventListener('scrollend', finish)
+      onFocusedTodoReady(focusedTodo)
+    }
+
     const frame = window.requestAnimationFrame(() => {
-      focusedTodoRef.current?.scrollIntoView({
+      target.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
         block: 'center',
         inline: 'nearest',
       })
+      if (!needsScroll || prefersReducedMotion) {
+        fallbackTimer = window.setTimeout(finish, 100)
+        return
+      }
+      window.addEventListener('scrollend', finish, { once: true })
+      fallbackTimer = window.setTimeout(finish, 600)
     })
-    return () => window.cancelAnimationFrame(frame)
-  }, [focusedTodoId, renderedDateCount])
+    return () => {
+      window.cancelAnimationFrame(frame)
+      if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer)
+      window.removeEventListener('scrollend', finish)
+    }
+  }, [focusedTodo, focusedTodoId, onFocusedTodoReady, renderedDateCount])
 
   useEffect(() => {
     const target = loadMoreRef.current
