@@ -16,6 +16,7 @@ export type PlannerProject = {
 }
 
 export type ProjectFilter = 'all' | 'backlog' | string
+export type ProjectSelection = string[]
 export type PlanCollection = 'completed' | 'trash'
 
 export type CalendarTodoVisibility = Record<string, boolean>
@@ -75,6 +76,33 @@ export const normalizeBacklogProject = (project?: string) =>
   project === LEGACY_INBOX_PROJECT_NAME
     ? BACKLOG_PROJECT_NAME
     : project
+
+export const getProjectSelection = (searchParams: URLSearchParams): ProjectSelection => {
+  const projectParam = searchParams.get('project')
+
+  if (!projectParam || projectParam === 'all') return []
+
+  return [
+    ...new Set(projectParam.split(',').filter((id) => id && id !== 'all')),
+  ]
+}
+
+export const isProjectInSelection = (
+  projectName: string | undefined,
+  projects: PlannerProject[],
+  selectedProjectIds: ProjectSelection,
+) => {
+  if (!selectedProjectIds.length) return true
+  if (
+    selectedProjectIds.includes('backlog') &&
+    isBacklogProject(projectName)
+  ) return true
+
+  return projects.some(
+    (project) =>
+      selectedProjectIds.includes(project.id) && project.name === projectName,
+  )
+}
 
 export const createInitialProjects = (): PlannerProject[] => [
   { id: 'haru-renewal', name: '하루 리뉴얼', accent: 'coral', color: PROJECT_ACCENT_COLORS.coral, createdAt: '2026-07-01T09:00:00.000Z' },
