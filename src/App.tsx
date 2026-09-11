@@ -488,8 +488,11 @@ export default function App() {
     setIsSearchOpen(false)
     setIsNotificationInboxOpen(false)
     setIsFocusPopoverOpen(false)
-    setIsSidebarOpen(false)
   }, [location.pathname, location.search])
+
+  useEffect(() => {
+    setIsSidebarOpen(false)
+  }, [location.pathname])
 
   useEffect(() => {
     const openGlobalSearch = (event: KeyboardEvent) => {

@@ -3,7 +3,7 @@ import type { Todo } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
 import { formatTaskDate, getTaskPriority } from '../lib/task'
 import { getBucketTodos, getTodoProjectBuckets } from '../lib/todoView'
-import type { ProjectFilter } from '../data/projects'
+import type { ProjectSelection } from '../data/projects'
 import type {
   FocusRecord,
   FocusRecordContext,
@@ -17,7 +17,7 @@ type TodoProjectListViewProps = {
   todos: Todo[]
   projects: PlannerProject[]
   focusRecords: FocusRecord[]
-  selectedProjectId: ProjectFilter
+  selectedProjectIds: ProjectSelection
   onToggleTodo: (todoId: string) => void
   onEditTodo: (todo: Todo) => void
   onStartFocus: (
@@ -33,15 +33,16 @@ export default function TodoProjectListView({
   todos,
   projects,
   focusRecords,
-  selectedProjectId,
+  selectedProjectIds,
   onToggleTodo,
   onEditTodo,
   onStartFocus,
   onPauseFocus,
 }: TodoProjectListViewProps) {
+  const selectedProjectKey = selectedProjectIds.join(',')
   const buckets = useMemo(
-    () => getTodoProjectBuckets(projects, selectedProjectId),
-    [projects, selectedProjectId],
+    () => getTodoProjectBuckets(projects, selectedProjectIds),
+    [projects, selectedProjectIds],
   )
   const [visibleProjectCount, setVisibleProjectCount] = useState(
     PROJECT_BATCH_SIZE,
@@ -51,7 +52,7 @@ export default function TodoProjectListView({
 
   useEffect(() => {
     setVisibleProjectCount(PROJECT_BATCH_SIZE)
-  }, [buckets.length, selectedProjectId])
+  }, [buckets.length, selectedProjectKey])
 
   useEffect(() => {
     const target = loadMoreRef.current

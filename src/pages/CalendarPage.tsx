@@ -23,10 +23,11 @@ import { toDateKey } from '../data/initialData'
 import {
   BACKLOG_PROJECT_NAME,
   getProjectColorByName,
+  getProjectSelection,
+  isProjectInSelection,
   isBacklogProject,
   type CalendarTodoVisibility,
   type PlannerProject,
-  type ProjectFilter,
 } from '../data/projects'
 import type {
   StudyRoom,
@@ -224,8 +225,7 @@ export default function CalendarPage({
 }: CalendarPageProps) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const selectedProjectId = (searchParams.get('project') ??
-    'all') as ProjectFilter
+  const selectedProjectIds = getProjectSelection(searchParams)
   const [calendarView, setCalendarView] = useState<CalendarView>('month')
   const [isDateJumpOpen, setIsDateJumpOpen] = useState(false)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
@@ -275,19 +275,15 @@ export default function CalendarPage({
     [visibleMonth],
   )
   const weekDays = useMemo(() => getWeekDays(selectedDate), [selectedDate])
-  const selectedProject = projects.find(
-    (project) => project.id === selectedProjectId,
-  )
-  const isBacklogEvent = (event: CalendarEvent) =>
-    isBacklogProject(event.project)
+  const selectedProject =
+    selectedProjectIds.length === 1
+      ? projects.find((project) => project.id === selectedProjectIds[0])
+      : undefined
   const filteredEvents = useMemo(() => {
-    if (selectedProjectId === 'all') return events
-    if (selectedProjectId === 'backlog') return events.filter(isBacklogEvent)
-    const project = projects.find((item) => item.id === selectedProjectId)
-    return project
-      ? events.filter((event) => event.project === project.name)
-      : events
-  }, [events, projects, selectedProjectId])
+    return events.filter((event) =>
+      isProjectInSelection(event.project, projects, selectedProjectIds),
+    )
+  }, [events, projects, selectedProjectIds])
   const enabledCalendarTodos = useMemo(
     () =>
       todos.filter((todo) => {
@@ -302,17 +298,10 @@ export default function CalendarPage({
     [calendarTodoVisibility, projects, todos],
   )
   const filteredTodos = useMemo(() => {
-    if (selectedProjectId === 'all') return enabledCalendarTodos
-    if (selectedProjectId === 'backlog') {
-      return enabledCalendarTodos.filter((todo) =>
-        isBacklogProject(todo.project),
-      )
-    }
-    const project = projects.find((item) => item.id === selectedProjectId)
-    return project
-      ? enabledCalendarTodos.filter((todo) => todo.project === project.name)
-      : enabledCalendarTodos
-  }, [enabledCalendarTodos, projects, selectedProjectId])
+    return enabledCalendarTodos.filter((todo) =>
+      isProjectInSelection(todo.project, projects, selectedProjectIds),
+    )
+  }, [enabledCalendarTodos, projects, selectedProjectIds])
   const selectedRange = useMemo(() => {
     if (!rangeStartKey) return undefined
     const [startKey, endKey] = sortDateKeys(
@@ -356,16 +345,23 @@ export default function CalendarPage({
   )
   const visibleSharedEvents = useMemo(
     () =>
-      selectedProjectId === 'all'
+      selectedProjectIds.length === 0
         ? participatingSharedEvents
         : [],
-    [participatingSharedEvents, selectedProjectId],
+    [participatingSharedEvents, selectedProjectIds],
   )
   const selectedProjectName =
     selectedProject?.name ??
-    (selectedProjectId === 'backlog'
-      ? BACKLOG_PROJECT_NAME
-      : '모든 목록')
+    (selectedProjectIds.length === 0
+      ? '모든 목록'
+      : selectedProjectIds
+          .map((id) =>
+            id === 'backlog'
+              ? BACKLOG_PROJECT_NAME
+              : projects.find((project) => project.id === id)?.name,
+          )
+          .filter(Boolean)
+          .join(' · '))
   const getEventProjectStyle = (projectName?: string) =>
     ({
       '--project-color': getProjectColorByName(projects, projectName),

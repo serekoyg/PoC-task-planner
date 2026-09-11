@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import type { Todo } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
-import type { ProjectFilter } from '../data/projects'
+import type { ProjectSelection } from '../data/projects'
 import type {
   FocusRecord,
   FocusRecordContext,
@@ -15,7 +15,7 @@ type TodoKanbanViewProps = {
   todos: Todo[]
   projects: PlannerProject[]
   focusRecords: FocusRecord[]
-  selectedProjectId: ProjectFilter
+  selectedProjectIds: ProjectSelection
   onToggleTodo: (todoId: string) => void
   onEditTodo: (todo: Todo) => void
   onStartFocus: (
@@ -31,13 +31,13 @@ export default function TodoKanbanView({
   todos,
   projects,
   focusRecords,
-  selectedProjectId,
+  selectedProjectIds,
   onToggleTodo,
   onEditTodo,
   onStartFocus,
   onPauseFocus,
 }: TodoKanbanViewProps) {
-  const buckets = getTodoProjectBuckets(projects, selectedProjectId)
+  const buckets = getTodoProjectBuckets(projects, selectedProjectIds)
 
   return (
     <section className="todo-kanban" aria-label="목록별 할 일 칸반">

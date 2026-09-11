@@ -2,6 +2,7 @@ import type { RefObject } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import {
   getProjectColor,
+  getProjectSelection,
   type PlanCollection,
   type PlannerProject,
 } from '../data/projects'
@@ -71,7 +72,7 @@ export default function AppSidebar({
 }: AppSidebarProps) {
   const location = useLocation()
   const searchParams = new URLSearchParams(location.search)
-  const selectedProjectId = searchParams.get('project') ?? 'all'
+  const selectedProjectIds = getProjectSelection(searchParams)
   const isPlannerRoute =
     location.pathname.startsWith('/calendar') ||
     location.pathname.startsWith('/todos')
@@ -81,10 +82,22 @@ export default function AppSidebar({
   const selectedCollection = location.pathname.startsWith('/collections/')
     ? (location.pathname.split('/').at(-1) as PlanCollection)
     : undefined
-  const projectTarget = (projectId: string) =>
-    projectId === 'all'
-      ? plannerPath
-      : `${plannerPath}?project=${encodeURIComponent(projectId)}`
+  const selectedProjectSearch = selectedProjectIds.length
+    ? `?project=${encodeURIComponent(selectedProjectIds.join(','))}`
+    : ''
+  const calendarTarget = `/calendar${selectedProjectSearch}`
+  const todoTarget = `/todos${selectedProjectSearch}`
+  const projectTarget = (projectId: string) => {
+    if (projectId === 'all') return plannerPath
+
+    const nextProjectIds = selectedProjectIds.includes(projectId)
+      ? selectedProjectIds.filter((id) => id !== projectId)
+      : [...selectedProjectIds, projectId]
+
+    return nextProjectIds.length
+      ? `${plannerPath}?project=${encodeURIComponent(nextProjectIds.join(','))}`
+      : plannerPath
+  }
 
   return (
     <>
@@ -182,7 +195,7 @@ export default function AppSidebar({
         <nav className="sidebar-primary-nav" aria-label="주요 메뉴">
           <Link
             className={location.pathname.startsWith('/calendar') ? 'active' : ''}
-            to="/calendar"
+            to={calendarTarget}
           >
             <span className="sidebar-nav-icon calendar" aria-hidden="true">▦</span>
             <span>캘린더</span>
@@ -193,7 +206,7 @@ export default function AppSidebar({
                 ? 'active'
                 : ''
             }
-            to="/todos"
+            to={todoTarget}
           >
             <span className="sidebar-nav-icon todo" aria-hidden="true">✓</span>
             <span>할 일</span>
@@ -225,7 +238,7 @@ export default function AppSidebar({
           <nav aria-label="나의 목록">
             <Link
               className={
-                isPlannerRoute && !selectedCollection && selectedProjectId === 'all'
+                isPlannerRoute && !selectedCollection && !selectedProjectIds.length
                   ? 'active'
                   : ''
               }
@@ -237,7 +250,7 @@ export default function AppSidebar({
             </Link>
             <Link
               className={
-                isPlannerRoute && selectedProjectId === 'backlog' ? 'active' : ''
+                isPlannerRoute && selectedProjectIds.includes('backlog') ? 'active' : ''
               }
               to={projectTarget('backlog')}
             >
@@ -248,7 +261,7 @@ export default function AppSidebar({
             {projects.map((project) => (
               <Link
                 className={
-                  isPlannerRoute && selectedProjectId === project.id ? 'active' : ''
+                  isPlannerRoute && selectedProjectIds.includes(project.id) ? 'active' : ''
                 }
                 key={project.id}
                 to={projectTarget(project.id)}
