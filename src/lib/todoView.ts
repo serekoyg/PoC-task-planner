@@ -6,7 +6,7 @@ import {
   getProjectColor,
   isBacklogProject,
 } from '../data/projects'
-import type { ProjectFilter } from '../data/projects'
+import type { ProjectSelection } from '../data/projects'
 
 export type TodoProjectBucket = {
   id: string
@@ -24,17 +24,15 @@ const backlogBucket: TodoProjectBucket = {
 
 export const getTodoProjectBuckets = (
   projects: PlannerProject[],
-  selectedProjectId: ProjectFilter,
+  selectedProjectIds: ProjectSelection,
 ): TodoProjectBucket[] => {
-  if (selectedProjectId === 'backlog') return [backlogBucket]
-
-  if (selectedProjectId !== 'all') {
-    const selectedProject = projects.find(
-      (project) => project.id === selectedProjectId,
-    )
-    return selectedProject
-      ? [{ ...selectedProject, color: getProjectColor(selectedProject) }]
-      : []
+  if (selectedProjectIds.length) {
+    return [
+      ...(selectedProjectIds.includes('backlog') ? [backlogBucket] : []),
+      ...projects
+        .filter((project) => selectedProjectIds.includes(project.id))
+        .map((project) => ({ ...project, color: getProjectColor(project) })),
+    ]
   }
 
   return [

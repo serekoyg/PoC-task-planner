@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import type { Todo } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
-import { getProjectColorByName, isBacklogProject } from '../data/projects'
+import { getProjectColorByName, isProjectInSelection } from '../data/projects'
 import type { StudySharedItemEntry } from '../data/studyRooms'
 import type {
   FocusRecord,
@@ -13,7 +13,7 @@ import type {
 import { formatSelectedDate } from '../lib/date'
 import { getSharedRepeatLabel } from '../lib/studyShared'
 import { getTaskPriority, getTaskProject } from '../lib/task'
-import type { ProjectFilter } from '../data/projects'
+import type { ProjectSelection } from '../data/projects'
 import FocusToggleButton from './FocusToggleButton'
 
 const DATE_BATCH_SIZE = 2
@@ -30,7 +30,7 @@ type TodoDateListViewProps = {
   projects: PlannerProject[]
   sharedItems: StudySharedItemEntry[]
   focusRecords: FocusRecord[]
-  selectedProjectId: ProjectFilter
+  selectedProjectIds: ProjectSelection
   onToggleTodo: (todoId: string) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
   onEditTodo: (todo: Todo) => void
@@ -44,15 +44,13 @@ type TodoDateListViewProps = {
   onPauseFocus: (recordId: string) => void
 }
 
-const isBacklogTodo = (todo: Todo) => isBacklogProject(todo.project)
-
 export default function TodoDateListView({
   today,
   todos,
   projects,
   sharedItems,
   focusRecords,
-  selectedProjectId,
+  selectedProjectIds,
   onToggleTodo,
   onToggleSharedItemStatus,
   onEditTodo,
@@ -60,17 +58,13 @@ export default function TodoDateListView({
   onStartFocus,
   onPauseFocus,
 }: TodoDateListViewProps) {
+  const selectedProjectKey = selectedProjectIds.join(',')
   const dateGroups = useMemo<TodoDateGroup[]>(() => {
-    const selectedProject = projects.find(
-      (project) => project.id === selectedProjectId,
+    const filteredTodos = todos.filter((todo) =>
+      isProjectInSelection(todo.project, projects, selectedProjectIds),
     )
-    const filteredTodos = todos.filter((todo) => {
-      if (selectedProjectId === 'all') return true
-      if (selectedProjectId === 'backlog') return isBacklogTodo(todo)
-      return selectedProject ? todo.project === selectedProject.name : true
-    })
     const visibleSharedItems =
-      selectedProjectId === 'all'
+      !selectedProjectIds.length
         ? sharedItems
         : []
     const grouped = new Map<string, TodoDateGroup>()
@@ -96,7 +90,7 @@ export default function TodoDateListView({
           )
         }),
       }))
-  }, [projects, selectedProjectId, sharedItems, todos])
+  }, [projects, selectedProjectIds, sharedItems, todos])
   const [visibleDateCount, setVisibleDateCount] = useState(DATE_BATCH_SIZE)
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const hasMore = visibleDateCount < dateGroups.length
@@ -104,7 +98,7 @@ export default function TodoDateListView({
 
   useEffect(() => {
     setVisibleDateCount(DATE_BATCH_SIZE)
-  }, [dateGroups.length, selectedProjectId])
+  }, [dateGroups.length, selectedProjectKey])
 
   useEffect(() => {
     const target = loadMoreRef.current

@@ -6,8 +6,8 @@ import TodoDateListView from '../components/TodoDateListView'
 import TodoKanbanView from '../components/TodoKanbanView'
 import TodoProjectListView from '../components/TodoProjectListView'
 import type { CalendarEventInput, Todo, TodoInput } from '../data/initialData'
-import type { PlannerProject, ProjectFilter } from '../data/projects'
-import { BACKLOG_PROJECT_NAME } from '../data/projects'
+import type { PlannerProject } from '../data/projects'
+import { BACKLOG_PROJECT_NAME, getProjectSelection } from '../data/projects'
 import type { StudySharedItemEntry } from '../data/studyRooms'
 import { Button, PageToolbar, SegmentedControl } from '../design-system'
 import type {
@@ -75,19 +75,25 @@ export default function TodosPage({
   onPauseFocus,
 }: TodosPageProps) {
   const [searchParams] = useSearchParams()
-  const selectedProjectId = (searchParams.get('project') ??
-    'all') as ProjectFilter
+  const selectedProjectIds = getProjectSelection(searchParams)
   const [todoView, setTodoView] = useState<TodoView>('dates')
   const [isCreating, setIsCreating] = useState(false)
   const [editingTodo, setEditingTodo] = useState<Todo>()
-  const selectedProject = projects.find(
-    (project) => project.id === selectedProjectId,
-  )
+  const selectedProject =
+    selectedProjectIds.length === 1
+      ? projects.find((project) => project.id === selectedProjectIds[0])
+      : undefined
   const selectedProjectName =
-    selectedProject?.name ??
-    (selectedProjectId === 'backlog'
-      ? BACKLOG_PROJECT_NAME
-      : '모든 목록')
+    selectedProjectIds.length === 0
+      ? '모든 목록'
+      : selectedProjectIds
+          .map((id) =>
+            id === 'backlog'
+              ? BACKLOG_PROJECT_NAME
+              : projects.find((project) => project.id === id)?.name,
+          )
+          .filter(Boolean)
+          .join(' · ')
 
   const closeEditor = () => {
     setIsCreating(false)
@@ -134,7 +140,7 @@ export default function TodosPage({
               projects={projects}
               sharedItems={sharedItems}
               focusRecords={focusRecords}
-              selectedProjectId={selectedProjectId}
+              selectedProjectIds={selectedProjectIds}
               onToggleTodo={onToggleTodo}
               onToggleSharedItemStatus={onToggleSharedItemStatus}
               onEditTodo={setEditingTodo}
@@ -149,7 +155,7 @@ export default function TodosPage({
               todos={todos}
               projects={projects}
               focusRecords={focusRecords}
-              selectedProjectId={selectedProjectId}
+              selectedProjectIds={selectedProjectIds}
               onToggleTodo={onToggleTodo}
               onEditTodo={setEditingTodo}
               onStartFocus={onStartFocus}
@@ -162,7 +168,7 @@ export default function TodosPage({
               todos={todos}
               projects={projects}
               focusRecords={focusRecords}
-              selectedProjectId={selectedProjectId}
+              selectedProjectIds={selectedProjectIds}
               onToggleTodo={onToggleTodo}
               onEditTodo={setEditingTodo}
               onStartFocus={onStartFocus}
