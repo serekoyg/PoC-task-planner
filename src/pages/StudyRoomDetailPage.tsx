@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   ArrowRight,
@@ -54,6 +54,7 @@ type StudyRoomDetailPageProps = {
     context?: FocusRecordContext,
   ) => void
   onPauseFocus: (recordId: string) => void
+  onFinishFocus: (recordId: string) => void
 }
 
 const formatMinutes = (minutes: number) => {
@@ -132,11 +133,16 @@ export default function StudyRoomDetailPage({
   onChangeRoom,
   onStartFocus,
   onPauseFocus,
+  onFinishFocus,
 }: StudyRoomDetailPageProps) {
   const [searchParams, setSearchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState<StudyRoomTab>('home')
   const [planFilter, setPlanFilter] = useState<SharedPlanFilter>('all')
   const [isPlanEditorOpen, setIsPlanEditorOpen] = useState(false)
+  const [editingPlan, setEditingPlan] = useState<StudySharedItem>()
+  const linkedPlanId = searchParams.get('plan')
+  const linkedPlanRef = useRef<HTMLElement>(null)
+  const openedPlanRequest = useRef<string | undefined>(undefined)
   const [viewingStatusItemId, setViewingStatusItemId] = useState<string>()
   const roomFocusRecords = useMemo(
     () =>
@@ -206,6 +212,36 @@ export default function StudyRoomDetailPage({
       setSearchParams(nextParams, { replace: true })
     }
   }, [searchParams, setSearchParams])
+
+  useEffect(() => {
+    if (!linkedPlanId) {
+      openedPlanRequest.current = undefined
+      return
+    }
+    if (!room?.joined || activeTab !== 'plans') return
+    const item = room.sharedItems.find((candidate) => candidate.id === linkedPlanId)
+    const member = room.members.find((candidate) => candidate.isMe)
+    const request = `${room.id}:${linkedPlanId}`
+    if (!item || !member || openedPlanRequest.current === request) return
+    if (planFilter !== 'all') {
+      setPlanFilter('all')
+      return
+    }
+    let editorFrame: number | undefined
+    const frame = window.requestAnimationFrame(() => {
+      if (!linkedPlanRef.current) return
+      linkedPlanRef.current.scrollIntoView({ behavior: 'instant', block: 'center' })
+      editorFrame = window.requestAnimationFrame(() => {
+        openedPlanRequest.current = request
+        setEditingPlan(item)
+        setIsPlanEditorOpen(true)
+      })
+    })
+    return () => {
+      window.cancelAnimationFrame(frame)
+      if (editorFrame !== undefined) window.cancelAnimationFrame(editorFrame)
+    }
+  }, [activeTab, linkedPlanId, planFilter, room])
 
   useEffect(() => {
     if (!viewingStatusItemId) return
@@ -295,6 +331,18 @@ export default function StudyRoomDetailPage({
 
   const saveSharedItem = (input: StudySharedItemInput) => {
     if (!me) return
+    if (editingPlan) {
+      if (editingPlan.createdById !== me.id && room.ownerId !== me.id && !room.managerIds.includes(me.id)) return
+      onChangeRoom(room.id, (current) => ({
+        ...current,
+        sharedItems: current.sharedItems.map((item) =>
+          item.id === editingPlan.id ? { ...item, ...input } : item,
+        ),
+      }))
+      setEditingPlan(undefined)
+      setIsPlanEditorOpen(false)
+      return
+    }
     onChangeRoom(room.id, (current) => ({
       ...current,
       sharedItems: [
@@ -546,6 +594,8 @@ export default function StudyRoomDetailPage({
                     <article
                       className={`study-shared-plan-row ${item.type}${isRunning ? ' running' : focusRecord ? ' paused' : ''}`}
                       key={item.id}
+                      ref={item.id === linkedPlanId ? linkedPlanRef : undefined}
+                      aria-current={item.id === linkedPlanId ? 'true' : undefined}
                     >
                       <span className="study-shared-plan-icon" aria-hidden="true">
                         {item.type === 'event' ? (
@@ -574,7 +624,18 @@ export default function StudyRoomDetailPage({
                           )}
                         </div>
 
-                        <h3>{item.title}</h3>
+                        <h3>
+                          {room.joined && me ? (
+                            <button className="todo-item-title-button" type="button"
+                              aria-label={`${item.title} 상세 보기`}
+                              onClick={() => {
+                                setEditingPlan(item)
+                                setIsPlanEditorOpen(true)
+                              }}>
+                              {item.title}
+                            </button>
+                          ) : item.title}
+                        </h3>
                         {item.location && (
                           <p className="shared-plan-location">
                             <MapPin size={14} weight="fill" aria-hidden="true" />
@@ -773,11 +834,19 @@ export default function StudyRoomDetailPage({
 
       {isPlanEditorOpen && me && (
         <PlanEditorModal
+          key={editingPlan?.id ?? 'new'}
+          item={editingPlan}
+          readOnly={Boolean(editingPlan && editingPlan.createdById !== me.id && room.ownerId !== me.id && !room.managerIds.includes(me.id))}
+          focusRecord={roomFocusRecords.find((record) => record.sourceId === editingPlan?.id && !record.endedAt)}
+          onFinishFocus={onFinishFocus}
           initialType="todo"
           selectedDate={new Date('2026-08-14T00:00:00')}
           fixedRoom={room}
           memberId={me.id}
-          onClose={() => setIsPlanEditorOpen(false)}
+          onClose={() => {
+            setIsPlanEditorOpen(false)
+            setEditingPlan(undefined)
+          }}
           onSaveShared={saveSharedItem}
         />
       )}

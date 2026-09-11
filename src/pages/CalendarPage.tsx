@@ -12,6 +12,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import DateJumpDialog from '../components/DateJumpDialog'
 import CalendarTimeGrid from '../components/CalendarTimeGrid'
 import PlanEditorModal from '../components/PlanEditorModal'
+import type { FocusRecord } from '../data/focusRecords'
 import type {
   CalendarEvent,
   CalendarEventInput,
@@ -175,6 +176,8 @@ const parseTimeSlotKey = (slotKey: string) => {
 }
 
 type CalendarPageProps = {
+  focusRecords: FocusRecord[]
+  onFinishFocus: (recordId: string) => void
   today: Date
   selectedDate: Date
   visibleMonth: Date
@@ -199,6 +202,8 @@ type CalendarPageProps = {
 }
 
 export default function CalendarPage({
+  focusRecords,
+  onFinishFocus,
   today,
   selectedDate,
   visibleMonth,
@@ -440,7 +445,6 @@ export default function CalendarPage({
     entry: StudySharedItemEntry,
     occurrenceDate?: Date,
   ) => {
-    if (!entry.canManage) return
     if (occurrenceDate) onSelectDate(occurrenceDate)
     setEditorDate(occurrenceDate ?? new Date(`${entry.item.date}T00:00:00`))
     setEditingEvent(undefined)
@@ -449,7 +453,7 @@ export default function CalendarPage({
   }
 
   const updateSharedEvent = (input: StudySharedItemInput) => {
-    if (!editingSharedEvent) return
+    if (!editingSharedEvent?.canManage) return
     onChangeRoom(editingSharedEvent.roomId, (room) => ({
       ...room,
       sharedItems: room.sharedItems.map((item) =>
@@ -460,7 +464,7 @@ export default function CalendarPage({
   }
 
   const removeSharedEvent = () => {
-    if (!editingSharedEvent) return
+    if (!editingSharedEvent?.canManage) return
     onChangeRoom(editingSharedEvent.roomId, (room) => ({
       ...room,
       sharedItems: room.sharedItems.filter(
@@ -1267,7 +1271,7 @@ export default function CalendarPage({
                   )
                   return
                 }
-                if (entry.canManage) openEditSharedEvent(entry, date)
+                openEditSharedEvent(entry, date)
               }}
             />
           )}
@@ -1320,8 +1324,7 @@ export default function CalendarPage({
                   )
                   return
                 }
-                if (entry.canManage) openEditSharedEvent(entry, date)
-                else openDayView(date)
+                openEditSharedEvent(entry, date)
               }}
             />
           )}
@@ -1502,15 +1505,13 @@ export default function CalendarPage({
                             key={`${entry.roomId}-${entry.item.id}`}
                             onClick={(event) =>
                               handleMonthPlanClick(event, date, () =>
-                                entry.canManage
-                                  ? openEditSharedEvent(entry, date)
-                                  : openDayView(date),
+                                openEditSharedEvent(entry, date),
                               )
                             }
                             aria-label={
                               entry.canManage
                                 ? `${entry.item.title} 편집`
-                                : `${entry.item.title}, 일간 보기에서 열기`
+                                : `${entry.item.title} 상세 보기`
                             }
                           >
                             {entry.item.time ?? '종일'} {entry.item.title}
@@ -1694,6 +1695,12 @@ export default function CalendarPage({
           }
           memberId={editingSharedEvent?.memberId}
           item={editingSharedEvent?.item}
+          readOnly={Boolean(editingSharedEvent && !editingSharedEvent.canManage)}
+          focusRecord={focusRecords.find((record) =>
+            record.sourceType === 'study' && record.roomId === editingSharedEvent?.roomId &&
+            record.sourceId === editingSharedEvent?.item.id && !record.endedAt,
+          )}
+          onFinishFocus={onFinishFocus}
           calendarEvent={editingEvent}
           defaultProjectName={selectedProject?.name}
           bulkDateKeys={bulkCreateDateKeys}

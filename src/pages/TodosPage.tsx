@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Plus } from '@phosphor-icons/react'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import PlanEditorModal from '../components/PlanEditorModal'
 import TodoDateListView from '../components/TodoDateListView'
 import TodoKanbanView from '../components/TodoKanbanView'
@@ -56,6 +56,7 @@ type TodosPageProps = {
     context?: FocusRecordContext,
   ) => void
   onPauseFocus: (recordId: string) => void
+  onFinishFocus: (recordId: string) => void
 }
 
 export default function TodosPage({
@@ -73,8 +74,12 @@ export default function TodosPage({
   onToggleSharedItemStatus,
   onStartFocus,
   onPauseFocus,
+  onFinishFocus,
 }: TodosPageProps) {
   const [searchParams] = useSearchParams()
+  const { todoId } = useParams<{ todoId?: string }>()
+  const location = useLocation()
+  const navigate = useNavigate()
   const selectedProjectIds = getProjectSelection(searchParams)
   const [todoView, setTodoView] = useState<TodoView>('dates')
   const [isCreating, setIsCreating] = useState(false)
@@ -95,9 +100,30 @@ export default function TodosPage({
           .filter(Boolean)
           .join(' · ')
 
+  useEffect(() => {
+    if (!todoId) return
+    const targetTodo = todos.find((todo) => todo.id === todoId)
+    if (!targetTodo) {
+      navigate({ pathname: '/todos', search: location.search }, { replace: true })
+      return
+    }
+    setTodoView('dates')
+    setEditingTodo(undefined)
+  }, [location.search, navigate, todoId, todos])
+
+  const openFocusedTodoEditor = useCallback(
+    (todo: Todo) => {
+      if (todo.id === todoId) setEditingTodo(todo)
+    },
+    [todoId],
+  )
+
   const closeEditor = () => {
     setIsCreating(false)
     setEditingTodo(undefined)
+    if (todoId) {
+      navigate({ pathname: '/todos', search: location.search }, { replace: true })
+    }
   }
 
   return (
@@ -141,6 +167,8 @@ export default function TodosPage({
               sharedItems={sharedItems}
               focusRecords={focusRecords}
               selectedProjectIds={selectedProjectIds}
+              focusedTodoId={todoId}
+              onFocusedTodoReady={openFocusedTodoEditor}
               onToggleTodo={onToggleTodo}
               onToggleSharedItemStatus={onToggleSharedItemStatus}
               onEditTodo={setEditingTodo}
@@ -183,6 +211,10 @@ export default function TodosPage({
           selectedDate={selectedDate}
           projects={projects}
           todo={editingTodo}
+          focusRecord={focusRecords.find((record) =>
+            record.sourceType === 'todo' && record.sourceId === editingTodo?.id && !record.endedAt,
+          )}
+          onFinishFocus={onFinishFocus}
           defaultProjectName={selectedProject?.name}
           onClose={closeEditor}
           onSaveTodo={(input) => {

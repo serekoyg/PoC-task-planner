@@ -31,6 +31,8 @@ type TodoDateListViewProps = {
   sharedItems: StudySharedItemEntry[]
   focusRecords: FocusRecord[]
   selectedProjectIds: ProjectSelection
+  focusedTodoId?: string
+  onFocusedTodoReady?: (todo: Todo) => void
   onToggleTodo: (todoId: string) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
   onEditTodo: (todo: Todo) => void
@@ -51,6 +53,8 @@ export default function TodoDateListView({
   sharedItems,
   focusRecords,
   selectedProjectIds,
+  focusedTodoId,
+  onFocusedTodoReady,
   onToggleTodo,
   onToggleSharedItemStatus,
   onEditTodo,
@@ -93,12 +97,66 @@ export default function TodoDateListView({
   }, [projects, selectedProjectIds, sharedItems, todos])
   const [visibleDateCount, setVisibleDateCount] = useState(DATE_BATCH_SIZE)
   const loadMoreRef = useRef<HTMLDivElement>(null)
-  const hasMore = visibleDateCount < dateGroups.length
+  const focusedTodoRef = useRef<HTMLElement>(null)
+  const focusedTodo = todos.find((todo) => todo.id === focusedTodoId)
+  const focusedGroupIndex = dateGroups.findIndex((group) =>
+    group.todos.some((todo) => todo.id === focusedTodoId),
+  )
+  const renderedDateCount = Math.max(
+    visibleDateCount,
+    focusedGroupIndex >= 0 ? focusedGroupIndex + 1 : 0,
+  )
+  const hasMore = renderedDateCount < dateGroups.length
   const todayKey = toDateKey(today)
 
   useEffect(() => {
     setVisibleDateCount(DATE_BATCH_SIZE)
   }, [dateGroups.length, selectedProjectKey])
+
+  useEffect(() => {
+    if (focusedGroupIndex < 0) return
+    setVisibleDateCount((current) => Math.max(current, focusedGroupIndex + 1))
+  }, [focusedGroupIndex])
+
+  useEffect(() => {
+    const target = focusedTodoRef.current
+    if (!focusedTodoId || !focusedTodo || !target || !onFocusedTodoReady) return
+    const prefersReducedMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches
+    const targetRect = target.getBoundingClientRect()
+    const needsScroll =
+      targetRect.top < 96 || targetRect.bottom > window.innerHeight - 96
+    let isFinished = false
+    let fallbackTimer: number | undefined
+
+    const finish = () => {
+      if (isFinished) return
+      isFinished = true
+      if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer)
+      window.removeEventListener('scrollend', finish)
+      onFocusedTodoReady(focusedTodo)
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      target.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'center',
+        inline: 'nearest',
+      })
+      if (!needsScroll || prefersReducedMotion) {
+        fallbackTimer = window.setTimeout(finish, 100)
+        return
+      }
+      window.addEventListener('scrollend', finish, { once: true })
+      fallbackTimer = window.setTimeout(finish, 600)
+    })
+    return () => {
+      window.cancelAnimationFrame(frame)
+      if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer)
+      window.removeEventListener('scrollend', finish)
+    }
+  }, [focusedTodo, focusedTodoId, onFocusedTodoReady, renderedDateCount])
 
   useEffect(() => {
     const target = loadMoreRef.current
@@ -128,7 +186,7 @@ export default function TodoDateListView({
 
   return (
     <section className="todo-date-list" aria-label="날짜별 할 일">
-      {dateGroups.slice(0, visibleDateCount).map((group) => {
+      {dateGroups.slice(0, renderedDateCount).map((group) => {
         const completedSharedCount = group.sharedItems.filter(
           ({ item, memberId }) =>
             (item.type === 'todo'
@@ -156,15 +214,18 @@ export default function TodoDateListView({
             <div className="todo-date-rows">
               {group.todos.map((todo) => {
                 const projectColor = getProjectColorByName(projects, todo.project)
+                const isFocused = todo.id === focusedTodoId
                 const focusRecord = focusRecords.find(
                   (record) =>
                     record.sourceType === 'todo' && record.sourceId === todo.id,
                 )
                 return (
                 <article
-                  className={`todo-date-row project-color-surface${todo.done ? ' completed' : ''}`}
+                  className={`todo-date-row project-color-surface${todo.done ? ' completed' : ''}${isFocused ? ' calendar-origin-focused' : ''}`}
                   style={{ '--project-color': projectColor } as CSSProperties}
                   key={todo.id}
+                  ref={isFocused ? focusedTodoRef : undefined}
+                  aria-current={isFocused ? 'true' : undefined}
                 >
                   <label className="todo-check-control">
                     <input
@@ -256,7 +317,7 @@ export default function TodoDateListView({
                           {typeLabel}
                         </span>
                       </div>
-                      <Link to={`/studies/${roomId}`}>{item.title}</Link>
+                      <Link to={`/studies/${roomId}?tab=plans&plan=${encodeURIComponent(item.id)}`}>{item.title}</Link>
                       <p>
                         {item.time ? `${item.time} · ` : ''}
                         {item.repeat === 'none'
