@@ -24,7 +24,14 @@ type TodoKanbanViewProps = {
     title: string,
     context?: FocusRecordContext,
   ) => void
+  onRestartFocus: (
+    sourceType: FocusSourceType,
+    sourceId: string,
+    title: string,
+    context?: FocusRecordContext,
+  ) => void
   onPauseFocus: (recordId: string) => void
+  onFinishFocus: (recordId: string) => void
 }
 
 export default function TodoKanbanView({
@@ -35,7 +42,9 @@ export default function TodoKanbanView({
   onToggleTodo,
   onEditTodo,
   onStartFocus,
+  onRestartFocus,
   onPauseFocus,
+  onFinishFocus,
 }: TodoKanbanViewProps) {
   const buckets = getTodoProjectBuckets(projects, selectedProjectIds)
 
@@ -74,7 +83,13 @@ export default function TodoKanbanView({
                         <input
                           type="checkbox"
                           checked={todo.done}
-                          onChange={() => onToggleTodo(todo.id)}
+                          onChange={() => {
+                            if (!todo.done && focusRecord) {
+                              onFinishFocus(focusRecord.id)
+                              return
+                            }
+                            onToggleTodo(todo.id)
+                          }}
                         />
                         <span className="custom-checkbox" aria-hidden="true">✓</span>
                         <span className="sr-only">
@@ -98,8 +113,13 @@ export default function TodoKanbanView({
                       <FocusToggleButton
                         label={`${todo.text} 집중`}
                         record={focusRecord}
+                        isCompleted={todo.done}
                         onStart={() => onStartFocus('todo', todo.id, todo.text)}
+                        onStartFromBeginning={() =>
+                          onRestartFocus('todo', todo.id, todo.text)
+                        }
                         onPause={onPauseFocus}
+                        onFinish={onFinishFocus}
                       />
                     </div>
                   </article>

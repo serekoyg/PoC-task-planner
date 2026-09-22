@@ -43,7 +43,14 @@ type TodoDateListViewProps = {
     title: string,
     context?: FocusRecordContext,
   ) => void
+  onRestartFocus: (
+    sourceType: FocusSourceType,
+    sourceId: string,
+    title: string,
+    context?: FocusRecordContext,
+  ) => void
   onPauseFocus: (recordId: string) => void
+  onFinishFocus: (recordId: string) => void
 }
 
 export default function TodoDateListView({
@@ -61,7 +68,9 @@ export default function TodoDateListView({
   onEditSharedItem,
   onCreateTodo,
   onStartFocus,
+  onRestartFocus,
   onPauseFocus,
+  onFinishFocus,
 }: TodoDateListViewProps) {
   const selectedProjectKey = selectedProjectIds.join(',')
   const dateGroups = useMemo<TodoDateGroup[]>(() => {
@@ -232,7 +241,13 @@ export default function TodoDateListView({
                     <input
                       type="checkbox"
                       checked={todo.done}
-                      onChange={() => onToggleTodo(todo.id)}
+                      onChange={() => {
+                        if (!todo.done && focusRecord) {
+                          onFinishFocus(focusRecord.id)
+                          return
+                        }
+                        onToggleTodo(todo.id)
+                      }}
                     />
                     <span className="custom-checkbox" aria-hidden="true">✓</span>
                     <span className="sr-only">
@@ -259,8 +274,13 @@ export default function TodoDateListView({
                   <FocusToggleButton
                     label={`${todo.text} 집중`}
                     record={focusRecord}
+                    isCompleted={todo.done}
                     onStart={() => onStartFocus('todo', todo.id, todo.text)}
+                    onStartFromBeginning={() =>
+                      onRestartFocus('todo', todo.id, todo.text)
+                    }
                     onPause={onPauseFocus}
+                    onFinish={onFinishFocus}
                   />
                 </article>
                 )
@@ -294,7 +314,17 @@ export default function TodoDateListView({
                       <input
                         type="checkbox"
                         checked={isCompleted}
-                        onChange={() => onToggleSharedItemStatus(roomId, item.id)}
+                        onChange={() => {
+                          if (
+                            item.type === 'todo' &&
+                            !isCompleted &&
+                            focusRecord
+                          ) {
+                            onFinishFocus(focusRecord.id)
+                            return
+                          }
+                          onToggleSharedItemStatus(roomId, item.id)
+                        }}
                       />
                       <span className="custom-checkbox" aria-hidden="true">✓</span>
                       <span className="sr-only">
@@ -336,10 +366,15 @@ export default function TodoDateListView({
                     <FocusToggleButton
                       label={`${roomName}에서 ${item.title} 활동`}
                       record={focusRecord}
+                      isCompleted={item.type === 'todo' && isCompleted}
                       onStart={() =>
                         onStartFocus('study', item.id, item.title, { roomId })
                       }
+                      onStartFromBeginning={() =>
+                        onRestartFocus('study', item.id, item.title, { roomId })
+                      }
                       onPause={onPauseFocus}
+                      onFinish={onFinishFocus}
                     />
                   </article>
                 )

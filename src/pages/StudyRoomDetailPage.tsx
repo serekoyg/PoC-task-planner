@@ -53,6 +53,12 @@ type StudyRoomDetailPageProps = {
     title: string,
     context?: FocusRecordContext,
   ) => void
+  onRestartFocus: (
+    sourceType: FocusSourceType,
+    sourceId: string,
+    title: string,
+    context?: FocusRecordContext,
+  ) => void
   onPauseFocus: (recordId: string) => void
   onFinishFocus: (recordId: string) => void
 }
@@ -132,6 +138,7 @@ export default function StudyRoomDetailPage({
   onRequestJoin,
   onChangeRoom,
   onStartFocus,
+  onRestartFocus,
   onPauseFocus,
   onFinishFocus,
 }: StudyRoomDetailPageProps) {
@@ -592,18 +599,40 @@ export default function StudyRoomDetailPage({
 
                   return (
                     <article
-                      className={`study-shared-plan-row ${item.type}${isRunning ? ' running' : focusRecord ? ' paused' : ''}`}
+                      className={`study-shared-plan-row ${item.type}${item.type === 'todo' && isMineActive ? ' completed' : ''}${isRunning ? ' running' : focusRecord ? ' paused' : ''}`}
                       key={item.id}
                       ref={item.id === linkedPlanId ? linkedPlanRef : undefined}
                       aria-current={item.id === linkedPlanId ? 'true' : undefined}
                     >
-                      <span className="study-shared-plan-icon" aria-hidden="true">
-                        {item.type === 'event' ? (
+                      {item.type === 'todo' && room.joined && me ? (
+                        <label className="study-shared-plan-check todo-check-control">
+                          <input
+                            type="checkbox"
+                            checked={isMineActive}
+                            onChange={() => {
+                              if (!isMineActive && focusRecord) {
+                                onFinishFocus(focusRecord.id)
+                                return
+                              }
+                              changeSharedItemStatus(item.id)
+                            }}
+                          />
+                          <span className="custom-checkbox" aria-hidden="true">✓</span>
+                          <span className="sr-only">
+                            {isMineActive
+                              ? `${item.title} 완료 취소`
+                              : `${item.title} 완료`}
+                          </span>
+                        </label>
+                      ) : (
+                        <span className="study-shared-plan-icon" aria-hidden="true">
+                          {item.type === 'event' ? (
                           <CalendarBlank size={21} weight="bold" />
-                        ) : (
-                          <CheckSquare size={21} weight="bold" />
-                        )}
-                      </span>
+                          ) : (
+                            <CheckSquare size={21} weight="bold" />
+                          )}
+                        </span>
+                      )}
 
                       <div className="study-shared-plan-copy">
                         <div className="study-shared-plan-meta">
@@ -678,19 +707,13 @@ export default function StudyRoomDetailPage({
                                 : `0/${room.memberCount}명 완료`}
                             </span>
                           )}
-                          {room.joined && me && (
+                          {room.joined && me && item.type === 'event' && (
                             <button
                               className={`shared-plan-status-toggle${isMineActive ? ' active' : ''}`}
                               type="button"
                               onClick={() => changeSharedItemStatus(item.id)}
                             >
-                              {item.type === 'event'
-                                ? isMineActive
-                                  ? '참여 중'
-                                  : '참여할게요'
-                                : isMineActive
-                                  ? '완료함'
-                                  : '내 완료 체크'}
+                              {isMineActive ? '참여 중' : '참여할게요'}
                             </button>
                           )}
                         </div>
@@ -700,12 +723,19 @@ export default function StudyRoomDetailPage({
                         <FocusToggleButton
                           label={`${item.title} 활동`}
                           record={focusRecord}
+                          isCompleted={item.type === 'todo' && isMineActive}
                           onStart={() =>
                             onStartFocus('study', item.id, item.title, {
                               roomId: room.id,
                             })
                           }
+                          onStartFromBeginning={() =>
+                            onRestartFocus('study', item.id, item.title, {
+                              roomId: room.id,
+                            })
+                          }
                           onPause={onPauseFocus}
+                          onFinish={onFinishFocus}
                         />
                       )}
                     </article>
