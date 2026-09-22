@@ -8,7 +8,11 @@ import TodoProjectListView from '../components/TodoProjectListView'
 import type { CalendarEventInput, Todo, TodoInput } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
 import { BACKLOG_PROJECT_NAME, getProjectSelection } from '../data/projects'
-import type { StudySharedItemEntry } from '../data/studyRooms'
+import type {
+  StudyRoom,
+  StudySharedItemEntry,
+  StudySharedItemInput,
+} from '../data/studyRooms'
 import { Button, PageToolbar, SegmentedControl } from '../design-system'
 import type {
   FocusRecord,
@@ -41,6 +45,7 @@ type TodosPageProps = {
   selectedDate: Date
   todos: Todo[]
   projects: PlannerProject[]
+  studyRooms: StudyRoom[]
   sharedItems: StudySharedItemEntry[]
   focusRecords: FocusRecord[]
   onAddTodo: (todo: TodoInput) => void
@@ -48,6 +53,11 @@ type TodosPageProps = {
   onUpdateTodo: (todoId: string, todo: TodoInput) => void
   onToggleTodo: (todoId: string) => void
   onRemoveTodo: (todoId: string) => void
+  onUpdateSharedItem: (
+    roomId: string,
+    itemId: string,
+    input: StudySharedItemInput,
+  ) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
   onStartFocus: (
     sourceType: FocusSourceType,
@@ -64,6 +74,7 @@ export default function TodosPage({
   selectedDate,
   todos,
   projects,
+  studyRooms,
   sharedItems,
   focusRecords,
   onAddTodo,
@@ -71,6 +82,7 @@ export default function TodosPage({
   onUpdateTodo,
   onToggleTodo,
   onRemoveTodo,
+  onUpdateSharedItem,
   onToggleSharedItemStatus,
   onStartFocus,
   onPauseFocus,
@@ -84,6 +96,11 @@ export default function TodosPage({
   const [todoView, setTodoView] = useState<TodoView>('dates')
   const [isCreating, setIsCreating] = useState(false)
   const [editingTodo, setEditingTodo] = useState<Todo>()
+  const [editingSharedItem, setEditingSharedItem] =
+    useState<StudySharedItemEntry>()
+  const editingSharedRoom = studyRooms.find(
+    (room) => room.id === editingSharedItem?.roomId,
+  )
   const selectedProject =
     selectedProjectIds.length === 1
       ? projects.find((project) => project.id === selectedProjectIds[0])
@@ -124,6 +141,12 @@ export default function TodosPage({
     if (todoId) {
       navigate({ pathname: '/todos', search: location.search }, { replace: true })
     }
+  }
+
+  const openSharedItemEditor = (entry: StudySharedItemEntry) => {
+    setIsCreating(false)
+    setEditingTodo(undefined)
+    setEditingSharedItem(entry)
   }
 
   return (
@@ -172,6 +195,7 @@ export default function TodosPage({
               onToggleTodo={onToggleTodo}
               onToggleSharedItemStatus={onToggleSharedItemStatus}
               onEditTodo={setEditingTodo}
+              onEditSharedItem={openSharedItemEditor}
               onCreateTodo={() => setIsCreating(true)}
               onStartFocus={onStartFocus}
               onPauseFocus={onPauseFocus}
@@ -240,6 +264,48 @@ export default function TodosPage({
                 }
               : undefined
           }
+        />
+      )}
+
+      {editingSharedItem && editingSharedRoom && (
+        <PlanEditorModal
+          key={`${editingSharedItem.roomId}-${editingSharedItem.item.id}`}
+          initialType={editingSharedItem.item.type}
+          selectedDate={new Date(`${editingSharedItem.item.date}T00:00:00`)}
+          fixedRoom={editingSharedRoom}
+          memberId={editingSharedItem.memberId}
+          item={editingSharedItem.item}
+          readOnly={!editingSharedItem.canManage}
+          focusRecord={focusRecords.find((record) =>
+            record.sourceType === 'study' &&
+            record.roomId === editingSharedItem.roomId &&
+            record.sourceId === editingSharedItem.item.id &&
+            !record.endedAt,
+          )}
+          onFinishFocus={onFinishFocus}
+          completed={
+            editingSharedItem.item.type === 'todo' &&
+            editingSharedItem.item.completedMemberIds.includes(
+              editingSharedItem.memberId,
+            )
+          }
+          onChangeCompleted={
+            editingSharedItem.item.type === 'todo'
+              ? () => onToggleSharedItemStatus(
+                  editingSharedItem.roomId,
+                  editingSharedItem.item.id,
+                )
+              : undefined
+          }
+          onClose={() => setEditingSharedItem(undefined)}
+          onSaveShared={(input) => {
+            onUpdateSharedItem(
+              editingSharedItem.roomId,
+              editingSharedItem.item.id,
+              input,
+            )
+            setEditingSharedItem(undefined)
+          }}
         />
       )}
     </main>

@@ -3605,7 +3605,8 @@ button.event-chip:hover {
   white-space: nowrap;
 }
 
-.shared-todo-item .todo-date-copy > a {
+.shared-todo-item .todo-date-copy > a,
+.shared-todo-item .todo-date-copy > .todo-item-title-button {
   width: fit-content;
   max-width: 100%;
   font-size: 0.86rem;

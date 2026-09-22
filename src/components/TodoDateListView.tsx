@@ -1,5 +1,4 @@
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import type { Todo } from '../data/initialData'
 import { toDateKey } from '../data/initialData'
 import type { PlannerProject } from '../data/projects'
@@ -36,6 +35,7 @@ type TodoDateListViewProps = {
   onToggleTodo: (todoId: string) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
   onEditTodo: (todo: Todo) => void
+  onEditSharedItem: (entry: StudySharedItemEntry) => void
   onCreateTodo: () => void
   onStartFocus: (
     sourceType: FocusSourceType,
@@ -58,6 +58,7 @@ export default function TodoDateListView({
   onToggleTodo,
   onToggleSharedItemStatus,
   onEditTodo,
+  onEditSharedItem,
   onCreateTodo,
   onStartFocus,
   onPauseFocus,
@@ -265,7 +266,8 @@ export default function TodoDateListView({
                 )
               })}
 
-              {group.sharedItems.map(({ roomId, roomName, memberId, item }) => {
+              {group.sharedItems.map((entry) => {
+                const { roomId, roomName, memberId, item } = entry
                 const statusMemberIds =
                   item.type === 'todo'
                     ? item.completedMemberIds
@@ -317,7 +319,13 @@ export default function TodoDateListView({
                           {typeLabel}
                         </span>
                       </div>
-                      <Link to={`/studies/${roomId}?tab=plans&plan=${encodeURIComponent(item.id)}`}>{item.title}</Link>
+                      <button
+                        className="todo-item-title-button"
+                        type="button"
+                        onClick={() => onEditSharedItem(entry)}
+                      >
+                        {item.title}
+                      </button>
                       <p>
                         {item.time ? `${item.time} · ` : ''}
                         {item.repeat === 'none'
