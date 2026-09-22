@@ -3518,6 +3518,123 @@ button.event-chip:hover {
   text-decoration: none;
 }
 
+.focus-inline-controls {
+  --focus-control-size: 34px;
+  width: var(--focus-control-size);
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  overflow: hidden;
+  transition: width 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.focus-inline-controls.active {
+  width: calc(var(--focus-control-size) * 2 + 6px);
+}
+
+.focus-inline-controls .todo-play-button {
+  flex: 0 0 var(--focus-control-size);
+}
+
+.focus-inline-toggle {
+  animation: focus-inline-toggle-reveal 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.todo-play-button.focus-inline-finish,
+.todo-play-button.focus-inline-finish:hover {
+  color: #fff;
+  border-color: var(--danger);
+  background: var(--danger);
+}
+
+@keyframes focus-inline-toggle-reveal {
+  from {
+    opacity: 0;
+    transform: translateX(18px) scale(0.82);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.focus-restart-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  padding: 20px;
+  display: grid;
+  place-items: center;
+  background: rgb(18 20 24 / 0.42);
+  backdrop-filter: blur(3px);
+}
+
+.focus-restart-dialog {
+  width: min(440px, 100%);
+  padding: 22px;
+  display: grid;
+  gap: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgb(18 20 24 / 0.22);
+}
+
+.focus-restart-heading {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.focus-restart-heading > span {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, white);
+  font-weight: 850;
+}
+
+.focus-restart-heading strong {
+  display: block;
+  font-size: 1rem;
+}
+
+.focus-restart-heading p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.focus-restart-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.focus-restart-actions button {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  color: var(--text);
+  background: var(--surface);
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+.focus-restart-actions button.primary {
+  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
 .todo-play-button:hover {
   border-color: var(--accent);
   background: #e1e9ff;
@@ -3534,6 +3651,13 @@ button.event-chip:hover {
   color: #fff;
   border-color: var(--danger);
   background: var(--danger);
+}
+
+.todo-play-button.focus-inline-toggle.running,
+.todo-play-button.focus-inline-toggle.running:hover {
+  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent);
 }
 
 .todo-play-button.shared {
@@ -3775,6 +3899,40 @@ button.event-chip:hover {
 .todo-project-row .todo-play-button {
   width: 30px;
   height: 30px;
+}
+
+.todo-kanban-card .focus-inline-controls,
+.todo-project-row .focus-inline-controls {
+  --focus-control-size: 30px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-inline-controls {
+    transition: none;
+  }
+
+  .focus-inline-toggle {
+    animation: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .focus-restart-backdrop {
+    padding: 12px;
+  }
+
+  .focus-restart-dialog {
+    padding: 18px;
+  }
+
+  .focus-restart-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .focus-restart-actions button {
+    width: 100%;
+  }
 }
 
 .todo-kanban-empty {
@@ -5218,7 +5376,7 @@ button.event-chip:hover {
   padding: 12px 13px 12px 10px;
   position: relative;
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 34px;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: center;
   gap: 11px;
   border: 1px solid var(--line);
@@ -5242,6 +5400,14 @@ button.event-chip:hover {
   background: #fbfbfa;
 }
 
+.study-shared-plan-row.completed {
+  opacity: 0.58;
+}
+
+.study-shared-plan-row.completed .todo-item-title-button {
+  text-decoration: line-through;
+}
+
 .study-shared-plan-icon {
   width: 38px;
   height: 38px;
@@ -5250,6 +5416,19 @@ button.event-chip:hover {
   border-radius: 10px;
   color: var(--success);
   background: #eff8f2;
+}
+
+.study-shared-plan-check {
+  width: 38px;
+  height: 38px;
+  margin: 0;
+  display: grid;
+  place-items: center;
+}
+
+.study-shared-plan-check .custom-checkbox {
+  width: 22px;
+  height: 22px;
 }
 
 .study-shared-plan-row.event .study-shared-plan-icon {
@@ -8055,7 +8234,7 @@ footer a {
 
   .study-shared-plan-row {
     padding: 11px 10px 11px 8px;
-    grid-template-columns: 36px minmax(0, 1fr) 34px;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
     gap: 9px;
   }
 
@@ -8063,6 +8242,11 @@ footer a {
     width: 34px;
     height: 34px;
     border-radius: 9px;
+  }
+
+  .study-shared-plan-check {
+    width: 34px;
+    height: 34px;
   }
 
   .study-shared-plan-copy > p:not(.shared-plan-location) {

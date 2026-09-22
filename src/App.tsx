@@ -161,6 +161,12 @@ type StudyRoomRouteProps = {
     title: string,
     context?: FocusRecordContext,
   ) => void
+  onRestartFocus: (
+    sourceType: FocusSourceType,
+    sourceId: string,
+    title: string,
+    context?: FocusRecordContext,
+  ) => void
   onPauseFocus: (recordId: string) => void
 }
 
@@ -172,6 +178,7 @@ function StudyRoomRoute({
   onRequestJoin,
   onChangeRoom,
   onStartFocus,
+  onRestartFocus,
   onPauseFocus,
 }: StudyRoomRouteProps) {
   const { roomId } = useParams()
@@ -184,6 +191,7 @@ function StudyRoomRoute({
       onRequestJoin={onRequestJoin}
       onChangeRoom={onChangeRoom}
       onStartFocus={onStartFocus}
+      onRestartFocus={onRestartFocus}
       onPauseFocus={onPauseFocus}
     />
   )
@@ -808,12 +816,60 @@ export default function App() {
     setTrash((current) => current.filter((item) => item.trashId !== trashId))
   }
 
+  const reopenFocusSource = useCallback((
+    sourceType: FocusSourceType,
+    sourceId: string,
+    context: FocusRecordContext,
+  ) => {
+    if (sourceType === 'todo') {
+      setTodos((current) =>
+        current.map((todo) =>
+          todo.id === sourceId && todo.done
+            ? { ...todo, done: false }
+            : todo,
+        ),
+      )
+      return
+    }
+
+    if (!context.roomId) return
+    setStudyRooms((current) =>
+      current.map((room) => {
+        if (room.id !== context.roomId) return room
+        const me = room.members.find((member) => member.isMe)
+        if (!me) return room
+
+        return {
+          ...room,
+          sharedItems: room.sharedItems.map((item) => {
+            if (
+              item.id !== sourceId ||
+              item.type !== 'todo' ||
+              !item.completedMemberIds.includes(me.id)
+            ) return item
+
+            const completedAtByMember = { ...item.completedAtByMember }
+            delete completedAtByMember[me.id]
+            return {
+              ...item,
+              completedMemberIds: item.completedMemberIds.filter(
+                (memberId) => memberId !== me.id,
+              ),
+              completedAtByMember,
+            }
+          }),
+        }
+      }),
+    )
+  }, [])
+
   const startFocus = useCallback((
     sourceType: FocusSourceType,
     sourceId: string,
     title: string,
     context: FocusRecordContext = {},
   ) => {
+    reopenFocusSource(sourceType, sourceId, context)
     setFocusRecords((current) => {
       const existing = current.find(
         (record) =>
@@ -848,7 +904,37 @@ export default function App() {
         },
       ]
     })
-  }, [])
+  }, [reopenFocusSource])
+
+  const restartFocus = useCallback((
+    sourceType: FocusSourceType,
+    sourceId: string,
+    title: string,
+    context: FocusRecordContext = {},
+  ) => {
+    reopenFocusSource(sourceType, sourceId, context)
+    const startedAt = new Date().toISOString()
+    setFocusRecords((current) => [
+      ...current.filter(
+        (record) =>
+          record.sourceType !== sourceType ||
+          record.sourceId !== sourceId ||
+          (sourceType === 'study' && record.roomId !== context.roomId),
+      ),
+      {
+        id: `focus-${crypto.randomUUID()}`,
+        sourceType,
+        sourceId,
+        title,
+        ...context,
+        startedAt,
+        segments: [{ startedAt }],
+      },
+    ])
+    if (sourceType === 'todo') {
+      setFocusResults((current) => ({ ...current, [sourceId]: 0 }))
+    }
+  }, [reopenFocusSource])
 
   const pauseFocus = useCallback((recordId: string) => {
     const pausedAt = new Date().toISOString()
@@ -900,10 +986,48 @@ export default function App() {
     )
 
     if (record.sourceType === 'todo') {
+      setTodos((current) =>
+        current.map((todo) =>
+          todo.id === record.sourceId && !todo.done
+            ? { ...todo, done: true }
+            : todo,
+        ),
+      )
       setFocusResults((current) => ({
         ...current,
         [record.sourceId]: (current[record.sourceId] ?? 0) + elapsedSeconds,
       }))
+      return
+    }
+
+    if (record.roomId) {
+      setStudyRooms((current) =>
+        current.map((room) => {
+          if (room.id !== record.roomId) return room
+          const me = room.members.find((member) => member.isMe)
+          if (!me) return room
+
+          return {
+            ...room,
+            sharedItems: room.sharedItems.map((item) => {
+              if (
+                item.id !== record.sourceId ||
+                item.type !== 'todo' ||
+                item.completedMemberIds.includes(me.id)
+              ) return item
+
+              return {
+                ...item,
+                completedMemberIds: [...item.completedMemberIds, me.id],
+                completedAtByMember: {
+                  ...item.completedAtByMember,
+                  [me.id]: endedAtIso,
+                },
+              }
+            }),
+          }
+        }),
+      )
     }
   }, [focusRecords])
 
@@ -1232,6 +1356,7 @@ export default function App() {
               onRemoveTodo={removeTodo}
               onToggleSharedItemStatus={toggleSharedItemStatus}
               onStartFocus={startFocus}
+              onRestartFocus={restartFocus}
               onPauseFocus={pauseFocus}
               onFinishFocus={finishFocus}
             />
@@ -1331,6 +1456,7 @@ export default function App() {
               onRequestJoin={requestStudyRoomJoin}
               onChangeRoom={changeStudyRoom}
               onStartFocus={startFocus}
+              onRestartFocus={restartFocus}
               onPauseFocus={pauseFocus}
             />
           }

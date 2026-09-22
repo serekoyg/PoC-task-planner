@@ -55,6 +55,12 @@ type TodosPageProps = {
     title: string,
     context?: FocusRecordContext,
   ) => void
+  onRestartFocus: (
+    sourceType: FocusSourceType,
+    sourceId: string,
+    title: string,
+    context?: FocusRecordContext,
+  ) => void
   onPauseFocus: (recordId: string) => void
   onFinishFocus: (recordId: string) => void
 }
@@ -73,6 +79,7 @@ export default function TodosPage({
   onRemoveTodo,
   onToggleSharedItemStatus,
   onStartFocus,
+  onRestartFocus,
   onPauseFocus,
   onFinishFocus,
 }: TodosPageProps) {
@@ -174,7 +181,9 @@ export default function TodosPage({
               onEditTodo={setEditingTodo}
               onCreateTodo={() => setIsCreating(true)}
               onStartFocus={onStartFocus}
+              onRestartFocus={onRestartFocus}
               onPauseFocus={onPauseFocus}
+              onFinishFocus={onFinishFocus}
             />
           )}
 
@@ -187,7 +196,9 @@ export default function TodosPage({
               onToggleTodo={onToggleTodo}
               onEditTodo={setEditingTodo}
               onStartFocus={onStartFocus}
+              onRestartFocus={onRestartFocus}
               onPauseFocus={onPauseFocus}
+              onFinishFocus={onFinishFocus}
             />
           )}
 
@@ -200,7 +211,9 @@ export default function TodosPage({
               onToggleTodo={onToggleTodo}
               onEditTodo={setEditingTodo}
               onStartFocus={onStartFocus}
+              onRestartFocus={onRestartFocus}
               onPauseFocus={onPauseFocus}
+              onFinishFocus={onFinishFocus}
             />
           )}
       </div>
