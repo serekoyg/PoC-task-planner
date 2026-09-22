@@ -839,6 +839,12 @@ export default function StudyRoomDetailPage({
           readOnly={Boolean(editingPlan && editingPlan.createdById !== me.id && room.ownerId !== me.id && !room.managerIds.includes(me.id))}
           focusRecord={roomFocusRecords.find((record) => record.sourceId === editingPlan?.id && !record.endedAt)}
           onFinishFocus={onFinishFocus}
+          completed={Boolean(editingPlan?.completedMemberIds.includes(me.id))}
+          onChangeCompleted={
+            editingPlan?.type === 'todo'
+              ? () => changeSharedItemStatus(editingPlan.id)
+              : undefined
+          }
           initialType="todo"
           selectedDate={new Date('2026-08-14T00:00:00')}
           fixedRoom={room}

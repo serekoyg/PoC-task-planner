@@ -3605,7 +3605,8 @@ button.event-chip:hover {
   white-space: nowrap;
 }
 
-.shared-todo-item .todo-date-copy > a {
+.shared-todo-item .todo-date-copy > a,
+.shared-todo-item .todo-date-copy > .todo-item-title-button {
   width: fit-content;
   max-width: 100%;
   font-size: 0.86rem;
@@ -9305,7 +9306,38 @@ footer a {
 }
 
 .plan-title-field {
+  min-width: 0;
+  flex: 1;
   display: block;
+}
+
+.plan-title-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.plan-completion-checkbox {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.plan-completion-checkbox input {
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.plan-completion-checkbox input:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  outline-offset: 3px;
 }
 
 .plan-title-field > input {
@@ -9327,6 +9359,18 @@ footer a {
 .plan-title-field > input:focus-visible {
   border-bottom-color: var(--accent);
   outline: 0;
+}
+
+.plan-title-field > input:disabled {
+  opacity: 1;
+  color: var(--text);
+  -webkit-text-fill-color: var(--text);
+}
+
+.plan-title-row.completed .plan-title-field > input {
+  color: var(--muted);
+  text-decoration: line-through;
+  -webkit-text-fill-color: var(--muted);
 }
 
 .plan-properties,

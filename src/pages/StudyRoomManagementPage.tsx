@@ -208,6 +208,26 @@ export default function StudyRoomManagementPage({
     showNotice(editingSharedItem ? '공유 계획을 수정했어요.' : '함께할 계획을 멤버들과 공유했어요.')
   }
 
+  const toggleSharedItemCompleted = (itemId: string) => {
+    onChangeRoom(room.id, (current) => ({
+      ...current,
+      sharedItems: current.sharedItems.map((item) => {
+        if (item.id !== itemId || item.type !== 'todo') return item
+        const isCompleted = item.completedMemberIds.includes(me.id)
+        const completedAtByMember = { ...item.completedAtByMember }
+        if (isCompleted) delete completedAtByMember[me.id]
+        else completedAtByMember[me.id] = new Date().toISOString()
+        return {
+          ...item,
+          completedMemberIds: isCompleted
+            ? item.completedMemberIds.filter((memberId) => memberId !== me.id)
+            : [...item.completedMemberIds, me.id],
+          completedAtByMember,
+        }
+      }),
+    }))
+  }
+
   const deleteSharedPlan = (itemId: string) => {
     onChangeRoom(room.id, (current) => ({
       ...current,
@@ -844,6 +864,12 @@ export default function StudyRoomManagementPage({
             record.sourceId === editingSharedItem?.id && !record.endedAt,
           )}
           onFinishFocus={onFinishFocus}
+          completed={Boolean(editingSharedItem?.completedMemberIds.includes(me.id))}
+          onChangeCompleted={
+            editingSharedItem?.type === 'todo'
+              ? () => toggleSharedItemCompleted(editingSharedItem.id)
+              : undefined
+          }
           onClose={() => {
             setEditingSharedItem(undefined)
             setIsPlanModalOpen(false)

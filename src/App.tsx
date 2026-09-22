@@ -35,6 +35,7 @@ import {
   normalizeStudyRooms,
   type StudyProfileVisibility,
   type StudySharedItemEntry,
+  type StudySharedItemInput,
   type StudyRoom,
   type StudyRoomCreateInput,
 } from './data/studyRooms'
@@ -1025,6 +1026,19 @@ export default function App() {
     })
   }
 
+  const updateSharedItem = (
+    roomId: string,
+    itemId: string,
+    input: StudySharedItemInput,
+  ) => {
+    changeStudyRoom(roomId, (room) => ({
+      ...room,
+      sharedItems: room.sharedItems.map((item) =>
+        item.id === itemId ? { ...item, ...input } : item,
+      ),
+    }))
+  }
+
   const createStudyRoom = (input: StudyRoomCreateInput) => {
     const roomId = `study-${crypto.randomUUID()}`
     const accents: StudyRoom['accent'][] = ['coral', 'blue', 'green', 'violet']
@@ -1223,6 +1237,7 @@ export default function App() {
               selectedDate={selectedDate}
               todos={todos}
               projects={projects}
+              studyRooms={joinedStudyRooms}
               sharedItems={sharedItemEntries}
               focusRecords={unfinishedFocusRecords}
               onAddTodo={addTodo}
@@ -1230,6 +1245,7 @@ export default function App() {
               onUpdateTodo={updateTodo}
               onToggleTodo={toggleTodo}
               onRemoveTodo={removeTodo}
+              onUpdateSharedItem={updateSharedItem}
               onToggleSharedItemStatus={toggleSharedItemStatus}
               onStartFocus={startFocus}
               onPauseFocus={pauseFocus}
