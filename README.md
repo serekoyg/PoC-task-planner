@@ -29,20 +29,21 @@
 
 `main`에는 이후 화면 실험의 출발점으로 사용할 기본 Todo + 일정 관리 화면이 들어 있습니다.
 
-- `/calendar`: 월간 달력과 선택한 날짜의 일정 관리
-- `/todos`: 선택한 날짜의 할 일과 완료율 관리
-- 상단 내비게이션을 통한 두 페이지 이동
-- 이전 달과 다음 달 이동, 오늘 날짜로 복귀
-- 날짜별 일정 조회와 새 일정 추가
-- 날짜별 할 일 추가, 완료 처리, 삭제
-- 할 일 완료율 표시
+- `/calendar`: 일간·주간·월간 일정과 범위 선택, 복사·이동
+- `/todos`: 날짜별·칸반·목록별 할 일과 현재 화면에서 여는 상세 패널
+- `/studies`: 모임 탐색, 공동 계획·활동·채팅·멤버 관리
+- `/collections/completed`, `/collections/trash`: 완료한 계획과 삭제한 계획의 복원
+- `/todos/:todoId/focus`, `/todos/:todoId/result`: 집중 기록과 결과
+- `/profile`, `/settings`: 활동 요약, 목록·공개 범위 설정
+- 사이드바, 전체 검색, 알림 수신함, 실행·일시정지 중인 활동 표시
+- 개인·모임 할 일의 체크박스 완료와 활동 마치기 연동
 - `localStorage`를 이용한 브라우저 내 데이터 유지
 - 데스크톱과 모바일 반응형 화면
 
 ## 로컬 실행
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -51,6 +52,16 @@ npm run dev
 ```bash
 npm run build
 ```
+
+리팩터링 회귀 테스트와 정적 검증은 아래처럼 실행합니다. 테스트는 기존 Vite의 TypeScript 변환과 Node 내장 테스트 러너를 사용하며 서버 포트를 열지 않습니다.
+
+```bash
+node --test tests/planner.test.mjs
+npm run lint
+npm run build
+```
+
+파일별 책임과 상태 변경 규칙은 [코드 구조](./docs/architecture.md)를 참고합니다.
 
 ## 작업 흐름
 

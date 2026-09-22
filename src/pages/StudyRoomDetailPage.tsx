@@ -12,10 +12,10 @@ import PlanEditorModal from '../components/PlanEditorModal'
 import StudyRoomChat from '../components/StudyRoomChat'
 import type {
   FocusRecord,
-  FocusRecordContext,
-  FocusSourceType,
+  FocusActions,
 } from '../data/focusRecords'
 import { toDateKey } from '../data/initialData'
+import { canManageSharedItem, toggleRoomSharedItemStatus } from '../lib/studyPlans'
 import type {
   StudyMemberStatus,
   StudyRoom,
@@ -38,7 +38,7 @@ import {
   studyWeekdays,
 } from '../lib/studyActivity'
 
-type StudyRoomDetailPageProps = {
+type StudyRoomDetailPageProps = FocusActions & {
   room?: StudyRoom
   focusRecords: FocusRecord[]
   nowMs: number
@@ -47,20 +47,6 @@ type StudyRoomDetailPageProps = {
     roomId: string,
     update: (current: StudyRoom) => StudyRoom,
   ) => void
-  onStartFocus: (
-    sourceType: FocusSourceType,
-    sourceId: string,
-    title: string,
-    context?: FocusRecordContext,
-  ) => void
-  onRestartFocus: (
-    sourceType: FocusSourceType,
-    sourceId: string,
-    title: string,
-    context?: FocusRecordContext,
-  ) => void
-  onPauseFocus: (recordId: string) => void
-  onFinishFocus: (recordId: string) => void
 }
 
 const formatMinutes = (minutes: number) => {
@@ -146,7 +132,9 @@ export default function StudyRoomDetailPage({
   const [activeTab, setActiveTab] = useState<StudyRoomTab>('home')
   const [planFilter, setPlanFilter] = useState<SharedPlanFilter>('all')
   const [isPlanEditorOpen, setIsPlanEditorOpen] = useState(false)
-  const [editingPlan, setEditingPlan] = useState<StudySharedItem>()
+  const [editingPlanId, setEditingPlanId] = useState<string>()
+  const editingPlan = room?.sharedItems.find((item) => item.id === editingPlanId)
+  const setEditingPlan = (item?: StudySharedItem) => setEditingPlanId(item?.id)
   const linkedPlanId = searchParams.get('plan')
   const linkedPlanRef = useRef<HTMLElement>(null)
   const openedPlanRequest = useRef<string | undefined>(undefined)
@@ -240,7 +228,7 @@ export default function StudyRoomDetailPage({
       linkedPlanRef.current.scrollIntoView({ behavior: 'instant', block: 'center' })
       editorFrame = window.requestAnimationFrame(() => {
         openedPlanRequest.current = request
-        setEditingPlan(item)
+        setEditingPlanId(item.id)
         setIsPlanEditorOpen(true)
       })
     })
@@ -306,40 +294,14 @@ export default function StudyRoomDetailPage({
   )
 
   const changeSharedItemStatus = (itemId: string) => {
-    if (!me) return
-    onChangeRoom(room.id, (current) => ({
-      ...current,
-      sharedItems: current.sharedItems.map((item) => {
-        if (item.id !== itemId) return item
-        const memberIds =
-          item.type === 'event'
-            ? item.participantMemberIds
-            : item.completedMemberIds
-        const nextMemberIds = memberIds.includes(me.id)
-          ? memberIds.filter((memberId) => memberId !== me.id)
-          : [...memberIds, me.id]
-        if (item.type === 'event') {
-          return { ...item, participantMemberIds: nextMemberIds }
-        }
-        const nextCompletedAtByMember = { ...item.completedAtByMember }
-        if (memberIds.includes(me.id)) {
-          delete nextCompletedAtByMember[me.id]
-        } else {
-          nextCompletedAtByMember[me.id] = new Date().toISOString()
-        }
-        return {
-          ...item,
-          completedMemberIds: nextMemberIds,
-          completedAtByMember: nextCompletedAtByMember,
-        }
-      }),
-    }))
+    const changedAt = new Date().toISOString()
+    onChangeRoom(room.id, (current) => toggleRoomSharedItemStatus(current, itemId, changedAt))
   }
 
   const saveSharedItem = (input: StudySharedItemInput) => {
     if (!me) return
     if (editingPlan) {
-      if (editingPlan.createdById !== me.id && room.ownerId !== me.id && !room.managerIds.includes(me.id)) return
+      if (!canManageSharedItem(room, editingPlan, me.id)) return
       onChangeRoom(room.id, (current) => ({
         ...current,
         sharedItems: current.sharedItems.map((item) =>
@@ -866,7 +828,7 @@ export default function StudyRoomDetailPage({
         <PlanEditorModal
           key={editingPlan?.id ?? 'new'}
           item={editingPlan}
-          readOnly={Boolean(editingPlan && editingPlan.createdById !== me.id && room.ownerId !== me.id && !room.managerIds.includes(me.id))}
+          readOnly={Boolean(editingPlan && !canManageSharedItem(room, editingPlan, me.id))}
           focusRecord={roomFocusRecords.find((record) => record.sourceId === editingPlan?.id && !record.endedAt)}
           onFinishFocus={onFinishFocus}
           completed={Boolean(editingPlan?.completedMemberIds.includes(me.id))}

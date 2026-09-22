@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, type CSSProperties } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { FocusRecord, FocusSourceType } from '../data/focusRecords'
 import type { Todo } from '../data/initialData'
-import { getFocusDurationSeconds } from '../lib/focus'
+import { getFocusDurationSeconds, isFocusRecordRunning } from '../lib/focus'
 import {
   formatTimer,
   getTaskEstimate,
@@ -11,7 +11,7 @@ import {
 
 type FocusSessionPageProps = {
   todo?: Todo
-  activeRecord?: FocusRecord
+  record?: FocusRecord
   nowMs: number
   onStartFocus: (
     sourceType: FocusSourceType,
@@ -24,7 +24,7 @@ type FocusSessionPageProps = {
 
 export default function FocusSessionPage({
   todo,
-  activeRecord,
+  record,
   nowMs,
   onStartFocus,
   onPauseFocus,
@@ -32,28 +32,12 @@ export default function FocusSessionPage({
 }: FocusSessionPageProps) {
   const navigate = useNavigate()
   const hasStartedOnEntry = useRef(false)
-  const previousActiveRecord = useRef<FocusRecord | undefined>(undefined)
-  const [pausedSeconds, setPausedSeconds] = useState(0)
 
   useEffect(() => {
     if (!todo || hasStartedOnEntry.current) return
     hasStartedOnEntry.current = true
-    if (!activeRecord) onStartFocus('todo', todo.id, todo.text)
-  }, [activeRecord, onStartFocus, todo])
-
-  useEffect(() => {
-    if (activeRecord) {
-      previousActiveRecord.current = activeRecord
-      return
-    }
-
-    if (previousActiveRecord.current) {
-      setPausedSeconds(
-        getFocusDurationSeconds(previousActiveRecord.current, Date.now()),
-      )
-      previousActiveRecord.current = undefined
-    }
-  }, [activeRecord])
+    if (!record) onStartFocus('todo', todo.id, todo.text)
+  }, [record, onStartFocus, todo])
 
   if (!todo) {
     return (
@@ -65,26 +49,22 @@ export default function FocusSessionPage({
     )
   }
 
-  const isRunning = Boolean(activeRecord)
-  const elapsedSeconds = activeRecord
-    ? getFocusDurationSeconds(activeRecord, nowMs)
-    : pausedSeconds
+  const isRunning = Boolean(record && isFocusRecordRunning(record))
+  const elapsedSeconds = record ? getFocusDurationSeconds(record, nowMs) : 0
   const estimateSeconds = getTaskEstimate(todo) * 60
   const progress = Math.min((elapsedSeconds / estimateSeconds) * 360, 360)
 
   const finishSession = () => {
-    if (activeRecord) onFinishFocus(activeRecord.id)
+    if (record) onFinishFocus(record.id)
     navigate(`/todos/${todo.id}/result`)
   }
 
   const toggleSession = () => {
-    if (activeRecord) {
-      setPausedSeconds(getFocusDurationSeconds(activeRecord, nowMs))
-      onPauseFocus(activeRecord.id)
+    if (record && isRunning) {
+      onPauseFocus(record.id)
       return
     }
 
-    setPausedSeconds(0)
     onStartFocus('todo', todo.id, todo.text)
   }
 
