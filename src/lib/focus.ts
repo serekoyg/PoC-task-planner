@@ -1,4 +1,4 @@
-import type { FocusRecord, FocusSegment } from '../data/focusRecords'
+import type { FocusRecord, FocusSegment, FocusRecordContext, FocusSourceType } from '../data/focusRecords'
 
 type FocusInterval = {
   start: number
@@ -22,6 +22,52 @@ export const isFocusRecordRunning = (record: FocusRecord) => {
   if (record.endedAt) return false
   const segments = getFocusSegments(record)
   return Boolean(segments.length && !segments[segments.length - 1].endedAt)
+}
+
+export const matchesFocusSource = (
+  record: FocusRecord,
+  sourceType: FocusSourceType,
+  sourceId: string,
+  context: FocusRecordContext = {},
+) => record.sourceType === sourceType && record.sourceId === sourceId &&
+  (sourceType !== 'study' || record.roomId === context.roomId)
+
+export function startFocusRecord(records: FocusRecord[], nextRecord: FocusRecord) {
+  const existing = records.find((record) =>
+    !record.endedAt && matchesFocusSource(record, nextRecord.sourceType, nextRecord.sourceId, nextRecord),
+  )
+  if (!existing) return [...records, nextRecord]
+  if (isFocusRecordRunning(existing)) return records
+  return records.map((record) => record.id === existing.id
+    ? { ...record, segments: [...getFocusSegments(record), { startedAt: nextRecord.startedAt }] }
+    : record,
+  )
+}
+
+export function restartFocusRecord(records: FocusRecord[], nextRecord: FocusRecord) {
+  return [
+    ...records.filter((record) =>
+      !matchesFocusSource(record, nextRecord.sourceType, nextRecord.sourceId, nextRecord),
+    ),
+    nextRecord,
+  ]
+}
+
+export function pauseFocusRecord(record: FocusRecord, pausedAt: string): FocusRecord {
+  if (!isFocusRecordRunning(record)) return record
+  const segments = getFocusSegments(record)
+  return {
+    ...record,
+    segments: segments.map((segment, index) => index === segments.length - 1
+      ? { ...segment, endedAt: pausedAt }
+      : segment,
+    ),
+  }
+}
+
+export function finishFocusRecord(record: FocusRecord, endedAt: string): FocusRecord {
+  if (record.endedAt) return record
+  return { ...pauseFocusRecord(record, endedAt), endedAt }
 }
 
 export const getFocusDurationSeconds = (

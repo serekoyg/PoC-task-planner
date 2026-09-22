@@ -6,34 +6,19 @@ import { getBucketTodos, getTodoProjectBuckets } from '../lib/todoView'
 import type { ProjectSelection } from '../data/projects'
 import type {
   FocusRecord,
-  FocusRecordContext,
-  FocusSourceType,
+  FocusActions,
 } from '../data/focusRecords'
 import FocusToggleButton from './FocusToggleButton'
 
 const PROJECT_BATCH_SIZE = 2
 
-type TodoProjectListViewProps = {
+type TodoProjectListViewProps = FocusActions & {
   todos: Todo[]
   projects: PlannerProject[]
   focusRecords: FocusRecord[]
   selectedProjectIds: ProjectSelection
   onToggleTodo: (todoId: string) => void
   onEditTodo: (todo: Todo) => void
-  onStartFocus: (
-    sourceType: FocusSourceType,
-    sourceId: string,
-    title: string,
-    context?: FocusRecordContext,
-  ) => void
-  onRestartFocus: (
-    sourceType: FocusSourceType,
-    sourceId: string,
-    title: string,
-    context?: FocusRecordContext,
-  ) => void
-  onPauseFocus: (recordId: string) => void
-  onFinishFocus: (recordId: string) => void
 }
 
 export default function TodoProjectListView({

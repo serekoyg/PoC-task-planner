@@ -4,34 +4,19 @@ import type { PlannerProject } from '../data/projects'
 import type { ProjectSelection } from '../data/projects'
 import type {
   FocusRecord,
-  FocusRecordContext,
-  FocusSourceType,
+  FocusActions,
 } from '../data/focusRecords'
 import { formatTaskDate, getTaskPriority } from '../lib/task'
 import { getBucketTodos, getTodoProjectBuckets } from '../lib/todoView'
 import FocusToggleButton from './FocusToggleButton'
 
-type TodoKanbanViewProps = {
+type TodoKanbanViewProps = FocusActions & {
   todos: Todo[]
   projects: PlannerProject[]
   focusRecords: FocusRecord[]
   selectedProjectIds: ProjectSelection
   onToggleTodo: (todoId: string) => void
   onEditTodo: (todo: Todo) => void
-  onStartFocus: (
-    sourceType: FocusSourceType,
-    sourceId: string,
-    title: string,
-    context?: FocusRecordContext,
-  ) => void
-  onRestartFocus: (
-    sourceType: FocusSourceType,
-    sourceId: string,
-    title: string,
-    context?: FocusRecordContext,
-  ) => void
-  onPauseFocus: (recordId: string) => void
-  onFinishFocus: (recordId: string) => void
 }
 
 export default function TodoKanbanView({

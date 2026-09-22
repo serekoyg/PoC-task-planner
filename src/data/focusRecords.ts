@@ -19,4 +19,11 @@ export type FocusRecord = FocusRecordContext & {
   segments?: FocusSegment[]
 }
 
+export type FocusActions = {
+  onStartFocus: (sourceType: FocusSourceType, sourceId: string, title: string, context?: FocusRecordContext) => void
+  onRestartFocus: (sourceType: FocusSourceType, sourceId: string, title: string, context?: FocusRecordContext) => void
+  onPauseFocus: (recordId: string) => void
+  onFinishFocus: (recordId: string) => void
+}
+
 export const createInitialFocusRecords = (): FocusRecord[] => []
