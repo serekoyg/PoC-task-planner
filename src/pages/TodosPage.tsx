@@ -215,6 +215,12 @@ export default function TodosPage({
             record.sourceType === 'todo' && record.sourceId === editingTodo?.id && !record.endedAt,
           )}
           onFinishFocus={onFinishFocus}
+          completed={editingTodo?.done}
+          onChangeCompleted={
+            editingTodo
+              ? () => onToggleTodo(editingTodo.id)
+              : undefined
+          }
           defaultProjectName={selectedProject?.name}
           onClose={closeEditor}
           onSaveTodo={(input) => {

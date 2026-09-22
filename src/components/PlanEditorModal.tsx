@@ -57,6 +57,8 @@ type PlanEditorModalProps = {
   onDelete?: () => void
   focusRecord?: FocusRecord
   onFinishFocus?: (recordId: string) => void
+  completed?: boolean
+  onChangeCompleted?: (completed: boolean) => void
 }
 
 export default function PlanEditorModal({
@@ -82,6 +84,8 @@ export default function PlanEditorModal({
   onDelete,
   focusRecord,
   onFinishFocus,
+  completed = false,
+  onChangeCompleted,
 }: PlanEditorModalProps) {
   const personalItem = todo ?? calendarEvent
   const isEditing = Boolean(item || personalItem)
@@ -145,6 +149,7 @@ export default function PlanEditorModal({
   const [isCloseConfirming, setIsCloseConfirming] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
   const [hasFinishedActivity, setHasFinishedActivity] = useState(false)
+  const [isCompleted, setIsCompleted] = useState(completed)
   const [isRepeatDetailsOpen, setIsRepeatDetailsOpen] = useState(
     storedRepeat !== 'none',
   )
@@ -154,6 +159,14 @@ export default function PlanEditorModal({
   const isPersonal = !fixedRoom
   const isBulkCreating = !isEditing && bulkDateCount > 1
   const member = fixedRoom?.members.find((candidate) => candidate.id === memberId)
+  const completionSourceId = todo?.id ?? item?.id
+  const hasCompletionControl = Boolean(
+    onChangeCompleted && (todo || item?.type === 'todo'),
+  )
+
+  useEffect(() => {
+    setIsCompleted(completed)
+  }, [completed, completionSourceId])
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null
@@ -310,6 +323,14 @@ export default function PlanEditorModal({
     }
   }
 
+  const changeCompleted = (nextCompleted: boolean) => {
+    setIsCompleted(nextCompleted)
+    onChangeCompleted?.(nextCompleted)
+    if (nextCompleted && focusRecord && onFinishFocus) {
+      onFinishFocus(focusRecord.id)
+    }
+  }
+
   return createPortal(
     <div
       className="study-modal-backdrop plan-editor-backdrop"
@@ -358,7 +379,8 @@ export default function PlanEditorModal({
           onSubmit={savePlan}
         >
           <div className="plan-editor-scroll">
-            {(todo || item) && (focusRecord || hasFinishedActivity) && (
+            {(calendarEvent || item?.type === 'event') &&
+              (focusRecord || hasFinishedActivity) && (
               <div className="plan-editor-activity">
                 <p role="status">
                   {focusRecord
@@ -375,9 +397,15 @@ export default function PlanEditorModal({
                 )}
               </div>
             )}
-            {readOnly && <p className="plan-readonly-notice">이 계획은 읽기 전용이에요. 작성자·방장·매니저가 수정할 수 있어요.</p>}
+            {readOnly && (
+              <p className="plan-readonly-notice">
+                {hasCompletionControl
+                  ? '계획 내용은 읽기 전용이에요. 내 완료 상태는 변경할 수 있어요.'
+                  : '이 계획은 읽기 전용이에요. 작성자·방장·매니저가 수정할 수 있어요.'}
+              </p>
+            )}
             <fieldset className="plan-editor-fields" disabled={readOnly}>
-            <legend className="visually-hidden">계획 내용</legend>
+            <legend className="visually-hidden">계획 종류</legend>
             <fieldset className="plan-type-switch">
               <legend className="visually-hidden">종류</legend>
               {([
@@ -401,26 +429,50 @@ export default function PlanEditorModal({
                 </label>
               ))}
             </fieldset>
+            </fieldset>
 
-            <label className="plan-title-field">
-              <span className="visually-hidden">제목</span>
-              <input
-                autoFocus
-                required
-                maxLength={60}
-                ref={titleInputRef}
-                value={title}
-                placeholder={
-                  type === 'todo'
-                    ? '무엇을 완료해야 하나요?'
-                    : '어떤 일정인가요?'
-                }
-                onChange={(event) => {
-                  setTitle(event.target.value)
-                  setError('')
-                }}
-              />
-            </label>
+            <div className={`plan-title-row${isCompleted ? ' completed' : ''}`}>
+              {hasCompletionControl && (
+                <label className="plan-completion-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={isCompleted}
+                    aria-label={`${title || '할 일'} 완료`}
+                    onChange={(event) => {
+                      event.stopPropagation()
+                      changeCompleted(event.target.checked)
+                    }}
+                  />
+                  <span className="visually-hidden">
+                    {isCompleted ? '완료됨' : '완료 처리'}
+                  </span>
+                </label>
+              )}
+
+              <label className="plan-title-field">
+                <span className="visually-hidden">제목</span>
+                <input
+                  autoFocus
+                  required
+                  maxLength={60}
+                  ref={titleInputRef}
+                  value={title}
+                  disabled={readOnly}
+                  placeholder={
+                    type === 'todo'
+                      ? '무엇을 완료해야 하나요?'
+                      : '어떤 일정인가요?'
+                  }
+                  onChange={(event) => {
+                    setTitle(event.target.value)
+                    setError('')
+                  }}
+                />
+              </label>
+            </div>
+
+            <fieldset className="plan-editor-fields" disabled={readOnly}>
+            <legend className="visually-hidden">계획 내용</legend>
 
             {isBulkCreating && (
               <div className="bulk-plan-create-info" role="status">
