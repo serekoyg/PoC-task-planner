@@ -16,8 +16,7 @@ import type {
 import { Button, PageToolbar, SegmentedControl } from '../design-system'
 import type {
   FocusRecord,
-  FocusRecordContext,
-  FocusSourceType,
+  FocusActions,
 } from '../data/focusRecords'
 
 type TodoView = 'dates' | 'kanban' | 'projects'
@@ -40,7 +39,7 @@ const viewDescriptions: Record<TodoView, string> = {
   projects: '목록별 할 일을 날짜와 함께 세로로 계속 탐색하세요.',
 }
 
-type TodosPageProps = {
+type TodosPageProps = FocusActions & {
   today: Date
   selectedDate: Date
   todos: Todo[]
@@ -59,20 +58,6 @@ type TodosPageProps = {
     input: StudySharedItemInput,
   ) => void
   onToggleSharedItemStatus: (roomId: string, itemId: string) => void
-  onStartFocus: (
-    sourceType: FocusSourceType,
-    sourceId: string,
-    title: string,
-    context?: FocusRecordContext,
-  ) => void
-  onRestartFocus: (
-    sourceType: FocusSourceType,
-    sourceId: string,
-    title: string,
-    context?: FocusRecordContext,
-  ) => void
-  onPauseFocus: (recordId: string) => void
-  onFinishFocus: (recordId: string) => void
 }
 
 export default function TodosPage({
@@ -102,9 +87,15 @@ export default function TodosPage({
   const selectedProjectIds = getProjectSelection(searchParams)
   const [todoView, setTodoView] = useState<TodoView>('dates')
   const [isCreating, setIsCreating] = useState(false)
-  const [editingTodo, setEditingTodo] = useState<Todo>()
-  const [editingSharedItem, setEditingSharedItem] =
-    useState<StudySharedItemEntry>()
+  const [editingTodoId, setEditingTodoId] = useState<string>()
+  const [editingSharedKey, setEditingSharedKey] = useState<string>()
+  const editingTodo = todos.find((todo) => todo.id === editingTodoId)
+  const editingSharedItem = sharedItems.find((entry) =>
+    `${entry.roomId}:${entry.item.id}` === editingSharedKey,
+  )
+  const setEditingTodo = (todo?: Todo) => setEditingTodoId(todo?.id)
+  const setEditingSharedItem = (entry?: StudySharedItemEntry) =>
+    setEditingSharedKey(entry ? `${entry.roomId}:${entry.item.id}` : undefined)
   const editingSharedRoom = studyRooms.find(
     (room) => room.id === editingSharedItem?.roomId,
   )
@@ -124,20 +115,20 @@ export default function TodosPage({
           .filter(Boolean)
           .join(' · ')
 
+  const linkedTodoExists = todos.some((todo) => todo.id === todoId)
   useEffect(() => {
     if (!todoId) return
-    const targetTodo = todos.find((todo) => todo.id === todoId)
-    if (!targetTodo) {
+    if (!linkedTodoExists) {
       navigate({ pathname: '/todos', search: location.search }, { replace: true })
       return
     }
     setTodoView('dates')
-    setEditingTodo(undefined)
-  }, [location.search, navigate, todoId, todos])
+    setEditingTodoId(undefined)
+  }, [location.search, navigate, todoId, linkedTodoExists])
 
   const openFocusedTodoEditor = useCallback(
     (todo: Todo) => {
-      if (todo.id === todoId) setEditingTodo(todo)
+      if (todo.id === todoId) setEditingTodoId(todo.id)
     },
     [todoId],
   )
@@ -244,6 +235,7 @@ export default function TodosPage({
 
       {(isCreating || editingTodo) && (
         <PlanEditorModal
+          key={editingTodo?.id ?? 'new'}
           initialType="todo"
           selectedDate={selectedDate}
           projects={projects}

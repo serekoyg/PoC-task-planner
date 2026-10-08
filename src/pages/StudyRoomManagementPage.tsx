@@ -8,6 +8,7 @@ import type {
   StudySharedItemInput,
 } from '../data/studyRooms'
 import { getSharedRepeatLabel, sharedItemTypeLabels } from '../lib/studyShared'
+import { canManageSharedItem, toggleRoomSharedItemStatus } from '../lib/studyPlans'
 
 type ManagementTab = 'shared' | 'members' | 'notifications' | 'settings'
 type SharedFilter = 'all' | StudySharedItem['type']
@@ -89,7 +90,9 @@ export default function StudyRoomManagementPage({
   const [activeTab, setActiveTab] = useState<ManagementTab>('shared')
   const [sharedFilter, setSharedFilter] = useState<SharedFilter>('all')
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false)
-  const [editingSharedItem, setEditingSharedItem] = useState<StudySharedItem>()
+  const [editingSharedItemId, setEditingSharedItemId] = useState<string>()
+  const editingSharedItem = room?.sharedItems.find((item) => item.id === editingSharedItemId)
+  const setEditingSharedItem = (item?: StudySharedItem) => setEditingSharedItemId(item?.id)
   const [deletingSharedItemId, setDeletingSharedItemId] = useState<string>()
   const [delegateMemberId, setDelegateMemberId] = useState<string>()
   const [removingMemberId, setRemovingMemberId] = useState<string>()
@@ -137,7 +140,7 @@ export default function StudyRoomManagementPage({
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       setIsPlanModalOpen(false)
-      setEditingSharedItem(undefined)
+      setEditingSharedItemId(undefined)
       setDelegateMemberId(undefined)
       setRemovingMemberId(undefined)
     }
@@ -209,23 +212,8 @@ export default function StudyRoomManagementPage({
   }
 
   const toggleSharedItemCompleted = (itemId: string) => {
-    onChangeRoom(room.id, (current) => ({
-      ...current,
-      sharedItems: current.sharedItems.map((item) => {
-        if (item.id !== itemId || item.type !== 'todo') return item
-        const isCompleted = item.completedMemberIds.includes(me.id)
-        const completedAtByMember = { ...item.completedAtByMember }
-        if (isCompleted) delete completedAtByMember[me.id]
-        else completedAtByMember[me.id] = new Date().toISOString()
-        return {
-          ...item,
-          completedMemberIds: isCompleted
-            ? item.completedMemberIds.filter((memberId) => memberId !== me.id)
-            : [...item.completedMemberIds, me.id],
-          completedAtByMember,
-        }
-      }),
-    }))
+    const changedAt = new Date().toISOString()
+    onChangeRoom(room.id, (current) => toggleRoomSharedItemStatus(current, itemId, changedAt))
   }
 
   const deleteSharedPlan = (itemId: string) => {
@@ -451,7 +439,7 @@ export default function StudyRoomManagementPage({
                   const creator = room.members.find(
                     (member) => member.id === item.createdById,
                   )
-                  const canManagePlan = isOwner || isManager || item.createdById === me.id
+                  const canManagePlan = canManageSharedItem(room, item, me.id)
 
                   return (
                     <article className={`shared-plan-card ${item.type}`} key={item.id}>

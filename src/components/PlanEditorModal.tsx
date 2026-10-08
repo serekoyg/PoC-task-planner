@@ -149,7 +149,6 @@ export default function PlanEditorModal({
   const [isCloseConfirming, setIsCloseConfirming] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
   const [hasFinishedActivity, setHasFinishedActivity] = useState(false)
-  const [isCompleted, setIsCompleted] = useState(completed)
   const [isRepeatDetailsOpen, setIsRepeatDetailsOpen] = useState(
     storedRepeat !== 'none',
   )
@@ -159,14 +158,9 @@ export default function PlanEditorModal({
   const isPersonal = !fixedRoom
   const isBulkCreating = !isEditing && bulkDateCount > 1
   const member = fixedRoom?.members.find((candidate) => candidate.id === memberId)
-  const completionSourceId = todo?.id ?? item?.id
   const hasCompletionControl = Boolean(
     onChangeCompleted && (todo || item?.type === 'todo'),
   )
-
-  useEffect(() => {
-    setIsCompleted(completed)
-  }, [completed, completionSourceId])
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null
@@ -324,11 +318,11 @@ export default function PlanEditorModal({
   }
 
   const changeCompleted = (nextCompleted: boolean) => {
-    setIsCompleted(nextCompleted)
-    onChangeCompleted?.(nextCompleted)
     if (nextCompleted && focusRecord && onFinishFocus) {
       onFinishFocus(focusRecord.id)
+      return
     }
+    onChangeCompleted?.(nextCompleted)
   }
 
   return createPortal(
@@ -431,12 +425,12 @@ export default function PlanEditorModal({
             </fieldset>
             </fieldset>
 
-            <div className={`plan-title-row${isCompleted ? ' completed' : ''}`}>
+            <div className={`plan-title-row${completed ? ' completed' : ''}`}>
               {hasCompletionControl && (
                 <label className="plan-completion-checkbox">
                   <input
                     type="checkbox"
-                    checked={isCompleted}
+                    checked={completed}
                     aria-label={`${title || '할 일'} 완료`}
                     onChange={(event) => {
                       event.stopPropagation()
@@ -444,7 +438,7 @@ export default function PlanEditorModal({
                     }}
                   />
                   <span className="visually-hidden">
-                    {isCompleted ? '완료됨' : '완료 처리'}
+                    {completed ? '완료됨' : '완료 처리'}
                   </span>
                 </label>
               )}

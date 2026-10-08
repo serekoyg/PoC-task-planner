@@ -36,6 +36,23 @@ import type {
 } from '../data/studyRooms'
 import { Button, PageToolbar, SegmentedControl } from '../design-system'
 import {
+  dateKeyFromDayNumber,
+  formatMinutes,
+  formatRangeLabel,
+  formatWeekTitle,
+  getDayNumber,
+  getTimeSlotKey,
+  parseTime,
+  parseTimeSlotKey,
+  shiftDateKey,
+  shiftDateTime,
+  sortDateKeys,
+  TIME_GRID_END_MINUTES,
+  TIME_GRID_START_MINUTES,
+  TIME_SLOT_MINUTES,
+  toLocalDate,
+} from '../lib/calendarTime'
+import {
   formatSelectedDate,
   getCalendarDays,
   getWeekDays,
@@ -77,102 +94,6 @@ const viewLabels: Record<CalendarView, string> = {
   day: '일간',
   week: '주간',
   month: '월간',
-}
-
-const formatShortDate = (date: Date) =>
-  `${date.getMonth() + 1}월 ${date.getDate()}일`
-
-const formatWeekTitle = (weekDays: Date[]) => {
-  const start = weekDays[0]
-  const end = weekDays[weekDays.length - 1]
-  return `${start.getFullYear()}년 ${formatShortDate(start)} – ${formatShortDate(end)}`
-}
-
-const toLocalDate = (dateKey: string) => new Date(`${dateKey}T00:00:00`)
-
-const sortDateKeys = (first: string, second: string) =>
-  first <= second ? [first, second] : [second, first]
-
-const getDayNumber = (dateKey: string) => {
-  const [year, month, day] = dateKey.split('-').map(Number)
-  return Math.round(Date.UTC(year, month - 1, day) / 86_400_000)
-}
-
-const shiftDateKey = (dateKey: string, offset: number) => {
-  const [year, month, day] = dateKey.split('-').map(Number)
-  const shifted = new Date(Date.UTC(year, month - 1, day + offset))
-  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, '0')}-${String(shifted.getUTCDate()).padStart(2, '0')}`
-}
-
-const formatRangeLabel = (startKey: string, endKey: string) => {
-  const [start, end] = sortDateKeys(startKey, endKey)
-  const startDate = toLocalDate(start)
-  const endDate = toLocalDate(end)
-  const startLabel = `${startDate.getMonth() + 1}월 ${startDate.getDate()}일`
-  if (start === end) return startLabel
-  const endLabel =
-    startDate.getMonth() === endDate.getMonth()
-      ? `${endDate.getDate()}일`
-      : `${endDate.getMonth() + 1}월 ${endDate.getDate()}일`
-  return `${startLabel}–${endLabel}`
-}
-
-const formatMinutes = (minutes: number) =>
-  `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(
-    minutes % 60,
-  ).padStart(2, '0')}`
-
-const parseTime = (time: string) => {
-  const [hours, minutes] = time.split(':').map(Number)
-  return hours * 60 + minutes
-}
-
-const dateKeyFromDayNumber = (dayNumber: number) => {
-  const date = new Date(dayNumber * 86_400_000)
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(
-    2,
-    '0',
-  )}-${String(date.getUTCDate()).padStart(2, '0')}`
-}
-
-const shiftDateTime = (
-  dateKey: string,
-  time: string,
-  sourceStartKey: string,
-  sourceStartMinutes: number,
-  targetStartKey: string,
-  targetStartMinutes: number,
-) => {
-  const relativeMinutes =
-    (getDayNumber(dateKey) - getDayNumber(sourceStartKey)) * 1_440 +
-    parseTime(time) -
-    sourceStartMinutes
-  const targetAbsoluteMinutes =
-    getDayNumber(targetStartKey) * 1_440 +
-    targetStartMinutes +
-    relativeMinutes
-  const targetDayNumber = Math.floor(targetAbsoluteMinutes / 1_440)
-  const targetMinutes =
-    ((targetAbsoluteMinutes % 1_440) + 1_440) % 1_440
-  return {
-    date: dateKeyFromDayNumber(targetDayNumber),
-    time: formatMinutes(targetMinutes),
-  }
-}
-
-const TIME_GRID_START_MINUTES = 6 * 60
-const TIME_GRID_END_MINUTES = 24 * 60
-const TIME_SLOT_MINUTES = 30
-
-const getTimeSlotKey = (dateKey: string, startMinutes: number) =>
-  `${dateKey}:${startMinutes}`
-
-const parseTimeSlotKey = (slotKey: string) => {
-  const separatorIndex = slotKey.lastIndexOf(':')
-  return {
-    dateKey: slotKey.slice(0, separatorIndex),
-    startMinutes: Number(slotKey.slice(separatorIndex + 1)),
-  }
 }
 
 type CalendarPageProps = {
@@ -230,9 +151,15 @@ export default function CalendarPage({
   const [isDateJumpOpen, setIsDateJumpOpen] = useState(false)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [editorDate, setEditorDate] = useState(selectedDate)
-  const [editingEvent, setEditingEvent] = useState<CalendarEvent>()
-  const [editingSharedEvent, setEditingSharedEvent] =
-    useState<StudySharedItemEntry>()
+  const [editingEventId, setEditingEventId] = useState<string>()
+  const [editingSharedKey, setEditingSharedKey] = useState<string>()
+  const editingEvent = events.find((event) => event.id === editingEventId)
+  const editingSharedEvent = sharedItems.find((entry) =>
+    `${entry.roomId}:${entry.item.id}` === editingSharedKey,
+  )
+  const setEditingEvent = (event?: CalendarEvent) => setEditingEventId(event?.id)
+  const setEditingSharedEvent = (entry?: StudySharedItemEntry) =>
+    setEditingSharedKey(entry ? `${entry.roomId}:${entry.item.id}` : undefined)
   const [rangeStartKey, setRangeStartKey] = useState<string>()
   const [rangeEndKey, setRangeEndKey] = useState<string>()
   const [isBlockSelectionMode, setIsBlockSelectionMode] = useState(false)
@@ -1223,9 +1150,9 @@ export default function CalendarPage({
             )}
           />
 
-          {calendarView === 'day' && (
+          {calendarView !== 'month' && (
             <CalendarTimeGrid
-              dates={[selectedDate]}
+              dates={calendarView === 'day' ? [selectedDate] : weekDays}
               events={filteredEvents}
               todos={filteredTodos}
               projects={projects}
@@ -1233,63 +1160,10 @@ export default function CalendarPage({
               selectedPlanKeys={selectedPlanKeys}
               cutPlanKeys={cutPlanKeys}
               selectedTimeSlotKeys={selectedTimeSlotKeys}
-              isSelecting={isRangeDragging && selectionSurface === 'day'}
-              surfaceRef={dayGridRef}
+              isSelecting={isRangeDragging && selectionSurface === calendarView}
+              surfaceRef={calendarView === 'day' ? dayGridRef : weekGridRef}
               onPointerDown={(event) =>
-                handleRangePointerDown(event, 'day')
-              }
-              onPointerMove={handleRangePointerMove}
-              onPointerUp={finishRangeGesture}
-              onPointerCancel={cancelRangeGesture}
-              onOpenEvent={(event, date) => {
-                if (suppressDayClickRef.current) return
-                if (isBlockSelectionMode) {
-                  toggleTimeInterval(
-                    date,
-                    event.allDay ? undefined : event.startTime,
-                    event.allDay ? undefined : event.endTime,
-                  )
-                  return
-                }
-                openEditEvent(event, date)
-              }}
-              onOpenTodo={(todo, date) => {
-                if (suppressDayClickRef.current) return
-                if (isBlockSelectionMode) {
-                  toggleTimeInterval(date, todo.dueTime)
-                  return
-                }
-                navigate(`/todos/${todo.id}`)
-              }}
-              onOpenShared={(entry, date) => {
-                if (suppressDayClickRef.current) return
-                if (isBlockSelectionMode) {
-                  toggleTimeInterval(
-                    date,
-                    entry.item.time,
-                    entry.item.endTime,
-                  )
-                  return
-                }
-                openEditSharedEvent(entry, date)
-              }}
-            />
-          )}
-
-          {calendarView === 'week' && (
-            <CalendarTimeGrid
-              dates={weekDays}
-              events={filteredEvents}
-              todos={filteredTodos}
-              projects={projects}
-              sharedItems={visibleSharedEvents}
-              selectedPlanKeys={selectedPlanKeys}
-              cutPlanKeys={cutPlanKeys}
-              selectedTimeSlotKeys={selectedTimeSlotKeys}
-              isSelecting={isRangeDragging && selectionSurface === 'week'}
-              surfaceRef={weekGridRef}
-              onPointerDown={(event) =>
-                handleRangePointerDown(event, 'week')
+                handleRangePointerDown(event, calendarView)
               }
               onPointerMove={handleRangePointerMove}
               onPointerUp={finishRangeGesture}

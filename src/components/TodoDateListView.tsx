@@ -6,8 +6,7 @@ import { getProjectColorByName, isProjectInSelection } from '../data/projects'
 import type { StudySharedItemEntry } from '../data/studyRooms'
 import type {
   FocusRecord,
-  FocusRecordContext,
-  FocusSourceType,
+  FocusActions,
 } from '../data/focusRecords'
 import { formatSelectedDate } from '../lib/date'
 import { getSharedRepeatLabel } from '../lib/studyShared'
@@ -23,7 +22,7 @@ type TodoDateGroup = {
   sharedItems: StudySharedItemEntry[]
 }
 
-type TodoDateListViewProps = {
+type TodoDateListViewProps = FocusActions & {
   today: Date
   todos: Todo[]
   projects: PlannerProject[]
@@ -37,20 +36,6 @@ type TodoDateListViewProps = {
   onEditTodo: (todo: Todo) => void
   onEditSharedItem: (entry: StudySharedItemEntry) => void
   onCreateTodo: () => void
-  onStartFocus: (
-    sourceType: FocusSourceType,
-    sourceId: string,
-    title: string,
-    context?: FocusRecordContext,
-  ) => void
-  onRestartFocus: (
-    sourceType: FocusSourceType,
-    sourceId: string,
-    title: string,
-    context?: FocusRecordContext,
-  ) => void
-  onPauseFocus: (recordId: string) => void
-  onFinishFocus: (recordId: string) => void
 }
 
 export default function TodoDateListView({

@@ -16,6 +16,7 @@ import {
   isTodoOnDate,
 } from '../lib/date'
 import { isSharedItemOnDate } from '../lib/studyShared'
+import { parseTime, TIME_GRID_START_MINUTES, TIME_GRID_END_MINUTES } from '../lib/calendarTime'
 
 type CalendarTimeGridProps = {
   dates: Date[]
@@ -37,17 +38,13 @@ type CalendarTimeGridProps = {
   onOpenShared: (entry: StudySharedItemEntry, occurrenceDate: Date) => void
 }
 
-const START_HOUR = 6
-const END_HOUR = 24
+const START_HOUR = TIME_GRID_START_MINUTES / 60
+const END_HOUR = TIME_GRID_END_MINUTES / 60
 const PIXELS_PER_MINUTE = 1
 const MIN_CARD_HEIGHT = 28
 const weekdayLabels = ['일', '월', '화', '수', '목', '금', '토']
 
-const toMinutes = (time?: string) => {
-  if (!time) return START_HOUR * 60
-  const [hours, minutes] = time.split(':').map(Number)
-  return hours * 60 + minutes
-}
+const toMinutes = (time?: string) => time ? parseTime(time) : TIME_GRID_START_MINUTES
 
 const getTimePosition = (time?: string) =>
   Math.max(
